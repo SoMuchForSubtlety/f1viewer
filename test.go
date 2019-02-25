@@ -5,38 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 )
 
-type config struct {
-	AuthToken string `json:"auth_token"`
-	Cookie    string `json:"cookie"`
-}
-
 func main() {
-
-	//load config with auth toke and cookie
-
-	configFile, err := ioutil.ReadFile("config.json")
-	if err != nil {
-		fmt.Println("please provide a config file")
-		os.Exit(1)
-	}
-
-	var localConfig config
-
-	err = json.Unmarshal(configFile, &localConfig)
-	if err != nil {
-		log.Fatalf("malformed configuration file: %v\n", err)
-	}
 
 	args := os.Args[1:]
 	download := false
 
+	//check arguments
 	if len(args) < 1 {
 		fmt.Println("please provide an asset ID")
 		os.Exit(1)
@@ -44,15 +23,26 @@ func main() {
 		download = true
 	}
 
-	//writes response to file
-	file, err := os.Create("result.json")
-	if err != nil {
-		log.Fatal("Cannot create file", err)
+	//trim asset ID
+	id := ""
+	if args[0][:17] == "/api/assets/asse_" {
+		id = args[0][17:]
+		id = id[:len(id)-1]
+	} else {
+		id = args[0]
 	}
-	defer file.Close()
 
-	response := GetProperURL(args[0], localConfig)
-	fmt.Fprintf(file, response)
+	response := GetProperURL(id)
+
+	//write json response to file
+	/*
+		file, err := os.Create("result.json")
+		if err != nil {
+			log.Fatal("Cannot create file", err)
+		}
+		defer file.Close()
+		fmt.Fprintf(file, response)
+	*/
 
 	//checks for errors
 	if response == `{"form_validation_errors": null, "skylark_error_code": null, "error": "Resource not found."}` {
@@ -60,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	//handles json and downloading
+	//extract url form json
 	type URLStruct struct {
 		Objects []struct {
 			Tata struct {
@@ -75,14 +65,15 @@ func main() {
 	var urlString = finalURL.Objects[0].Tata.TokenisedURL
 	fmt.Println(urlString)
 
+	//download .m3u8 file
 	if download {
-		if err := DownloadFile("master.m3u8", urlString); err != nil {
+		if err := DownloadFile(id+"_master.m3u8", urlString); err != nil {
 			panic(err)
 		}
 	}
 }
 
-//DownloadFile downloads url to path
+//DownloadFile downloads m3u8 to specified path and applies patch
 func DownloadFile(filepath string, url string) error {
 	// Get the data
 	resp, err := http.Get(url)
@@ -98,40 +89,30 @@ func DownloadFile(filepath string, url string) error {
 	}
 	defer out.Close()
 
+	//TODO: skip writing to file
 	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
+	//create patched version
+	fixm3u8(filepath, url)
+	//delete original
+	out.Close()
+	os.Remove(filepath)
 	return err
 }
 
 //GetProperURL returns the body of the json request
-func GetProperURL(assetID string, localConfig config) string {
-	baseJSON := `{"asset_url":"`
+func GetProperURL(assetID string) string {
+
 	extendedJSON := `{"asset_url":"/api/assets/asse_`
 
-	var finalJSON = ""
+	var finalJSON = extendedJSON + assetID + `/"}`
 
-	if assetID[:17] == "/api/assets/asse_" {
-		finalJSON = baseJSON + assetID + `"}`
-	} else {
-		finalJSON = extendedJSON + assetID + `/"}`
-	}
-
+	//make request
 	body := strings.NewReader(finalJSON)
 	req, err := http.NewRequest("POST", "https://f1tv.formula1.com/api/viewings/", body)
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0")
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Accept-Language", "en, en")
-	req.Header.Set("Referer", "https://f1tv.formula1.com/en/episode/1996-spanish-grand-prix")
-	req.Header.Set("Content-Type", "application/json;charset=utf-8")
-	req.Header.Set("Authorization", localConfig.AuthToken)
-	req.Header.Set("X-Countrycode", "zero")
-	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Cookie", localConfig.Cookie)
-	req.Header.Set("Te", "Trailers")
-
 	resp, err := http.DefaultClient.Do(req)
 
 	if err != nil {
