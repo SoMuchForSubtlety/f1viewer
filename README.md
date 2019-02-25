@@ -9,7 +9,9 @@ or
 
     $ .\F1viewer e1468e205ad140e6ae8e8bdf7040d95e
 
-The resulting `master.m3u8` needs to be modified to be played!
+**KNOW ISSUES**
+
+ - resulting m3u8 can have audio desync
 
 **GOAL 1:**
 
