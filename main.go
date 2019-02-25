@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -34,16 +33,6 @@ func main() {
 
 	response := GetProperURL(id)
 
-	//write json response to file
-	/*
-		file, err := os.Create("result.json")
-		if err != nil {
-			log.Fatal("Cannot create file", err)
-		}
-		defer file.Close()
-		fmt.Fprintf(file, response)
-	*/
-
 	//checks for errors
 	if response == `{"form_validation_errors": null, "skylark_error_code": null, "error": "Resource not found."}` {
 		fmt.Println("There was an error, please review result.json for details and double check the asset ID")
@@ -65,7 +54,7 @@ func main() {
 	var urlString = finalURL.Objects[0].Tata.TokenisedURL
 	fmt.Println(urlString)
 
-	//download .m3u8 file
+	//download and patch .m3u8 file
 	if download {
 		if err := DownloadFile(id+"_master.m3u8", urlString); err != nil {
 			panic(err)
@@ -73,7 +62,7 @@ func main() {
 	}
 }
 
-//DownloadFile downloads m3u8 to specified path and applies patch
+//DownloadFile downloads m3u8 and applies patch
 func DownloadFile(filepath string, url string) error {
 	// Get the data
 	resp, err := http.Get(url)
@@ -82,33 +71,22 @@ func DownloadFile(filepath string, url string) error {
 	}
 	defer resp.Body.Close()
 
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	//TODO: skip writing to file
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	//create patched version
-	fixm3u8(filepath, url)
-	//delete original
-	out.Close()
-	os.Remove(filepath)
+	// convert body to string array
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	lineArray := strings.Split(buf.String(), "\n")
+	//apply fix and save
+	fixm3u8(lineArray, url, filepath)
 	return err
 }
 
 //GetProperURL returns the body of the json request
 func GetProperURL(assetID string) string {
 
-	extendedJSON := `{"asset_url":"/api/assets/asse_`
-
-	var finalJSON = extendedJSON + assetID + `/"}`
+	json := `{"asset_url":"/api/assets/asse_` + assetID + `/"}`
 
 	//make request
-	body := strings.NewReader(finalJSON)
+	body := strings.NewReader(json)
 	req, err := http.NewRequest("POST", "https://f1tv.formula1.com/api/viewings/", body)
 	if err != nil {
 		panic(err)
