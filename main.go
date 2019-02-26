@@ -1,105 +1,75 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
-	"strings"
+	"sort"
+
+	"github.com/gdamore/tcell"
+	"github.com/rivo/tview"
 )
 
 func main() {
 
-	args := os.Args[1:]
-	download := false
+	rootDir := "VOD-Types"
+	root := tview.NewTreeNode(rootDir).
+		SetColor(tcell.ColorRed)
+	tree := tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
+	vodTypes := getVodTypes()
 
-	//check arguments
-	if len(args) < 1 {
-		fmt.Println("please provide an asset ID")
-		os.Exit(1)
-	} else if len(args) >= 2 && args[1] == "-d" {
-		download = true
-	}
-
-	//trim asset ID
-	id := ""
-	if args[0][:17] == "/api/assets/asse_" {
-		id = args[0][17:]
-		id = id[:len(id)-1]
-	} else {
-		id = args[0]
-	}
-
-	response := GetProperURL(id)
-
-	//checks for errors
-	if response == `{"form_validation_errors": null, "skylark_error_code": null, "error": "Resource not found."}` {
-		fmt.Println("There was an error, please review result.json for details and double check the asset ID")
-		os.Exit(1)
-	}
-
-	//extract url form json
-	type URLStruct struct {
-		Objects []struct {
-			Tata struct {
-				TokenisedURL string `json:"tokenised_url"`
-			} `json:"tata"`
-		} `json:"objects"`
-	}
-
-	var finalURL URLStruct
-
-	json.Unmarshal([]byte(response), &finalURL)
-	var urlString = finalURL.Objects[0].Tata.TokenisedURL
-	fmt.Println(urlString)
-
-	//download and patch .m3u8 file
-	if download {
-		if err := DownloadFile(id+"_master.m3u8", urlString); err != nil {
-			panic(err)
+	add := func(target *tview.TreeNode) {
+		for i, vType := range vodTypes.Objects {
+			node := tview.NewTreeNode(vType.Name).SetSelectable(true)
+			node.SetReference(i)
+			target.AddChild(node)
 		}
 	}
-}
 
-//DownloadFile downloads m3u8 and applies patch
-func DownloadFile(filepath string, url string) error {
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
+	addEpisodes := func(target *tview.TreeNode, parentType int) {
+
+		var episodes []episodeStruct
+
+		for _, episode := range vodTypes.Objects[parentType].ContentUrls {
+			episodes = append(episodes, getEpisode(episode))
+		}
+
+		sort.Slice(episodes, func(i, j int) bool {
+			return episodes[i].Title < episodes[j].Title
+		})
+
+		if len(episodes) == 0 {
+			node := tview.NewTreeNode("no content available")
+			target.AddChild(node)
+		} else {
+			for _, episode := range episodes {
+				node := tview.NewTreeNode(episode.Title).SetSelectable(true)
+				node.SetReference(episode)
+				target.AddChild(node)
+			}
+		}
 	}
-	defer resp.Body.Close()
 
-	// convert body to string array
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	lineArray := strings.Split(buf.String(), "\n")
-	//apply fix and save
-	fixm3u8(lineArray, url, filepath)
-	return err
-}
+	add(root)
 
-//GetProperURL returns the body of the json request
-func GetProperURL(assetID string) string {
+	tree.SetSelectedFunc(func(node *tview.TreeNode) {
+		reference := node.GetReference()
+		children := node.GetChildren()
+		if reference == nil {
+			return // Selecting the root node does nothing.
+		} else if ep, ok := reference.(episodeStruct); ok && len(children) < 1 {
+			downloadAsset(ep.Items[0], ep.Title)
+			newNode := tview.NewTreeNode("content downloaded")
+			node.AddChild(newNode)
+			return
+		}
+		// Load and show files in this directory.
+		if len(children) == 0 {
+			addEpisodes(node, reference.(int))
+		} else {
+			// Collapse if visible, expand if collapsed.
+			node.SetExpanded(!node.IsExpanded())
+		}
+	})
 
-	json := `{"asset_url":"/api/assets/asse_` + assetID + `/"}`
-
-	//make request
-	body := strings.NewReader(json)
-	req, err := http.NewRequest("POST", "https://f1tv.formula1.com/api/viewings/", body)
-	if err != nil {
+	if err := tview.NewApplication().SetRoot(tree, true).Run(); err != nil {
 		panic(err)
 	}
-	resp, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	//converts response body to string
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	return buf.String()
 }
