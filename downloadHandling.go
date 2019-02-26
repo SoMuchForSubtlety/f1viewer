@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+//chage URIs to full URLS
 func fixm3u8(lines []string, url string, filePath string) {
 	//lines, _ := readLines(filePath)
 	var newLines []string
@@ -33,6 +34,7 @@ func fixm3u8(lines []string, url string, filePath string) {
 	writeLines(newLines, filePath)
 }
 
+//write m3u8 to file
 func writeLines(lines []string, path string) error {
 	file, err := os.Create(path)
 	if err != nil {
@@ -87,7 +89,7 @@ func downloadAsset(assetID string, title string) {
 	}
 }
 
-//downloads m3u8 and applies patch
+//downloads m3u8
 func downloadM3U8(filepath string, url string) error {
 	// Get the data
 	resp, err := http.Get(url)

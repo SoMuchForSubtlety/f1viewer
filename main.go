@@ -15,7 +15,10 @@ func main() {
 	tree := tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
 	vodTypes := getVodTypes()
 
+	//TODO does not need to be a function (?)
+	//for the base category nodes
 	add := func(target *tview.TreeNode) {
+		//iterate through vod-types
 		for i, vType := range vodTypes.Objects {
 			node := tview.NewTreeNode(vType.Name).SetSelectable(true)
 			node.SetReference(i)
@@ -23,10 +26,11 @@ func main() {
 		}
 	}
 
+	//for episode nodes
 	addEpisodes := func(target *tview.TreeNode, parentType int) {
 
+		//create slice of episode IDs and sort it by date
 		var episodes []episodeStruct
-
 		for _, episode := range vodTypes.Objects[parentType].ContentUrls {
 			episodes = append(episodes, getEpisode(episode))
 		}
@@ -35,8 +39,10 @@ func main() {
 			return episodes[i].Title < episodes[j].Title
 		})
 
+		//add them to the tree/ add no content available note
 		if len(episodes) == 0 {
 			node := tview.NewTreeNode("no content available")
+			node.SetSelectable(false)
 			target.AddChild(node)
 		} else {
 			for _, episode := range episodes {
@@ -47,6 +53,7 @@ func main() {
 		}
 	}
 
+	//build base tree
 	add(root)
 
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
@@ -69,6 +76,7 @@ func main() {
 		}
 	})
 
+	//start UI
 	if err := tview.NewApplication().SetRoot(tree, true).Run(); err != nil {
 		panic(err)
 	}
