@@ -11,7 +11,7 @@ func main() {
 
 	rootDir := "VOD-Types"
 	root := tview.NewTreeNode(rootDir).
-		SetColor(tcell.ColorRed)
+		SetColor(tcell.ColorBlue)
 	tree := tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
 	vodTypes := getVodTypes()
 
@@ -43,11 +43,13 @@ func main() {
 		if len(episodes) == 0 {
 			node := tview.NewTreeNode("no content available")
 			node.SetSelectable(false)
+			node.SetColor(tcell.ColorRed)
 			target.AddChild(node)
 		} else {
 			for _, episode := range episodes {
 				node := tview.NewTreeNode(episode.Title).SetSelectable(true)
 				node.SetReference(episode)
+				node.SetColor(tcell.ColorGreen)
 				target.AddChild(node)
 			}
 		}
