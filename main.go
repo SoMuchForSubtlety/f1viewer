@@ -29,6 +29,9 @@ func main() {
 		}
 	}
 
+	//build base tree
+	add(root)
+
 	addEpisodes := func(target *tview.TreeNode, parentType int) {
 		//check if episodes of the selected type are not available
 		if len(vodTypes.Objects[parentType].ContentUrls) == 0 {
@@ -41,7 +44,7 @@ func main() {
 			//store loaded episodes to be sorted at the end
 			var episodes []episodeStruct
 
-			//add waitgroup so sorting doesn't get skipped
+			//waitgroup so sorting doesn't get skipped
 			var wg sync.WaitGroup
 			wg.Add(len(vodTypes.Objects[parentType].ContentUrls))
 
@@ -76,9 +79,6 @@ func main() {
 		}
 	}
 
-	//build base tree
-	add(root)
-
 	//what happens when a node is selected
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
 		reference := node.GetReference()
@@ -86,6 +86,7 @@ func main() {
 		if reference == nil {
 			return //Selecting the root node does nothing.
 		} else if ep, ok := reference.(episodeStruct); ok && len(children) < 1 {
+			//TODO replace ep.title with proper title
 			downloadAsset(ep.Items[0], ep.Title)
 			newNode := tview.NewTreeNode("content downloaded")
 			node.AddChild(newNode)
