@@ -11,6 +11,6 @@ Open resulting files with VLC (make sure it's up to date).
     $ go build
     $ .\F1viewer
     
-**KNOW ISSUES**
+**KNOWN ISSUES**
 
 * resulting m3u8 can have audio desync
