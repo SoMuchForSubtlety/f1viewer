@@ -146,7 +146,7 @@ func main() {
 	flex := tview.NewFlex()
 	infoTable = tview.NewTable()
 	infoTable.SetBorder(true).SetTitle(" Episode Info ")
-	flex.AddItem(tree, 0, 1, true)
-	flex.AddItem(infoTable, 0, 1, false)
+	flex.AddItem(tree, 0, 2, true)
+	flex.AddItem(infoTable, 0, 3, false)
 	app.SetRoot(flex, true).Run()
 }
