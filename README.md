@@ -8,6 +8,7 @@ Open resulting files with VLC (make sure it's up to date).
 
 **USAGE**
 
+    $ go get github.com/rivo/tview
     $ go build
     $ .\F1viewer
     
