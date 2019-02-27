@@ -1,3 +1,11 @@
+## F1Viewer
+
+Download streamable .m3u8 file for any F1TV VOD.
+Open resulting files with VLC (make sure it's up to date).
+
+![alt text](https://vgy.me/qL0EuP.png)
+ 
+
 **USAGE**
 
     $ go build
