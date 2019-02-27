@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"sort"
 	"sync"
 
@@ -9,6 +10,7 @@ import (
 )
 
 var app *tview.Application
+var infoTable *tview.Table
 
 func main() {
 
@@ -79,6 +81,42 @@ func main() {
 		}
 	}
 
+	//display info for the episode the cursor is on
+	//TODO: are linebreaks possible?
+	tree.SetChangedFunc(func(node *tview.TreeNode) {
+		infoTable.Clear()
+		//check if selected node is an episode
+		reference := node.GetReference()
+		if ep, ok := reference.(episodeStruct); ok {
+			//get name and value
+			fields := reflect.TypeOf(ep)
+			values := reflect.ValueOf(ep)
+			num := fields.NumField()
+			num2 := 0
+
+			//write to table
+			for i := 0; i < num; i++ {
+				field := fields.Field(i)
+				value := values.Field(i)
+				//if value is a single string
+				if value.Kind() == reflect.String {
+					infoTable.SetCell(num2, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
+					infoTable.SetCell(num2, 2, tview.NewTableCell(value.String()))
+					num2++
+				} else if value.Kind() == reflect.Slice {
+					//if value is a string slice iterate through that too
+					infoTable.SetCell(num2, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorRed))
+					for j := 0; j < value.Len(); j++ {
+						item := value.Index(j)
+						infoTable.SetCell(num2, 2, tview.NewTableCell(item.String()))
+						num2++
+					}
+				}
+			}
+		}
+		infoTable.ScrollToBeginning()
+	})
+
 	//what happens when a node is selected
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
 		reference := node.GetReference()
@@ -89,6 +127,7 @@ func main() {
 			//TODO replace ep.title with proper title
 			downloadAsset(ep.Items[0], ep.Title)
 			newNode := tview.NewTreeNode("content downloaded")
+			newNode.SetSelectable(false)
 			node.AddChild(newNode)
 			return
 		}
@@ -104,5 +143,10 @@ func main() {
 
 	//start UI
 	app = tview.NewApplication()
-	app.SetRoot(tree, true).Run()
+	flex := tview.NewFlex()
+	infoTable = tview.NewTable()
+	infoTable.SetBorder(true).SetTitle(" Episode Info ")
+	flex.AddItem(tree, 0, 1, true)
+	flex.AddItem(infoTable, 0, 1, false)
+	app.SetRoot(flex, true).Run()
 }
