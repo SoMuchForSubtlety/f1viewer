@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
 	"reflect"
 	"sort"
@@ -83,38 +82,24 @@ func main() {
 		}
 	}
 
-	//display info for the episode the cursor is on
-	//TODO: are linebreaks possible?
+	//display info for the episode or VOD type the cursor is on
+	//TODO: are linebreaks/ multiline cells possible?
 	tree.SetChangedFunc(func(node *tview.TreeNode) {
-		infoTable.Clear()
-		//check if selected node is an episode
 		reference := node.GetReference()
-		if ep, ok := reference.(episodeStruct); ok {
+		if index, ok := reference.(int); ok {
+			//check if selected node is a vod type
+			vodTypeStruct := vodTypes.Objects[index]
+			fields := reflect.TypeOf(vodTypeStruct)
+			values := reflect.ValueOf(vodTypeStruct)
+			fillTable(fields, values)
+		} else if ep, ok := reference.(episodeStruct); ok {
+			//check if selected node is an episode
 			//get name and value
 			fields := reflect.TypeOf(ep)
 			values := reflect.ValueOf(ep)
-			num := fields.NumField()
-			num2 := 0
-
-			//write to table
-			for i := 0; i < num; i++ {
-				field := fields.Field(i)
-				value := values.Field(i)
-				//if value is a single string
-				if value.Kind() == reflect.String {
-					infoTable.SetCell(num2, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
-					infoTable.SetCell(num2, 2, tview.NewTableCell(value.String()))
-					num2++
-				} else if value.Kind() == reflect.Slice {
-					//if value is a string slice iterate through that too
-					infoTable.SetCell(num2, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorRed))
-					for j := 0; j < value.Len(); j++ {
-						item := value.Index(j)
-						infoTable.SetCell(num2, 2, tview.NewTableCell(item.String()))
-						num2++
-					}
-				}
-			}
+			fillTable(fields, values)
+		} else if node.GetText() == "VOD-Types" {
+			infoTable.Clear()
 		}
 		infoTable.ScrollToBeginning()
 	})
@@ -126,24 +111,26 @@ func main() {
 		if reference == nil {
 			return //Selecting the root node does nothing.
 		} else if ep, ok := reference.(episodeStruct); ok && len(children) < 1 {
+			//if episode is selected for the first time
 			//add nodes to download or play directly
 			playNode := tview.NewTreeNode("Play with MPV")
 			playNode.SetReference(getM3U8URL(ep.Items[0]))
 			node.AddChild(playNode)
 
-			downloadNode := tview.NewTreeNode("download .m3u8")
+			downloadNode := tview.NewTreeNode("Download .m3u8")
 			downloadNode.SetReference([]string{ep.Items[0], ep.Title})
 			node.AddChild(downloadNode)
 		} else if node.GetText() == "Play with MPV" {
 			//if "play" node is selected
+			node.SetColor(tcell.ColorBlue)
 			//open URL in MPV
 			mpvPlay(reference.(string))
-		} else if node.GetText() == "download .m3u8" {
+		} else if node.GetText() == "Download .m3u8" {
 			//if "download" node is selected
+			node.SetColor(tcell.ColorBlue)
 			//download .m3u8
-			slice1 := node.GetReference().([]string)
-			fmt.Println(len(slice1))
-			downloadAsset(slice1[0], slice1[1])
+			ref := node.GetReference().([]string)
+			downloadAsset(ref[0], ref[1])
 		} else if len(children) == 0 {
 			//if episodes for category are not loaded yet
 			//TODO: limit threads that are spawned
@@ -160,7 +147,7 @@ func main() {
 	app = tview.NewApplication()
 	flex := tview.NewFlex()
 	infoTable = tview.NewTable()
-	infoTable.SetBorder(true).SetTitle(" Episode Info ")
+	infoTable.SetBorder(true).SetTitle(" Info ")
 	flex.AddItem(tree, 0, 2, true)
 	flex.AddItem(infoTable, 0, 3, false)
 	app.SetRoot(flex, true).Run()
@@ -170,4 +157,30 @@ func main() {
 func mpvPlay(m3u8URL string) {
 	cmd := exec.Command("mpv", m3u8URL)
 	cmd.Start()
+}
+
+//takes struct reflect Types and Values and draws them as a table
+func fillTable(fields reflect.Type, values reflect.Value) {
+	infoTable.Clear()
+	rowIndex := 0
+
+	//iterate through  fields
+	for fieldIndex := 0; fieldIndex < fields.NumField(); fieldIndex++ {
+		field := fields.Field(fieldIndex)
+		value := values.Field(fieldIndex)
+		//if value is a single string
+		if value.Kind() == reflect.String {
+			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
+			infoTable.SetCell(rowIndex, 2, tview.NewTableCell(value.String()))
+			rowIndex++
+		} else if value.Kind() == reflect.Slice {
+			//if value is a string slice iterate through that too
+			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorRed))
+			for j := 0; j < value.Len(); j++ {
+				item := value.Index(j)
+				infoTable.SetCell(rowIndex, 2, tview.NewTableCell(item.String()))
+				rowIndex++
+			}
+		}
+	}
 }
