@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os/exec"
 	"reflect"
 	"sort"
 	"sync"
@@ -124,14 +126,27 @@ func main() {
 		if reference == nil {
 			return //Selecting the root node does nothing.
 		} else if ep, ok := reference.(episodeStruct); ok && len(children) < 1 {
-			//TODO replace ep.title with proper title
-			downloadAsset(ep.Items[0], ep.Title)
-			newNode := tview.NewTreeNode("content downloaded")
-			newNode.SetSelectable(false)
-			node.AddChild(newNode)
-			return
-		}
-		if len(children) == 0 {
+			//add nodes to download or play directly
+			playNode := tview.NewTreeNode("Play with MPV")
+			playNode.SetReference(getM3U8URL(ep.Items[0]))
+			node.AddChild(playNode)
+
+			downloadNode := tview.NewTreeNode("download .m3u8")
+			downloadNode.SetReference([]string{ep.Items[0], ep.Title})
+			node.AddChild(downloadNode)
+		} else if node.GetText() == "Play with MPV" {
+			//if "play" node is selected
+			//open URL in MPV
+			mpvPlay(reference.(string))
+		} else if node.GetText() == "download .m3u8" {
+			//if "download" node is selected
+			//download .m3u8
+			slice1 := node.GetReference().([]string)
+			fmt.Println(len(slice1))
+			downloadAsset(slice1[0], slice1[1])
+		} else if len(children) == 0 {
+			//if episodes for category are not loaded yet
+			//TODO: limit threads that are spawned
 			go func() {
 				addEpisodes(node, reference.(int))
 			}()
@@ -149,4 +164,10 @@ func main() {
 	flex.AddItem(tree, 0, 2, true)
 	flex.AddItem(infoTable, 0, 3, false)
 	app.SetRoot(flex, true).Run()
+}
+
+//launches MPV
+func mpvPlay(m3u8URL string) {
+	cmd := exec.Command("mpv", m3u8URL)
+	cmd.Start()
 }
