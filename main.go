@@ -136,20 +136,19 @@ func main() {
 			//check if window is launched
 			scanner := bufio.NewScanner(stdoutIn)
 			go func() {
+				//check if MPV is opened
 				done := false
-				for !done {
-					//check if MPV is opened
-					go func() {
-						for scanner.Scan() {
-							sText := scanner.Text()
-							if strings.Contains(sText, "Video") {
-								break
-							}
+				go func() {
+					for scanner.Scan() {
+						sText := scanner.Text()
+						if strings.Contains(sText, "Video") {
+							break
 						}
-						done = true
-					}()
-
-					//blink the current node from white to blue
+					}
+					done = true
+				}()
+				//blink the current node from white to blue until MPV is opened
+				for !done {
 					node.SetColor(tcell.ColorBlue)
 					app.Draw()
 					time.Sleep(300 * time.Millisecond)
