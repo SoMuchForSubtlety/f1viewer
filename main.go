@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"os/exec"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
@@ -54,6 +57,7 @@ func main() {
 			//load every episode
 			for i := range vodTypes.Objects[parentType].ContentUrls {
 				//multithread loading the apisodes and add them to the tree dynamically
+				//TODO: limit the number of threads
 				go func(i int) {
 					ep := getEpisode(vodTypes.Objects[parentType].ContentUrls[i])
 					episodes = append(episodes, ep)
@@ -118,13 +122,42 @@ func main() {
 			node.AddChild(playNode)
 
 			downloadNode := tview.NewTreeNode("Download .m3u8")
-			downloadNode.SetReference([]string{ep.Items[0], ep.Title})
+			downloadNode.SetReference([]string{ep.Items[0], ep.Slug})
 			node.AddChild(downloadNode)
 		} else if node.GetText() == "Play with MPV" {
 			//if "play" node is selected
-			node.SetColor(tcell.ColorBlue)
 			//open URL in MPV
-			mpvPlay(reference.(string))
+
+			cmd := exec.Command("mpv", reference.(string))
+			//create pipe with command output
+			stdoutIn, _ := cmd.StdoutPipe()
+			//launch command
+			cmd.Start()
+			//check if window is launched
+			scanner := bufio.NewScanner(stdoutIn)
+			go func() {
+				done := false
+				for !done {
+					//check if MPV is opened
+					go func() {
+						for scanner.Scan() {
+							sText := scanner.Text()
+							if strings.Contains(sText, "Video") {
+								break
+							}
+						}
+						done = true
+					}()
+
+					//blink the current node from white to blue
+					node.SetColor(tcell.ColorBlue)
+					app.Draw()
+					time.Sleep(300 * time.Millisecond)
+					node.SetColor(tcell.ColorWhite)
+					app.Draw()
+					time.Sleep(300 * time.Millisecond)
+				}
+			}()
 		} else if node.GetText() == "Download .m3u8" {
 			//if "download" node is selected
 			node.SetColor(tcell.ColorBlue)
@@ -133,7 +166,6 @@ func main() {
 			downloadAsset(ref[0], ref[1])
 		} else if len(children) == 0 {
 			//if episodes for category are not loaded yet
-			//TODO: limit threads that are spawned
 			go func() {
 				addEpisodes(node, reference.(int))
 			}()
@@ -151,12 +183,6 @@ func main() {
 	flex.AddItem(tree, 0, 2, true)
 	flex.AddItem(infoTable, 0, 3, false)
 	app.SetRoot(flex, true).Run()
-}
-
-//launches MPV
-func mpvPlay(m3u8URL string) {
-	cmd := exec.Command("mpv", m3u8URL)
-	cmd.Start()
 }
 
 //takes struct reflect Types and Values and draws them as a table

@@ -37,7 +37,7 @@ func downloadAsset(assetID string, title string) {
 
 	//download and patch .m3u8 file
 	//TODO: switch id to title
-	downloadM3U8(id+".m3u8", response)
+	downloadM3U8(title+".m3u8", response)
 }
 
 //returns valid m3u8 URL as string
