@@ -11,29 +11,16 @@ import (
 	"strings"
 )
 
-//trims asset ID
-//TODO: unnessecary?
-func trimID(assetID string) string {
-	id := ""
-	if assetID[:17] == "/api/assets/asse_" {
-		id = assetID[17 : len(assetID)-1]
-	} else {
-		id = assetID
-	}
-	return id
-}
-
 //returns URL of m3u8
 func getM3U8URL(assetID string) string {
 	//get playable URL of m3u8 file
-	return getProperURL(trimID(assetID))
+	return getProperURL(assetID)
 }
 
 //takes asset ID and downloads corresponding .m3u8
 func downloadAsset(assetID string, title string) {
 	//get JSON containing .m3u8 url
-	id := trimID(assetID)
-	response := getProperURL(id)
+	response := getProperURL(assetID)
 
 	//download and patch .m3u8 file
 	//TODO: switch id to title
@@ -43,7 +30,7 @@ func downloadAsset(assetID string, title string) {
 //returns valid m3u8 URL as string
 func getProperURL(assetID string) string {
 
-	formattedID := `{"asset_url":"/api/assets/asse_` + assetID + `/"}`
+	formattedID := `{"asset_url":"` + assetID + `"}`
 
 	//make request
 	body := strings.NewReader(formattedID)
