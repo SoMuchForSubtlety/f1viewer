@@ -131,6 +131,34 @@ type vodTypesStruct struct {
 	} `json:"objects"`
 }
 
+type driverStruct struct {
+	LastName                     string    `json:"last_name"`
+	UID                          string    `json:"uid"`
+	EventoccurrenceAsWinner1Urls []string  `json:"eventoccurrence_as_winner_1_urls"`
+	NationURL                    string    `json:"nation_url"`
+	ChannelUrls                  []string  `json:"channel_urls"`
+	LastSeason                   int       `json:"last_season"`
+	FirstName                    string    `json:"first_name"`
+	DriverReference              string    `json:"driver_reference"`
+	Self                         string    `json:"self"`
+	FirstSeason                  int       `json:"first_season"`
+	DriverTla                    string    `json:"driver_tla"`
+	DataSourceFields             []string  `json:"data_source_fields"`
+	EventoccurrenceAsWinner2Urls []string  `json:"eventoccurrence_as_winner_2_urls"`
+	DataSourceID                 string    `json:"data_source_id"`
+	DriveroccurrenceUrls         []string  `json:"driveroccurrence_urls"`
+	ImageUrls                    []string  `json:"image_urls"`
+	LastDataIngest               time.Time `json:"last_data_ingest"`
+	EventoccurrenceAsWinner3Urls []string  `json:"eventoccurrence_as_winner_3_urls"`
+	Language                     string    `json:"language"`
+	Created                      time.Time `json:"created"`
+	Modified                     time.Time `json:"modified"`
+	ContentUrls                  []string  `json:"content_urls"`
+	TeamURL                      string    `json:"team_url"`
+	Editability                  string    `json:"editability"`
+	DriverRacingnumber           int       `json:"driver_racingnumber"`
+}
+
 //downloads json from URL and returns the json as string and whether it's valid as bool
 func getJSON(url string) (bool, string) {
 	resp, err := http.Get(url)
@@ -150,20 +178,23 @@ func isJSON(s string) bool {
 	return json.Unmarshal([]byte(s), &js) == nil
 }
 
+func getDriver(driverID string) driverStruct {
+	var driver driverStruct
+	_, jsonString := getJSON(urlStart + driverID)
+	json.Unmarshal([]byte(jsonString), &driver)
+	return driver
+}
+
 func getEpisode(episodeID string) episodeStruct {
 	var ep episodeStruct
-
 	_, jsonString := getJSON(urlStart + episodeID)
 	json.Unmarshal([]byte(jsonString), &ep)
-
 	return ep
 }
 
 func getVodTypes() vodTypesStruct {
 	var types vodTypesStruct
-
 	_, jsonString := getJSON(vodTypesURL)
 	json.Unmarshal([]byte(jsonString), &types)
-
 	return types
 }

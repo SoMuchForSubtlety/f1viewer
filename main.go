@@ -17,36 +17,38 @@ import (
 )
 
 var episodeMap map[string]episodeStruct
+var driverMap map[string]driverStruct
+
 var episodeMapMutex = sync.RWMutex{}
+var driverMapMutex = sync.RWMutex{}
 
 var app *tview.Application
 var infoTable *tview.Table
 var debugText *tview.TextView
+var tree *tview.TreeView
 
 func main() {
+	//TODO: add confit for preserred audio language
+
+	//cache for loaded episodes
 	episodeMap = make(map[string]episodeStruct)
-
-	rootDir := "VOD-Types"
-	root := tview.NewTreeNode(rootDir).
-		SetColor(tcell.ColorBlue)
-	tree := tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
-	vodTypes := getVodTypes()
-
-	//TODO does not need to be a function (?)
-	//for the base category nodes
-	add := func(target *tview.TreeNode) {
-		//iterate through vod-types
-		for i, vType := range vodTypes.Objects {
-			node := tview.NewTreeNode(vType.Name).SetSelectable(true)
-			node.SetReference(i)
-			target.AddChild(node)
-		}
-	}
+	driverMap = make(map[string]driverStruct)
 
 	//build base tree
-	add(root)
+	rootDir := "VOD-Types"
+	root := tview.NewTreeNode(rootDir)
+	root.SetColor(tcell.ColorBlue)
+	root.SetSelectable(false)
+	tree = tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
+	//add vod types to tree
+	vodTypes := getVodTypes()
+	for i, vType := range vodTypes.Objects {
+		node := tview.NewTreeNode(vType.Name).SetSelectable(true)
+		node.SetReference(i)
+		root.AddChild(node)
+	}
 
-	//TODO add year subnodes
+	//load episodes for VOD type
 	addEpisodes := func(target *tview.TreeNode, parentType int) {
 		//check if episodes of the selected type are not available
 		if len(vodTypes.Objects[parentType].ContentUrls) == 0 {
@@ -62,6 +64,19 @@ func main() {
 			//waitgroup so sorting doesn't get skipped
 			var wg sync.WaitGroup
 			wg.Add(len(vodTypes.Objects[parentType].ContentUrls))
+
+			//blink category node until loading is complete
+			doneLoading := false
+			go func() {
+				for !doneLoading {
+					target.SetColor(tcell.ColorBlue)
+					app.Draw()
+					time.Sleep(200 * time.Millisecond)
+					target.SetColor(tcell.ColorWhite)
+					app.Draw()
+					time.Sleep(200 * time.Millisecond)
+				}
+			}()
 
 			//load every episode
 			//TODO: tweak number of threads
@@ -93,8 +108,10 @@ func main() {
 					}(i)
 				}
 			}()
+
 			//wait for loading to complete
 			wg.Wait()
+
 			//sort episodes
 			sort.Slice(episodes, func(i, j int) bool {
 				_, err := strconv.Atoi(episodes[i].DataSourceID[:4])
@@ -107,11 +124,12 @@ func main() {
 
 				year1, race1 := getYearAndRace(episodes[i].DataSourceID)
 				year2, race2 := getYearAndRace(episodes[j].DataSourceID)
-				//sort chronologically
+				//sort chronologically by year and race number
 				return year1 < year2 || ((year1 == year2) && (race1 < race2))
 			})
+
+			//add loaded and sorted episodes to tree
 			var skippedEpisodes []*tview.TreeNode
-			//add episodes to tree
 			for _, ep := range episodes {
 				node := tview.NewTreeNode(ep.Title).SetSelectable(true)
 				node.SetReference(ep)
@@ -120,7 +138,7 @@ func main() {
 				//check for year/ race code
 				if _, err := strconv.Atoi(yearRaceID); err == nil {
 					year := ""
-					//TODO: better solution for "2018/19[..]" IDs
+					//TODO: better solution for "2018/19[..]" IDs before
 					//special case for IDs that start with 2018/19 since they don't  match the pattern
 					if yearRaceID != "2018" && yearRaceID != "2019" {
 						year, _ = getYearAndRace(ep.DataSourceID)
@@ -151,10 +169,13 @@ func main() {
 					skippedEpisodes = append(skippedEpisodes, node)
 				}
 			}
+
 			//add skipped episodes to tree
 			for _, ep := range skippedEpisodes {
 				target.AddChild(ep)
 			}
+			//stop blinking
+			doneLoading = true
 			app.Draw()
 		}
 	}
@@ -168,14 +189,14 @@ func main() {
 			vodTypeStruct := vodTypes.Objects[index]
 			fields := reflect.TypeOf(vodTypeStruct)
 			values := reflect.ValueOf(vodTypeStruct)
-			fillTable(fields, values)
+			go fillTable(fields, values)
 		} else if ep, ok := reference.(episodeStruct); ok {
 			//check if selected node is an episode
 			//get name and value
 			fields := reflect.TypeOf(ep)
 			values := reflect.ValueOf(ep)
-			fillTable(fields, values)
-		} else if node.GetText() == "VOD-Types" {
+			go fillTable(fields, values)
+		} else {
 			infoTable.Clear()
 		}
 		infoTable.ScrollToBeginning()
@@ -188,6 +209,7 @@ func main() {
 		if reference == nil {
 			return //Selecting the root node does nothing.
 		} else if ep, ok := reference.(episodeStruct); ok && len(children) < 1 {
+			//TODO: create these on episode node creation?
 			//if episode is selected for the first time
 			//add nodes to download or play directly
 			playNode := tview.NewTreeNode("Play with MPV")
@@ -291,38 +313,78 @@ func fillTable(fields reflect.Type, values reflect.Value) {
 			infoTable.SetCell(rowIndex, 2, tview.NewTableCell(value.String()))
 			rowIndex++
 		} else if value.Kind() == reflect.Slice {
-			//if value is a string slice iterate through that too
 			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorRed))
-			for j := 0; j < value.Len(); j++ {
-				item := value.Index(j)
-				infoTable.SetCell(rowIndex, 2, tview.NewTableCell(item.String()))
+			//if value is a string slice iterate through that too
+			lines := multiLine(value)
+			app.Draw()
+			for _, line := range lines {
+				infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
 				rowIndex++
 			}
 		}
 	}
-}
-
-//TODO: change before 2030
-func fullYear(lastDigits string) string {
-	intYear, _ := strconv.Atoi(lastDigits)
-	fullYear := ""
-	//TODO: change before 2030
-	if intYear < 30 {
-		fullYear = "20" + lastDigits
-	} else {
-		fullYear = "19" + lastDigits
-	}
-	return fullYear
+	infoTable.ScrollToBeginning()
 }
 
 //takes year/race ID and returns full year and race nuber as strings
 func getYearAndRace(input string) (string, string) {
-	year := fullYear(input[:2])
+	year := input[:2]
+	intYear, _ := strconv.Atoi(year)
+	var fullYear string
+	//TODO: change before 2030
+	if intYear < 30 {
+		fullYear = "20" + year
+	} else {
+		fullYear = "19" + year
+	}
 	raceNumber := input[2:4]
-	return year, raceNumber
+	return fullYear, raceNumber
 }
 
 //prints to debug window
 func debugPrint(s string) {
 	fmt.Fprintf(debugText, s+"\n")
+	debugText.ScrollToEnd()
+}
+
+//parses multiline values for the info table
+func multiLine(value reflect.Value) []string {
+	size := value.Len()
+	lines := make([]string, size)
+	var wg sync.WaitGroup
+	wg.Add(size)
+	//iterate over all lines
+	for j := 0; j < value.Len(); j++ {
+		go func(j int) {
+			//get original content
+			item := value.Index(j)
+			//convert to string
+			valueString := item.String()
+			//if it's a list of driver IDs
+			//TODO: do the same for teams, etc.
+			if len(valueString) > 12 && valueString[:12] == "/api/driver/" {
+				//check if driver metadata is already cached
+				driverMapMutex.RLock()
+				driver, ok := driverMap[valueString]
+				driverMapMutex.RUnlock()
+				if !ok {
+					debugPrint("loaded from web")
+					//load driver metadata if not already cached
+					driver = getDriver(valueString)
+					//add metadata to cache
+					driverMapMutex.Lock()
+					driverMap[valueString] = driver
+					driverMapMutex.Unlock()
+				}
+				//change string to driver name + number from metadata
+				valueString = driver.FirstName + " " + driver.LastName + " (" + strconv.Itoa(driver.DriverRacingnumber) + ")"
+			}
+			//add string to slice
+			lines[j] = valueString
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	sort.Strings(lines)
+	return lines
 }
