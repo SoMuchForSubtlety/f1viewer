@@ -159,6 +159,25 @@ type driverStruct struct {
 	DriverRacingnumber           int       `json:"driver_racingnumber"`
 }
 
+type teamStruct struct {
+	Name                 string    `json:"name"`
+	Language             string    `json:"language"`
+	Created              time.Time `json:"created"`
+	Colour               string    `json:"colour"`
+	DriveroccurrenceUrls []string  `json:"driveroccurrence_urls"`
+	DriverUrls           []string  `json:"driver_urls"`
+	Modified             time.Time `json:"modified"`
+	ImageUrls            []string  `json:"image_urls"`
+	NationURL            string    `json:"nation_url"`
+	ContentUrls          []string  `json:"content_urls"`
+	LastDataIngest       time.Time `json:"last_data_ingest"`
+	DataSourceFields     []string  `json:"data_source_fields"`
+	Self                 string    `json:"self"`
+	Editability          string    `json:"editability"`
+	DataSourceID         string    `json:"data_source_id"`
+	UID                  string    `json:"uid"`
+}
+
 //downloads json from URL and returns the json as string and whether it's valid as bool
 func getJSON(url string) (bool, string) {
 	resp, err := http.Get(url)
@@ -183,6 +202,13 @@ func getDriver(driverID string) driverStruct {
 	_, jsonString := getJSON(urlStart + driverID)
 	json.Unmarshal([]byte(jsonString), &driver)
 	return driver
+}
+
+func getTeam(teamID string) teamStruct {
+	var team teamStruct
+	_, jsonString := getJSON(urlStart + teamID)
+	json.Unmarshal([]byte(jsonString), &team)
+	return team
 }
 
 func getEpisode(episodeID string) episodeStruct {

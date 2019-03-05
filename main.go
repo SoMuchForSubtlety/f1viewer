@@ -18,9 +18,11 @@ import (
 
 var episodeMap map[string]episodeStruct
 var driverMap map[string]driverStruct
+var teamMap map[string]teamStruct
 
 var episodeMapMutex = sync.RWMutex{}
 var driverMapMutex = sync.RWMutex{}
+var teamMapMutex = sync.RWMutex{}
 
 var app *tview.Application
 var infoTable *tview.Table
@@ -33,6 +35,7 @@ func main() {
 	//cache for loaded episodes
 	episodeMap = make(map[string]episodeStruct)
 	driverMap = make(map[string]driverStruct)
+	teamMap = make(map[string]teamStruct)
 
 	//build base tree
 	rootDir := "VOD-Types"
@@ -316,12 +319,12 @@ func fillTable(fields reflect.Type, values reflect.Value) {
 			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorRed))
 			//if value is a string slice iterate through that too
 			lines := multiLine(value)
-			app.Draw()
 			for _, line := range lines {
 				infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
 				rowIndex++
 			}
 		}
+		app.Draw()
 	}
 	infoTable.ScrollToBeginning()
 }
@@ -351,36 +354,85 @@ func debugPrint(s string) {
 func multiLine(value reflect.Value) []string {
 	size := value.Len()
 	lines := make([]string, size)
-	var wg sync.WaitGroup
-	wg.Add(size)
-	//iterate over all lines
+	if len(lines) < 1 {
+		return lines
+	}
+	//populate string array
 	for j := 0; j < value.Len(); j++ {
+		lines[j] = value.Index(j).String()
+	}
+	if len(lines[0]) > 12 && lines[0][:12] == "/api/driver/" {
+		lines = getDriverNames(lines)
+	} else if len(lines[0]) > 12 && lines[0][:10] == "/api/team/" {
+		lines = getTeamNames(lines)
+	}
+	return lines
+}
+
+//turns array of driver IDs to their names
+func getDriverNames(lines []string) []string {
+	var wg sync.WaitGroup
+	wg.Add(len(lines))
+	//iterate over all lines
+	for j := 0; j < len(lines); j++ {
 		go func(j int) {
-			//get original content
-			item := value.Index(j)
-			//convert to string
-			valueString := item.String()
-			//if it's a list of driver IDs
 			//TODO: do the same for teams, etc.
-			if len(valueString) > 12 && valueString[:12] == "/api/driver/" {
-				//check if driver metadata is already cached
-				driverMapMutex.RLock()
-				driver, ok := driverMap[valueString]
-				driverMapMutex.RUnlock()
-				if !ok {
-					debugPrint("loaded from web")
-					//load driver metadata if not already cached
-					driver = getDriver(valueString)
-					//add metadata to cache
-					driverMapMutex.Lock()
-					driverMap[valueString] = driver
-					driverMapMutex.Unlock()
-				}
-				//change string to driver name + number from metadata
-				valueString = driver.FirstName + " " + driver.LastName + " (" + strconv.Itoa(driver.DriverRacingnumber) + ")"
+			//check if driver metadata is already cached
+			driverMapMutex.RLock()
+			driver, ok := driverMap[lines[j]]
+			driverMapMutex.RUnlock()
+			if !ok {
+				debugPrint("team loaded from web")
+				//load driver metadata if not already cached
+				driver = getDriver(lines[j])
+				//add metadata to cache
+				driverMapMutex.Lock()
+				driverMap[lines[j]] = driver
+				driverMapMutex.Unlock()
+			}
+			//change string to driver name + number from metadata
+			number := driver.DriverRacingnumber
+			//TODO: move number to back of string
+			strNumber := ""
+			if number < 10 {
+				strNumber = " (" + strconv.Itoa(driver.DriverRacingnumber) + ") "
+			} else {
+				strNumber = "(" + strconv.Itoa(driver.DriverRacingnumber) + ") "
+
+			}
+			lines[j] = strNumber + driver.FirstName + " " + driver.LastName
+
+			//add string to slice
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	sort.Strings(lines)
+	return lines
+}
+
+//turns array of team IDs to their names
+func getTeamNames(lines []string) []string {
+	var wg sync.WaitGroup
+	wg.Add(len(lines))
+	//iterate over all lines
+	for j := 0; j < len(lines); j++ {
+		go func(j int) {
+			//check if team metadata is already cached
+			teamMapMutex.RLock()
+			team, ok := teamMap[lines[j]]
+			teamMapMutex.RUnlock()
+			if !ok {
+				debugPrint("driver loaded from web")
+				//load team metadata if not already cached
+				team = getTeam(lines[j])
+				//add metadata to cache
+				teamMapMutex.Lock()
+				teamMap[lines[j]] = team
+				teamMapMutex.Unlock()
 			}
 			//add string to slice
-			lines[j] = valueString
+			lines[j] = team.Name
 			wg.Done()
 		}(j)
 	}
