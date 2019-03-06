@@ -186,6 +186,9 @@ func main() {
 	//display info for the episode or VOD type the cursor is on
 	//TODO: are linebreaks/ multiline cells possible?
 	tree.SetChangedFunc(func(node *tview.TreeNode) {
+		titles := make([]string, 1)
+		values := make([][]string, 1)
+
 		reference := node.GetReference()
 		if index, ok := reference.(int); ok {
 			//check if selected node is a vod type
@@ -196,9 +199,18 @@ func main() {
 		} else if ep, ok := reference.(episodeStruct); ok {
 			//check if selected node is an episode
 			//get name and value
-			fields := reflect.TypeOf(ep)
-			values := reflect.ValueOf(ep)
-			go fillTable(fields, values)
+			titles = append(titles, "Title")
+			values = append(values, []string{ep.Title})
+			titles = append(titles, "Subtitle")
+			values = append(values, []string{ep.Subtitle})
+			titles = append(titles, "Synopsis")
+			values = append(values, []string{ep.Synopsis})
+			titles = append(titles, "Drivers")
+			values = append(values, ep.DriverUrls)
+			titles = append(titles, "Teams")
+			values = append(values, ep.TeamUrls)
+
+			go fillTableFromSlices(titles, values)
 		} else {
 			infoTable.Clear()
 		}
@@ -226,8 +238,8 @@ func main() {
 			//if "play" node is selected
 			//open URL in MPV
 			//TODO: handle mpv not installed
-
-			cmd := exec.Command("mpv", reference.(string))
+			//TODO: move language selection to config file
+			cmd := exec.Command("mpv", reference.(string), "--alang=en")
 			//create pipe with command output
 			stdoutIn, _ := cmd.StdoutPipe()
 			//launch command
@@ -301,24 +313,45 @@ func main() {
 	app.SetRoot(flex, true).Run()
 }
 
-//takes struct reflect Types and Values and draws them as a table
-func fillTable(fields reflect.Type, values reflect.Value) {
+//takes struct reflect Types and values and draws them as a table
+func fillTable(titles reflect.Type, values reflect.Value) {
+	t := make([]string, 1)
+	v := make([][]string, 1)
+
+	//iterate through titles and values and add them to the slices
+	for i := 0; i < titles.NumField(); i++ {
+		title := titles.Field(i)
+		value := values.Field(i)
+
+		if value.Kind() == reflect.String {
+			//if velue is a string
+			t = append(t, title.Name)
+			v = append(v, []string{value.String()})
+		} else if value.Kind() == reflect.Slice {
+			//if value is a slice of strings
+			lines := make([]string, value.Len())
+			for j := 0; j < value.Len(); j++ {
+				lines[j] = value.Index(j).String()
+			}
+			t = append(t, title.Name)
+			v = append(v, lines)
+		}
+	}
+	fillTableFromSlices(t, v)
+}
+
+//takes title and values slices and draws them as table
+func fillTableFromSlices(titles []string, values [][]string) {
 	infoTable.Clear()
 	rowIndex := 0
-
-	//iterate through  fields
-	for fieldIndex := 0; fieldIndex < fields.NumField(); fieldIndex++ {
-		field := fields.Field(fieldIndex)
-		value := values.Field(fieldIndex)
-		//if value is a single string
-		if value.Kind() == reflect.String {
-			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
-			infoTable.SetCell(rowIndex, 2, tview.NewTableCell(value.String()))
-			rowIndex++
-		} else if value.Kind() == reflect.Slice {
-			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(field.Name).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorRed))
-			//if value is a string slice iterate through that too
-			lines := multiLine(value)
+	for index, title := range titles {
+		//convert supported API IDs to reasonable strings
+		lines := convertIDs(values[index])
+		//print to info table
+		if len(values[index]) > 0 && len(values[index][0]) > 1 {
+			//print title
+			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(title).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
+			//print values
 			for _, line := range lines {
 				infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
 				rowIndex++
@@ -351,15 +384,9 @@ func debugPrint(s string) {
 }
 
 //parses multiline values for the info table
-func multiLine(value reflect.Value) []string {
-	size := value.Len()
-	lines := make([]string, size)
+func convertIDs(lines []string) []string {
 	if len(lines) < 1 {
 		return lines
-	}
-	//populate string array
-	for j := 0; j < value.Len(); j++ {
-		lines[j] = value.Index(j).String()
 	}
 	if len(lines[0]) > 12 && lines[0][:12] == "/api/driver/" {
 		lines = getDriverNames(lines)
@@ -389,6 +416,8 @@ func getDriverNames(lines []string) []string {
 				driverMapMutex.Lock()
 				driverMap[lines[j]] = driver
 				driverMapMutex.Unlock()
+			} else {
+				debugPrint("team loaded from cache")
 			}
 			//change string to driver name + number from metadata
 			number := driver.DriverRacingnumber
@@ -430,6 +459,8 @@ func getTeamNames(lines []string) []string {
 				teamMapMutex.Lock()
 				teamMap[lines[j]] = team
 				teamMapMutex.Unlock()
+			} else {
+				debugPrint("driver loaded from cache")
 			}
 			//add string to slice
 			lines[j] = team.Name
