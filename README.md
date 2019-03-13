@@ -7,7 +7,7 @@ You can play the downloaded files with VLC or MPV player. To play them with MPV 
 
 Some files have audio desync issues with VLC.
 
-![alt text](https://i.imgur.com/E8Akpby.png)
+![alt text](https://i.imgur.com/K8yCkib.png)
  
 
 **USAGE**
