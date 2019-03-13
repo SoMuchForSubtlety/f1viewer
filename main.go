@@ -170,7 +170,9 @@ func main() {
 
 			//blink category node until loading is complete
 			doneLoading := false
+			originalText := target.GetText()
 			go func() {
+				target.SetText("loading...")
 				for !doneLoading {
 					target.SetColor(tcell.ColorBlue)
 					app.Draw()
@@ -179,6 +181,8 @@ func main() {
 					app.Draw()
 					time.Sleep(200 * time.Millisecond)
 				}
+				target.SetText(originalText)
+				app.Draw()
 			}()
 
 			//load every episode
@@ -360,6 +364,7 @@ func main() {
 					done = true
 				}()
 				//blink the current node from white to blue until MPV is opened
+				node.SetText("loading...")
 				for !done {
 					node.SetColor(tcell.ColorBlue)
 					app.Draw()
@@ -368,6 +373,9 @@ func main() {
 					app.Draw()
 					time.Sleep(300 * time.Millisecond)
 				}
+				node.SetText("Play with MPV")
+				app.Draw()
+
 			}()
 		} else if node.GetText() == "Download .m3u8" {
 			//if "download" node is selected
@@ -377,9 +385,13 @@ func main() {
 			downloadAsset(ref[0], ref[1])
 		} else if len(children) == 0 {
 			//if episodes for category are not loaded yet
-			go func() {
-				addEpisodes(node, reference.(int))
-			}()
+			if i, ok := reference.(int); ok {
+				if i < len(vodTypes.Objects) {
+					go func() {
+						addEpisodes(node, i)
+					}()
+				}
+			}
 		} else {
 			//Collapse if visible, expand if collapsed.
 			node.SetExpanded(!node.IsExpanded())
