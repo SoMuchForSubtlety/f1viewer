@@ -11,16 +11,17 @@ import (
 	"strings"
 )
 
-//returns URL of m3u8
-func getM3U8URL(assetID string) string {
-	//get playable URL of m3u8 file
-	return getProperURL(assetID)
-}
-
 //takes asset ID and downloads corresponding .m3u8
 func downloadAsset(assetID string, title string) {
+	//sanitize title
+	title = strings.Replace(title, ":", "", -1)
 	//get JSON containing .m3u8 url
 	response := getProperURL(assetID)
+
+	//abort if no proper URL was found
+	if len(response) < 10 {
+		return
+	}
 
 	//download and patch .m3u8 file
 	//TODO: switch id to title
@@ -29,9 +30,14 @@ func downloadAsset(assetID string, title string) {
 
 //returns valid m3u8 URL as string
 func getProperURL(assetID string) string {
-
-	formattedID := `{"asset_url":"` + assetID + `"}`
-
+	formattedID := ""
+	isChannel := false
+	if strings.Contains(assetID, "/api/channels/") {
+		isChannel = true
+		formattedID = `{"channel_url":"` + assetID + `"}`
+	} else {
+		formattedID = `{"asset_url":"` + assetID + `"}`
+	}
 	//make request
 	body := strings.NewReader(formattedID)
 	req, err := http.NewRequest("POST", "https://f1tv.formula1.com/api/viewings/", body)
@@ -59,10 +65,25 @@ func getProperURL(assetID string) string {
 		} `json:"objects"`
 	}
 
-	var finalURL urlStruct
+	type channelURLstruct struct {
+		TokenisedURL string `json:"tokenised_url"`
+	}
 
-	json.Unmarshal([]byte(repsAsString), &finalURL)
-	var urlString = finalURL.Objects[0].Tata.TokenisedURL
+	var urlString = ""
+	if isChannel {
+		var finalURL channelURLstruct
+		err = json.Unmarshal([]byte(repsAsString), &finalURL)
+		if err != nil {
+			fmt.Println(err)
+		}
+		urlString = finalURL.TokenisedURL
+
+	} else {
+		var finalURL urlStruct
+		json.Unmarshal([]byte(repsAsString), &finalURL)
+		urlString = finalURL.Objects[0].Tata.TokenisedURL
+	}
+	//debugPrint(urlString)
 	return urlString
 }
 

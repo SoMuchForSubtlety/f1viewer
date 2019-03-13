@@ -8,6 +8,7 @@ import (
 )
 
 const urlStart = "https://f1tv.formula1.com"
+const sessionURLstart = "https://f1tv.formula1.com/api/session-occurrence/?fields=uid,nbc_status,status,editorial_start_time,live_sources_path,data_source_id,available_for_user,global_channel_urls,global_channel_urls__uid,global_channel_urls__slug,global_channel_urls__self,channel_urls,channel_urls__ovps,channel_urls__slug,channel_urls__name,channel_urls__uid,channel_urls__self,channel_urls__driver_urls,channel_urls__driver_urls__driver_tla,channel_urls__driver_urls__driver_racingnumber,channel_urls__driver_urls__first_name,channel_urls__driver_urls__last_name,channel_urls__driver_urls__image_urls,channel_urls__driver_urls__image_urls__image_type,channel_urls__driver_urls__image_urls__url,channel_urls__driver_urls__team_url,channel_urls__driver_urls__team_url__name,channel_urls__driver_urls__team_url__colour,eventoccurrence_url,eventoccurrence_url__slug,eventoccurrence_url__circuit_url,eventoccurrence_url__circuit_url__short_name,session_type_url,session_type_url__name&fields_to_expand=global_channel_urls,channel_urls,channel_urls__driver_urls,channel_urls__driver_urls__image_urls,channel_urls__driver_urls__team_url,eventoccurrence_url,eventoccurrence_url__circuit_url,session_type_url&slug="
 
 const tagsURL = "https://f1tv.formula1.com/api/tags/"
 const vodTypesURL = "http://f1tv.formula1.com/api/vod-type-tag/"
@@ -178,6 +179,134 @@ type teamStruct struct {
 	UID                  string    `json:"uid"`
 }
 
+type seasonStruct struct {
+	Name                     string        `json:"name"`
+	Language                 string        `json:"language"`
+	Created                  time.Time     `json:"created"`
+	ScheduleUrls             []string      `json:"schedule_urls"`
+	Self                     string        `json:"self"`
+	HasContent               bool          `json:"has_content"`
+	ImageUrls                []string      `json:"image_urls"`
+	Modified                 time.Time     `json:"modified"`
+	ScheduleAfterNextYearURL string        `json:"schedule_after_next_year_url"`
+	LastDataIngest           time.Time     `json:"last_data_ingest"`
+	DataSourceFields         []interface{} `json:"data_source_fields"`
+	Year                     int           `json:"year"`
+	EventoccurrenceUrls      []string      `json:"eventoccurrence_urls"`
+	Editability              string        `json:"editability"`
+	DataSourceID             string        `json:"data_source_id"`
+	UID                      string        `json:"uid"`
+}
+
+type eventStruct struct {
+	EventURL              string    `json:"event_url"`
+	UID                   string    `json:"uid"`
+	RaceSeasonURL         string    `json:"race_season_url"`
+	ScheduleUrls          []string  `json:"schedule_urls"`
+	Winner3URL            string    `json:"winner_3_url"`
+	OfficialName          string    `json:"official_name"`
+	NationURL             string    `json:"nation_url"`
+	SessionoccurrenceUrls []string  `json:"sessionoccurrence_urls"`
+	CircuitURL            string    `json:"circuit_url"`
+	Self                  string    `json:"self"`
+	DataSourceFields      []string  `json:"data_source_fields"`
+	StartDate             string    `json:"start_date"`
+	DataSourceID          string    `json:"data_source_id"`
+	EndDate               string    `json:"end_date"`
+	ImageUrls             []string  `json:"image_urls"`
+	Slug                  string    `json:"slug"`
+	LastDataIngest        time.Time `json:"last_data_ingest"`
+	Winner2URL            string    `json:"winner_2_url"`
+	Name                  string    `json:"name"`
+	Language              string    `json:"language"`
+	Created               time.Time `json:"created"`
+	Modified              time.Time `json:"modified"`
+	SponsorURL            string    `json:"sponsor_url"`
+	Winner1URL            string    `json:"winner_1_url"`
+	Editability           string    `json:"editability"`
+}
+
+type sessionStruct struct {
+	UID                      string        `json:"uid"`
+	ScheduleAfterMidnightURL string        `json:"schedule_after_midnight_url"`
+	ScheduleUrls             []string      `json:"schedule_urls"`
+	SessionExpiredTime       time.Time     `json:"session_expired_time"`
+	ChannelUrls              []string      `json:"channel_urls"`
+	GlobalChannelUrls        []string      `json:"global_channel_urls"`
+	AvailableForUser         bool          `json:"available_for_user"`
+	ScheduleAfter7DaysURL    string        `json:"schedule_after_7_days_url"`
+	NbcStatus                string        `json:"nbc_status"`
+	Self                     string        `json:"self"`
+	ReplayStartTime          time.Time     `json:"replay_start_time"`
+	DataSourceFields         []interface{} `json:"data_source_fields"`
+	DataSourceID             string        `json:"data_source_id"`
+	Status                   string        `json:"status"`
+	ScheduleAfter14DaysURL   string        `json:"schedule_after_14_days_url"`
+	EventoccurrenceURL       string        `json:"eventoccurrence_url"`
+	DriveroccurrenceUrls     []interface{} `json:"driveroccurrence_urls"`
+	StartTime                time.Time     `json:"start_time"`
+	ImageUrls                []string      `json:"image_urls"`
+	LiveSourcesPath          string        `json:"live_sources_path"`
+	StatusOverride           interface{}   `json:"status_override"`
+	NbcPid                   int           `json:"nbc_pid"`
+	LiveSourcesMd5           string        `json:"live_sources_md5"`
+	Slug                     string        `json:"slug"`
+	LastDataIngest           time.Time     `json:"last_data_ingest"`
+	Name                     string        `json:"name"`
+	SessionTypeURL           string        `json:"session_type_url"`
+	EditorialStartTime       time.Time     `json:"editorial_start_time"`
+	EventConfigMd5           string        `json:"event_config_md5"`
+	EditorialEndTime         interface{}   `json:"editorial_end_time"`
+	Language                 string        `json:"language"`
+	Created                  time.Time     `json:"created"`
+	Modified                 time.Time     `json:"modified"`
+	ContentUrls              []string      `json:"content_urls"`
+	ScheduleAfter24HURL      string        `json:"schedule_after_24h_url"`
+	EndTime                  time.Time     `json:"end_time"`
+	SeriesURL                string        `json:"series_url"`
+	SessionName              string        `json:"session_name"`
+	Editability              string        `json:"editability"`
+}
+
+type sessionStreamsStruct struct {
+	Objects []struct {
+		Status         string `json:"status"`
+		SessionTypeURL struct {
+			Name string `json:"name"`
+		} `json:"session_type_url"`
+		EditorialStartTime time.Time `json:"editorial_start_time"`
+		NbcStatus          string    `json:"nbc_status"`
+		EventoccurrenceURL struct {
+			CircuitURL struct {
+				ShortName string `json:"short_name"`
+			} `json:"circuit_url"`
+			Slug string `json:"slug"`
+		} `json:"eventoccurrence_url"`
+		LiveSourcesPath string `json:"live_sources_path"`
+		UID             string `json:"uid"`
+		ChannelUrls     []struct {
+			UID        string        `json:"uid"`
+			Self       string        `json:"self"`
+			DriverUrls []interface{} `json:"driver_urls"`
+			Ovps       []struct {
+				AccountURL    string `json:"account_url"`
+				Path          string `json:"path"`
+				Domain        string `json:"domain"`
+				FullStreamURL string `json:"full_stream_url"`
+			} `json:"ovps"`
+			Slug string `json:"slug"`
+			Name string `json:"name"`
+		} `json:"channel_urls"`
+		GlobalChannelUrls []struct {
+			Self string `json:"self"`
+			Slug string `json:"slug"`
+			UID  string `json:"uid"`
+		} `json:"global_channel_urls"`
+		DataSourceID     string `json:"data_source_id"`
+		AvailableForUser bool   `json:"available_for_user"`
+	} `json:"objects"`
+}
+
 //downloads json from URL and returns the json as string and whether it's valid as bool
 func getJSON(url string) (bool, string) {
 	resp, err := http.Get(url)
@@ -223,4 +352,32 @@ func getVodTypes() vodTypesStruct {
 	_, jsonString := getJSON(vodTypesURL)
 	json.Unmarshal([]byte(jsonString), &types)
 	return types
+}
+
+func getSeason(seasonID string) seasonStruct {
+	var season seasonStruct
+	_, jsonString := getJSON(urlStart + seasonID)
+	json.Unmarshal([]byte(jsonString), &season)
+	return season
+}
+
+func getEvent(eventID string) eventStruct {
+	var event eventStruct
+	_, jsonString := getJSON(urlStart + eventID)
+	json.Unmarshal([]byte(jsonString), &event)
+	return event
+}
+
+func getSession(sessionID string) sessionStruct {
+	var session sessionStruct
+	_, jsonString := getJSON(urlStart + sessionID)
+	json.Unmarshal([]byte(jsonString), &session)
+	return session
+}
+
+func getSessionStreams(sessionSlug string) sessionStreamsStruct {
+	var sessionStreams sessionStreamsStruct
+	_, jsonString := getJSON(sessionURLstart + sessionSlug)
+	json.Unmarshal([]byte(jsonString), &sessionStreams)
+	return sessionStreams
 }
