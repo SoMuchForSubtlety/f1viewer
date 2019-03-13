@@ -297,7 +297,7 @@ func main() {
 			downloadAsset(ref[0], ref[1])
 		} else if len(children) == 0 {
 			//if episodes for category are not loaded yet
-			if i, ok := reference.(int); ok {
+			if i, ok := reference.(int); ok && node.GetText() != "loading..." {
 				if i < len(vodTypes.Objects) {
 					go func() {
 						addEpisodes(node, i)
@@ -312,7 +312,6 @@ func main() {
 					go func() {
 						node.SetText("loading...")
 						//TODO: replace selectability with proper check
-						node.SetSelectable(false)
 						for !done {
 							node.SetColor(tcell.ColorBlue)
 							app.Draw()
@@ -322,7 +321,6 @@ func main() {
 							time.Sleep(200 * time.Millisecond)
 						}
 						node.SetText(originalText)
-						node.SetSelectable(true)
 						app.Draw()
 					}()
 				}
