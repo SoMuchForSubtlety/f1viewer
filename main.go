@@ -256,7 +256,7 @@ func main() {
 			//TODO: handle mpv not installed
 			//TODO: move language selection to config file
 			debugPrint(reference.(string))
-			cmd := exec.Command("mpv", reference.(string), "--alang=en")
+			cmd := exec.Command("mpv", reference.(string), "--alang=en", "--start=0")
 			//create pipe with command output
 			stdoutIn, _ := cmd.StdoutPipe()
 			//launch command
@@ -350,7 +350,7 @@ func main() {
 	})
 
 	flex.AddItem(tree, 0, 2, true)
-	flex.AddItem(rowFlex, 0, 3, false)
+	flex.AddItem(rowFlex, 0, 2, false)
 	rowFlex.AddItem(infoTable, 0, 2, false)
 	//flag -d enables debug window
 	if len(os.Args) > 1 && os.Args[1] == "-d" {
@@ -564,7 +564,7 @@ func loadEvents(parentNode *tview.TreeNode) {
 								}
 								//get url and check for url pattern where separate request needs to be made for the url to be accessible
 								url := streamPerspective.Ovps[0].FullStreamURL
-								if strings.Contains(url, "https://f1tv.secure.footprint.net/live/") || url == "" {
+								if strings.Contains(url, "https://f1tv.secure.footprint.net/live/") || url == "" || strings.Contains(url, "f1tv-cdn-cent-live") {
 									//TODO: see if high speed tests can be streamed (curretly return empty string)
 									newURL := getProperURL(streamPerspective.Self)
 									if len(newURL) > 5 {

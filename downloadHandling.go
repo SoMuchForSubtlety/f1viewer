@@ -115,7 +115,7 @@ func fixm3u8(lines []string, url string, filePath string) {
 
 	//fix URLs in m3u8
 	for _, line := range lines {
-		if len(line) > 0 && line[:5] == "layer" {
+		if len(line) > 0 && (line[:5] == "layer" || strings.Contains(line, "clip")) {
 			line = url + line
 		} else {
 			var re = regexp.MustCompile(`[^"]*m3u8"`)
