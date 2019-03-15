@@ -198,6 +198,10 @@ type seasonStruct struct {
 	UID                      string        `json:"uid"`
 }
 
+type allSeasonStruct struct {
+	Seasons []seasonStruct `json:"objects"`
+}
+
 type eventStruct struct {
 	EventURL              string    `json:"event_url"`
 	UID                   string    `json:"uid"`
@@ -354,11 +358,14 @@ func getVodTypes() vodTypesStruct {
 	return types
 }
 
-func getSeason(seasonID string) seasonStruct {
-	var season seasonStruct
-	_, jsonString := getJSON(urlStart + seasonID)
-	json.Unmarshal([]byte(jsonString), &season)
-	return season
+var listOfSeasons allSeasonStruct
+
+func getSeasons() allSeasonStruct {
+	if len(listOfSeasons.Seasons) < 1 {
+		_, jsonString := getJSON("https://f1tv.formula1.com/api/race-season/")
+		json.Unmarshal([]byte(jsonString), &listOfSeasons)
+	}
+	return listOfSeasons
 }
 
 func getEvent(eventID string) eventStruct {
