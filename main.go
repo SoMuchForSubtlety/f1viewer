@@ -82,20 +82,7 @@ func main() {
 
 			//blink category node until loading is complete
 			doneLoading := false
-			originalText := target.GetText()
-			go func() {
-				target.SetText("loading...")
-				for !doneLoading {
-					target.SetColor(tcell.ColorBlue)
-					app.Draw()
-					time.Sleep(200 * time.Millisecond)
-					target.SetColor(tcell.ColorYellow)
-					app.Draw()
-					time.Sleep(200 * time.Millisecond)
-				}
-				target.SetText(originalText)
-				app.Draw()
-			}()
+			go blinkNode(target, &doneLoading, tcell.ColorYellow)
 
 			//load every episode
 			//TODO: tweak number of threads
@@ -193,7 +180,6 @@ func main() {
 			for _, ep := range skippedEpisodes {
 				target.AddChild(ep)
 			}
-			//stop blinking
 			doneLoading = true
 			app.Draw()
 		}
@@ -237,12 +223,10 @@ func main() {
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
 		reference := node.GetReference()
 		children := node.GetChildren()
-		if reference == nil {
+		if reference == nil || node.GetText() == "loading..." {
 			return //Selecting the root node does nothing.
 		} else if ep, ok := reference.(episodeStruct); ok && len(children) < 1 {
-			//TODO: create these on episode node creation?
 			//if episode is selected for the first time
-			//add nodes to download or play directly
 			playNode := tview.NewTreeNode("Play with MPV")
 			playNode.SetReference(getProperURL(ep.Items[0]))
 			node.AddChild(playNode)
@@ -250,9 +234,62 @@ func main() {
 			downloadNode := tview.NewTreeNode("Download .m3u8")
 			downloadNode.SetReference([]string{ep.Items[0], ep.Title})
 			node.AddChild(downloadNode)
+		} else if ep, ok := reference.(channelUrlsStruct); ok && len(children) < 1 {
+			//if full race weekend perspective is selected
+			url := ep.Ovps[0].FullStreamURL
+			//TODO: take another look at this
+			if strings.Contains(url, "https://f1tv.secure.footprint.net/live/") || url == "" || strings.Contains(url, "f1tv-cdn-cent-live") {
+				//TODO: see if high speed tests can be streamed (curretly return empty string)
+				newURL := getProperURL(ep.Self)
+				if len(newURL) > 5 {
+					url = newURL
+				}
+			}
+			playNode := tview.NewTreeNode("Play with MPV")
+			playNode.SetReference(url)
+			node.AddChild(playNode)
+
+			downloadNode := tview.NewTreeNode("Download .m3u8")
+			//TODO: better name
+			downloadNode.SetReference([]string{ep.Self, ep.Name})
+			node.AddChild(downloadNode)
+		} else if event, ok := reference.(eventStruct); ok && len(children) < 1 {
+			//if single event (eg. Australian GP 2018) is selected from full race weekends
+			done := false
+			hasSessions := false
+			//load the sessions
+			go func() {
+				sessions := getSessionNodes(event)
+				for _, session := range sessions {
+					if session != nil && len(session.GetChildren()) > 0 {
+						hasSessions = true
+						node.AddChild(session)
+					}
+				}
+				done = true
+			}()
+			go func() {
+				blinkNode(node, &done, tcell.ColorWhite)
+				if !hasSessions {
+					node.SetColor(tcell.ColorRed)
+					node.SetText(node.GetText() + " - NO CONTENT AVAILABLE")
+					node.SetSelectable(false)
+				}
+				app.Draw()
+			}()
+		} else if season, ok := reference.(seasonStruct); ok && len(children) < 1 {
+			//if full season is selected from full race weekends
+			done := false
+			go func() {
+				events := getEventNodes(season)
+				for _, event := range events {
+					node.AddChild(event)
+				}
+				done = true
+			}()
+			go blinkNode(node, &done, tcell.ColorWheat)
 		} else if node.GetText() == "Play with MPV" {
 			//if "play" node is selected
-			//open URL in MPV
 			//TODO: handle mpv not installed
 			//TODO: move language selection to config file
 			debugPrint(reference.(string))
@@ -269,22 +306,14 @@ func main() {
 				go func() {
 					for scanner.Scan() {
 						sText := scanner.Text()
+						debugPrint(sText)
 						if strings.Contains(sText, "Video") {
 							break
 						}
 					}
 					done = true
 				}()
-				//blink the current node from white to blue until MPV is opened
-				node.SetText("loading...")
-				for !done {
-					node.SetColor(tcell.ColorBlue)
-					app.Draw()
-					time.Sleep(300 * time.Millisecond)
-					node.SetColor(tcell.ColorWhite)
-					app.Draw()
-					time.Sleep(300 * time.Millisecond)
-				}
+				blinkNode(node, &done, tcell.ColorWhite)
 				node.SetText("Play with MPV")
 				app.Draw()
 
@@ -297,32 +326,19 @@ func main() {
 			downloadAsset(ref[0], ref[1])
 		} else if len(children) == 0 {
 			//if episodes for category are not loaded yet
-			if i, ok := reference.(int); ok && node.GetText() != "loading..." {
+			if i, ok := reference.(int); ok {
 				if i < len(vodTypes.Objects) {
 					go func() {
 						addEpisodes(node, i)
 					}()
 				} else if i == maxi+1 {
+					//special case for full weekends
 					done := false
 					go func() {
-						loadEvents(fullSessions)
+						addSeasons(fullSessions)
 						done = true
 					}()
-					originalText := node.GetText()
-					go func() {
-						node.SetText("loading...")
-						//TODO: replace selectability with proper check
-						for !done {
-							node.SetColor(tcell.ColorBlue)
-							app.Draw()
-							time.Sleep(200 * time.Millisecond)
-							node.SetColor(tcell.ColorYellow)
-							app.Draw()
-							time.Sleep(200 * time.Millisecond)
-						}
-						node.SetText(originalText)
-						app.Draw()
-					}()
+					go blinkNode(node, &done, tcell.ColorYellow)
 				}
 			}
 		} else {
@@ -519,118 +535,116 @@ func getTeamNames(lines []string) []string {
 	return lines
 }
 
-//TODO: break into more functions
-func loadEvents(parentNode *tview.TreeNode) {
+//adds all season to "Full Race Weekends" node
+func addSeasons(parentNode *tview.TreeNode) {
 	seasons := getSeasons()
 	seasonList := make([]*tview.TreeNode, len(seasons.Seasons)-68)
-	//load 2018 and any future seasons
-	seasonList[0] = addSeason(seasons.Seasons[1])
+	//load 2018
+	season1Node := tview.NewTreeNode(seasons.Seasons[1].Name)
+	season1Node.SetReference(seasons.Seasons[1])
+	seasonList[0] = season1Node
+	//load 2019 and onwards
 	for i := 69; i < len(seasons.Seasons); i++ {
-		seasonList[i-68] = addSeason(seasons.Seasons[i])
+		seasonNode := tview.NewTreeNode(seasons.Seasons[i].Name)
+		seasonNode.SetReference(seasons.Seasons[i])
+		seasonList[i-68] = seasonNode
 	}
-
 	for _, season := range seasonList {
-		if len(season.GetChildren()) > 0 {
-			parentNode.AddChild(season)
-		}
+		parentNode.AddChild(season)
 	}
+	parentNode.SetExpanded(true)
 }
 
-func addSeason(season seasonStruct) *tview.TreeNode {
-	seasonNode := tview.NewTreeNode(season.Name)
-	seasonNode.SetReference(season)
-	seasonNode.SetExpanded(false)
-
+//returns node for every event (Australian GP, Bahrain GP, etc.)
+func getEventNodes(season seasonStruct) []*tview.TreeNode {
 	var wg1 sync.WaitGroup
 	wg1.Add(len(season.EventoccurrenceUrls))
-	//slice of all events (for thread safety)
 	events := make([]*tview.TreeNode, len(season.EventoccurrenceUrls))
-	//iterate through events (GPs)
+	//iterate through events
 	for m, eventID := range season.EventoccurrenceUrls {
 		go func(eventID string, m int) {
+			debugPrint("loading event")
 			event := getEvent(eventID)
 			//if the events actually has saved sassions add it to the tree
 			if len(event.SessionoccurrenceUrls) > 0 {
 				eventNode := tview.NewTreeNode(event.OfficialName).SetSelectable(true)
-				eventNode.SetReference(event.Slug)
-				eventNode.SetExpanded(false)
+				eventNode.SetReference(event)
 				events[m] = eventNode
-				//slice of all sessions (for thread safety)
-				sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
-				var wg2 sync.WaitGroup
-				wg2.Add(len(event.SessionoccurrenceUrls))
-				//iterate through sessions (FP1, FP2, etc.)
-				for n, sessionID := range event.SessionoccurrenceUrls {
-					go func(sessionID string, n int) {
-						session := getSession(sessionID)
-						if session.Status != "upcoming" {
-							sessionNode := tview.NewTreeNode(session.Name).SetSelectable(true)
-							sessionNode.SetReference(session.Slug)
-							sessionNode.SetExpanded(false)
-							sessions[n] = sessionNode
-
-							streams := getSessionStreams(session.Slug)
-							//slice of all channels (for thread safety)
-							channels := make([]*tview.TreeNode, len(streams.Objects[0].ChannelUrls))
-							var wg3 sync.WaitGroup
-							wg3.Add(len(streams.Objects[0].ChannelUrls))
-							//iterate through all available streams for the session (Main feed and driver feeds)
-							for i := range streams.Objects[0].ChannelUrls {
-								go func(f int) {
-									streamPerspective := streams.Objects[0].ChannelUrls[f]
-									name := streamPerspective.Name
-									if name == "WIF" {
-										name = "Main Feed"
-									}
-									//get url and check for url pattern where separate request needs to be made for the url to be accessible
-									url := streamPerspective.Ovps[0].FullStreamURL
-									if strings.Contains(url, "https://f1tv.secure.footprint.net/live/") || url == "" || strings.Contains(url, "f1tv-cdn-cent-live") {
-										//TODO: see if high speed tests can be streamed (curretly return empty string)
-										newURL := getProperURL(streamPerspective.Self)
-										if len(newURL) > 5 {
-											url = newURL
-										}
-									}
-									streamNode := tview.NewTreeNode(name).SetSelectable(true)
-									streamNode.SetReference("kjasdlkjhasdlkjhasdlkj")
-									streamNode.SetExpanded(false)
-									streamNode.SetColor(tcell.ColorGreen)
-									channels[f] = streamNode
-
-									//add download and play nodes
-									playNode := tview.NewTreeNode("Play with MPV")
-									playNode.SetReference(url)
-									streamNode.AddChild(playNode)
-
-									downloadNode := tview.NewTreeNode("Download .m3u8")
-									downloadNode.SetReference([]string{streamPerspective.Self, event.OfficialName + " - " + session.Name + " - " + name})
-									streamNode.AddChild(downloadNode)
-									wg3.Done()
-								}(i)
-							}
-							wg3.Wait()
-							for _, stream := range channels {
-								sessionNode.AddChild(stream)
-							}
-						}
-						wg2.Done()
-					}(sessionID, n)
-				}
-				wg2.Wait()
-				for _, session := range sessions {
-					if session != nil && len(session.GetChildren()) > 0 {
-						eventNode.AddChild(session)
-					}
-				}
 			}
 			wg1.Done()
 		}(eventID, m)
 	}
 	wg1.Wait()
-	for _, event := range events {
-		if len(event.GetChildren()) > 0 {
-			seasonNode.AddChild(event)
-		}
+	return events
+}
+
+//returns node for every session (FP1, FP2, etc.)
+func getSessionNodes(event eventStruct) []*tview.TreeNode {
+	sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
+	var wg2 sync.WaitGroup
+	wg2.Add(len(event.SessionoccurrenceUrls))
+	//iterate through sessions
+	for n, sessionID := range event.SessionoccurrenceUrls {
+		go func(sessionID string, n int) {
+			debugPrint("loading session")
+			session := getSession(sessionID)
+			if session.Status != "upcoming" {
+				debugPrint("loading session streams")
+				streams := getSessionStreams(session.Slug)
+				sessionNode := tview.NewTreeNode(session.Name).SetSelectable(true)
+				sessionNode.SetReference(streams.Objects[0].ChannelUrls)
+				sessionNode.SetExpanded(false)
+				sessions[n] = sessionNode
+
+				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
+				for _, stream := range channels {
+					sessionNode.AddChild(stream)
+				}
+			}
+			wg2.Done()
+		}(sessionID, n)
 	}
-	return seasonNode
+	wg2.Wait()
+	return sessions
+}
+
+//returns nodes for every perspective (main feed, data feed, drivers, etc.)
+func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
+	channels := make([]*tview.TreeNode, len(perspectives))
+	var wg3 sync.WaitGroup
+	wg3.Add(len(perspectives))
+	//iterate through all available streams for the session
+	for i := range perspectives {
+		go func(i int) {
+			streamPerspective := perspectives[i]
+			name := streamPerspective.Name
+			if name == "WIF" {
+				name = "Main Feed"
+			}
+			streamNode := tview.NewTreeNode(name).SetSelectable(true)
+			streamNode.SetReference(streamPerspective)
+			streamNode.SetColor(tcell.ColorGreen)
+			channels[i] = streamNode
+
+			wg3.Done()
+		}(i)
+	}
+	wg3.Wait()
+	return channels
+}
+
+//blinks node until bool is changed
+func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
+	originalText := node.GetText()
+	node.SetText("loading...")
+	for !*done {
+		node.SetColor(tcell.ColorBlue)
+		app.Draw()
+		time.Sleep(200 * time.Millisecond)
+		node.SetColor(originalColor)
+		app.Draw()
+		time.Sleep(200 * time.Millisecond)
+	}
+	node.SetText(originalText)
+	app.Draw()
 }

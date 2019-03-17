@@ -286,21 +286,9 @@ type sessionStreamsStruct struct {
 			} `json:"circuit_url"`
 			Slug string `json:"slug"`
 		} `json:"eventoccurrence_url"`
-		LiveSourcesPath string `json:"live_sources_path"`
-		UID             string `json:"uid"`
-		ChannelUrls     []struct {
-			UID        string        `json:"uid"`
-			Self       string        `json:"self"`
-			DriverUrls []interface{} `json:"driver_urls"`
-			Ovps       []struct {
-				AccountURL    string `json:"account_url"`
-				Path          string `json:"path"`
-				Domain        string `json:"domain"`
-				FullStreamURL string `json:"full_stream_url"`
-			} `json:"ovps"`
-			Slug string `json:"slug"`
-			Name string `json:"name"`
-		} `json:"channel_urls"`
+		LiveSourcesPath   string              `json:"live_sources_path"`
+		UID               string              `json:"uid"`
+		ChannelUrls       []channelUrlsStruct `json:"channel_urls"`
 		GlobalChannelUrls []struct {
 			Self string `json:"self"`
 			Slug string `json:"slug"`
@@ -309,6 +297,20 @@ type sessionStreamsStruct struct {
 		DataSourceID     string `json:"data_source_id"`
 		AvailableForUser bool   `json:"available_for_user"`
 	} `json:"objects"`
+}
+
+type channelUrlsStruct struct {
+	UID        string        `json:"uid"`
+	Self       string        `json:"self"`
+	DriverUrls []interface{} `json:"driver_urls"`
+	Ovps       []struct {
+		AccountURL    string `json:"account_url"`
+		Path          string `json:"path"`
+		Domain        string `json:"domain"`
+		FullStreamURL string `json:"full_stream_url"`
+	} `json:"ovps"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
 }
 
 //downloads json from URL and returns the json as string and whether it's valid as bool
