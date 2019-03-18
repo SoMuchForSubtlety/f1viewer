@@ -31,52 +31,44 @@ var debugText *tview.TextView
 var tree *tview.TreeView
 
 func main() {
-	//TODO: add confit for preserred audio language
-
-	//cache for loaded episodes
+	//TODO: add config for preserred audio language
+	//cache
 	episodeMap = make(map[string]episodeStruct)
 	driverMap = make(map[string]driverStruct)
 	teamMap = make(map[string]teamStruct)
-
 	//build base tree
-	rootDir := "VOD-Types"
-	root := tview.NewTreeNode(rootDir)
+	root := tview.NewTreeNode("VOD-Types")
 	root.SetColor(tcell.ColorBlue)
 	root.SetSelectable(false)
 	tree = tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
 	//add vod types to tree
 	vodTypes = getVodTypes()
-	maxi := 0
 	for i, vType := range vodTypes.Objects {
-		node := tview.NewTreeNode(vType.Name).SetSelectable(true)
-		node.SetReference(i)
-		node.SetColor(tcell.ColorYellow)
-		root.AddChild(node)
-		maxi = i
+		if len(vType.ContentUrls) > 0 {
+			node := tview.NewTreeNode(vType.Name).SetSelectable(true)
+			node.SetReference(i)
+			node.SetColor(tcell.ColorYellow)
+			root.AddChild(node)
+		}
 	}
-
 	//TODO: add content for info table
 	fullSessions := tview.NewTreeNode("Full Race Weekends").SetSelectable(true)
-	fullSessions.SetReference(maxi + 1)
+	fullSessions.SetReference(len(vodTypes.Objects))
 	fullSessions.SetExpanded(false)
 	fullSessions.SetColor(tcell.ColorYellow)
 	root.AddChild(fullSessions)
 
 	//display info for the episode or VOD type the cursor is on
-	//TODO: are linebreaks/ multiline cells possible?
 	tree.SetChangedFunc(func(node *tview.TreeNode) {
 		titles := make([]string, 1)
 		values := make([][]string, 1)
-
 		reference := node.GetReference()
-		if index, ok := reference.(int); ok && index <= maxi {
-			//check if selected node is a vod type
+		if index, ok := reference.(int); ok && index < len(vodTypes.Objects) { //check if selected node is a vod type
 			vodTypeStruct := vodTypes.Objects[index]
 			fields := reflect.TypeOf(vodTypeStruct)
 			values := reflect.ValueOf(vodTypeStruct)
 			go fillTable(fields, values)
-		} else if ep, ok := reference.(episodeStruct); ok {
-			//check if selected node is an episode
+		} else if ep, ok := reference.(episodeStruct); ok { //check if selected node is an episode
 			//get name and value
 			titles = append(titles, "Title")
 			values = append(values, []string{ep.Title})
@@ -88,7 +80,6 @@ func main() {
 			values = append(values, ep.DriverUrls)
 			titles = append(titles, "Teams")
 			values = append(values, ep.TeamUrls)
-
 			go fillTableFromSlices(titles, values)
 		} else {
 			infoTable.Clear()
@@ -102,42 +93,25 @@ func main() {
 		children := node.GetChildren()
 		if reference == nil || node.GetText() == "loading..." {
 			return //Selecting the root node or a loading node does nothing
-		} else if len(node.GetChildren()) > 0 {
-			//Collapse if visible, expand if collapsed.
-			node.SetExpanded(!node.IsExpanded())
+		} else if len(children) > 0 {
+			node.SetExpanded(!node.IsExpanded()) //Collapse if visible, expand if collapsed.
 		} else if ep, ok := reference.(episodeStruct); ok {
-			//if episode is selected for the first time
-			playNode := tview.NewTreeNode("Play with MPV")
-			playNode.SetReference(getProperURL(ep.Items[0]))
-			node.AddChild(playNode)
-
-			downloadNode := tview.NewTreeNode("Download .m3u8")
-			downloadNode.SetReference([]string{ep.Items[0], ep.Title})
-			node.AddChild(downloadNode)
+			//if regular episode is selected for the first time
+			addPlaybackNodes(node, getProperURL(ep.Items[0]), ep.Title)
 		} else if ep, ok := reference.(channelUrlsStruct); ok {
-			//if full race weekend perspective is selected
+			//if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
 			url := ep.Ovps[0].FullStreamURL
-			//TODO: take another look at this
-			if strings.Contains(url, "https://f1tv.secure.footprint.net/live/") || url == "" || strings.Contains(url, "f1tv-cdn-cent-live") {
-				//TODO: see if high speed tests can be streamed (curretly return empty string)
-				newURL := getProperURL(ep.Self)
-				if len(newURL) > 5 {
-					url = newURL
-				}
+			//TODO: see if high speed tests can be streamed (curretly return empty string)
+			newURL := getProperURL(ep.Self)
+			if len(newURL) > 5 {
+				url = newURL
 			}
-			playNode := tview.NewTreeNode("Play with MPV")
-			playNode.SetReference(url)
-			node.AddChild(playNode)
-
-			downloadNode := tview.NewTreeNode("Download .m3u8")
 			//TODO: better name
-			downloadNode.SetReference([]string{ep.Self, ep.Name})
-			node.AddChild(downloadNode)
+			addPlaybackNodes(node, url, ep.Name)
 		} else if event, ok := reference.(eventStruct); ok {
-			//if single event (eg. Australian GP 2018) is selected from full race weekends
+			//if event (eg. Australian GP 2018) is selected from full race weekends
 			done := false
 			hasSessions := false
-			//load the sessions
 			go func() {
 				sessions := getSessionNodes(event)
 				for _, session := range sessions {
@@ -174,14 +148,11 @@ func main() {
 			//TODO: move language selection to config file
 			debugPrint(reference.(string))
 			cmd := exec.Command("mpv", reference.(string), "--alang=en", "--start=0")
-			//create pipe with command output
 			stdoutIn, _ := cmd.StdoutPipe()
-			//launch command
 			cmd.Start()
-			//check if window is launched
 			scanner := bufio.NewScanner(stdoutIn)
+			//parse command output to see if MPV has opened
 			go func() {
-				//check if MPV is opened
 				done := false
 				go func() {
 					for scanner.Scan() {
@@ -199,30 +170,28 @@ func main() {
 
 			}()
 		} else if node.GetText() == "Download .m3u8" {
-			//if "download" node is selected
 			node.SetColor(tcell.ColorBlue)
-			//download .m3u8
-			ref := node.GetReference().([]string)
-			downloadAsset(ref[0], ref[1])
+			urlAndTitle := reference.([]string)
+			downloadAsset(urlAndTitle[0], urlAndTitle[1])
 		} else if node.GetText() == "Stream with VLC" {
-			cmd := exec.Command("vlc", reference.(string), "--alang=en", "--start=0")
+			cmd := exec.Command("vlc", "--intf", "telnet", "--telnet-port", "55001", "--telnet-password", "pass", reference.(string), "--sout", "'#duplicate{dst=std{access=http,mux=ts,dst=:8080}'")
 			cmd.Start()
-		} else if len(children) == 0 {
+			debugPrint("sent VLC command")
+			node.SetColor(tcell.ColorBlue)
+		} else if i, ok := reference.(int); ok {
 			//if episodes for category are not loaded yet
-			if i, ok := reference.(int); ok {
-				if i < len(vodTypes.Objects) {
-					go func() {
-						addEpisodes(node, i)
-					}()
-				} else if i == maxi+1 {
-					//special case for full weekends
-					done := false
-					go func() {
-						addSeasons(fullSessions)
-						done = true
-					}()
-					go blinkNode(node, &done, tcell.ColorYellow)
-				}
+			if i < len(vodTypes.Objects) {
+				go func() {
+					addEpisodes(node, i)
+				}()
+			} else if i == len(vodTypes.Objects) {
+				//special case for full weekends
+				done := false
+				go func() {
+					addSeasons(fullSessions)
+					done = true
+				}()
+				go blinkNode(node, &done, tcell.ColorYellow)
 			}
 		}
 	})
@@ -249,7 +218,7 @@ func main() {
 	flex.AddItem(rowFlex, 0, 2, false)
 	rowFlex.AddItem(infoTable, 0, 2, false)
 	//flag -d enables debug window
-	if len(os.Args) > 1 && os.Args[1] == "-d" {
+	if checkArgs("-d") {
 		rowFlex.AddItem(debugText, 0, 1, false)
 	}
 	app.SetRoot(flex, true).Run()
@@ -339,7 +308,7 @@ func convertIDs(lines []string) []string {
 	return lines
 }
 
-//turns array of driver IDs to their names
+//turns slice of driver IDs to their names
 func getDriverNames(lines []string) []string {
 	var wg sync.WaitGroup
 	wg.Add(len(lines))
@@ -532,122 +501,132 @@ func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 
 //add episodes to VOD type
 func addEpisodes(target *tview.TreeNode, parentType int) {
-	//check if episodes of the selected type are not available
-	if len(vodTypes.Objects[parentType].ContentUrls) == 0 {
-		node := tview.NewTreeNode("no content available")
-		node.SetSelectable(false)
-		node.SetColor(tcell.ColorRed)
-		target.AddChild(node)
-		app.Draw()
-	} else {
-		//store loaded episodes to be sorted at the end
-		var episodes []episodeStruct
+	//store loaded episodes to be sorted at the end
+	var episodes []episodeStruct
 
-		//waitgroup so sorting doesn't get skipped
-		var wg sync.WaitGroup
-		wg.Add(len(vodTypes.Objects[parentType].ContentUrls))
+	//waitgroup so sorting doesn't get skipped
+	var wg sync.WaitGroup
+	wg.Add(len(vodTypes.Objects[parentType].ContentUrls))
 
-		//blink category node until loading is complete
-		doneLoading := false
-		go blinkNode(target, &doneLoading, tcell.ColorYellow)
+	//blink category node until loading is complete
+	doneLoading := false
+	go blinkNode(target, &doneLoading, tcell.ColorYellow)
 
-		//load every episode
-		//TODO: tweak number of threads
-		guard := make(chan struct{}, 100)
-		go func() {
-			for i := range vodTypes.Objects[parentType].ContentUrls {
-				//multithread loading the apisodes
-				//wait for space in guard
-				guard <- struct{}{}
-				go func(i int) {
-					epID := vodTypes.Objects[parentType].ContentUrls[i]
-					//check if episode metadata is already cached
-					episodeMapMutex.RLock()
-					ep, ok := episodeMap[epID]
-					episodeMapMutex.RUnlock()
-					if !ok {
-						//load episode metadata if not already cached
-						ep = getEpisode(epID)
-						//add metadata to cache
-						episodeMapMutex.Lock()
-						episodeMap[epID] = ep
-						episodeMapMutex.Unlock()
-					}
-					//temporarily save loaded episodes
-					episodes = append(episodes, ep)
-					//make room in guard
-					<-guard
-					defer wg.Done()
-				}(i)
-			}
-		}()
-
-		//wait for loading to complete
-		wg.Wait()
-
-		//sort episodes
-		sort.Slice(episodes, func(i, j int) bool {
-			_, err := strconv.Atoi(episodes[i].DataSourceID[:4])
-			_, err2 := strconv.Atoi(episodes[j].DataSourceID[:4])
-
-			//if one of the episodes doesn't start with a date/race code just compare titles
-			if err != nil || err2 != nil {
-				return episodes[i].Title < episodes[j].Title
-			}
-
-			year1, race1 := getYearAndRace(episodes[i].DataSourceID)
-			year2, race2 := getYearAndRace(episodes[j].DataSourceID)
-			//sort chronologically by year and race number
-			return year1 < year2 || ((year1 == year2) && (race1 < race2))
-		})
-
-		//add loaded and sorted episodes to tree
-		var skippedEpisodes []*tview.TreeNode
-		for _, ep := range episodes {
-			node := tview.NewTreeNode(ep.Title).SetSelectable(true)
-			node.SetReference(ep)
-			node.SetColor(tcell.ColorGreen)
-			yearRaceID := ep.DataSourceID[:4]
-			//check for year/ race code
-			if _, err := strconv.Atoi(yearRaceID); err == nil {
-				year := ""
-				//TODO: better solution for "2018/19[..]" IDs before
-				//special case for IDs that start with 2018/19 since they don't  match the pattern
-				if yearRaceID != "2018" && yearRaceID != "2019" {
-					year, _ = getYearAndRace(ep.DataSourceID)
-				} else {
-					year = yearRaceID
+	//load every episode
+	//TODO: tweak number of threads
+	guard := make(chan struct{}, 100)
+	go func() {
+		for i := range vodTypes.Objects[parentType].ContentUrls {
+			//multithread loading the apisodes
+			//wait for space in guard
+			guard <- struct{}{}
+			go func(i int) {
+				epID := vodTypes.Objects[parentType].ContentUrls[i]
+				//check if episode metadata is already cached
+				episodeMapMutex.RLock()
+				ep, ok := episodeMap[epID]
+				episodeMapMutex.RUnlock()
+				if !ok {
+					//load episode metadata if not already cached
+					ep = getEpisode(epID)
+					//add metadata to cache
+					episodeMapMutex.Lock()
+					episodeMap[epID] = ep
+					episodeMapMutex.Unlock()
 				}
-				fatherFound := false
-				var fatherNode *tview.TreeNode
-				//check if there is a node for the specified year
-				for _, subNode := range target.GetChildren() {
-					if subNode.GetReference() == year {
-						fatherNode = subNode
-						fatherFound = true
-					}
-				}
-				//if there is no node for the year, create one
-				if !fatherFound {
-					yearNode := tview.NewTreeNode(year).SetSelectable(true)
-					yearNode.SetReference(year)
-					yearNode.SetExpanded(false)
-					target.AddChild(yearNode)
-					fatherNode = yearNode
-				}
-				//add episode to mathcing year
-				fatherNode.AddChild(node)
+				//temporarily save loaded episodes
+				episodes = append(episodes, ep)
+				//make room in guard
+				<-guard
+				defer wg.Done()
+			}(i)
+		}
+	}()
+	//wait for loading to complete
+	wg.Wait()
+	//sort episodes
+	sort.Slice(episodes, func(i, j int) bool {
+		_, err := strconv.Atoi(episodes[i].DataSourceID[:4])
+		_, err2 := strconv.Atoi(episodes[j].DataSourceID[:4])
+		//if one of the episodes doesn't start with a date/race code just compare titles
+		if err != nil || err2 != nil {
+			return episodes[i].Title < episodes[j].Title
+		}
+		year1, race1 := getYearAndRace(episodes[i].DataSourceID)
+		year2, race2 := getYearAndRace(episodes[j].DataSourceID)
+		//sort chronologically by year and race number
+		return year1 < year2 || ((year1 == year2) && (race1 < race2))
+	})
+	//add loaded and sorted episodes to tree
+	var skippedEpisodes []*tview.TreeNode
+	for _, ep := range episodes {
+		node := tview.NewTreeNode(ep.Title).SetSelectable(true)
+		node.SetReference(ep)
+		node.SetColor(tcell.ColorGreen)
+		yearRaceID := ep.DataSourceID[:4]
+		//check for year/ race code
+		if _, err := strconv.Atoi(yearRaceID); err == nil {
+			year := ""
+			//TODO: better solution for "2018/19[..]" IDs before
+			//special case for IDs that start with 2018/19 since they don't  match the pattern
+			if yearRaceID != "2018" && yearRaceID != "2019" {
+				year, _ = getYearAndRace(ep.DataSourceID)
 			} else {
-				//save episodes with no year/race ID to be added at the end
-				skippedEpisodes = append(skippedEpisodes, node)
+				year = yearRaceID
 			}
+			fatherFound := false
+			var fatherNode *tview.TreeNode
+			//check if there is a node for the specified year
+			for _, subNode := range target.GetChildren() {
+				if subNode.GetReference() == year {
+					fatherNode = subNode
+					fatherFound = true
+				}
+			}
+			//if there is no node for the year, create one
+			if !fatherFound {
+				yearNode := tview.NewTreeNode(year).SetSelectable(true)
+				yearNode.SetReference(year)
+				yearNode.SetExpanded(false)
+				target.AddChild(yearNode)
+				fatherNode = yearNode
+			}
+			//add episode to mathcing year
+			fatherNode.AddChild(node)
+		} else {
+			//save episodes with no year/race ID to be added at the end
+			skippedEpisodes = append(skippedEpisodes, node)
 		}
-
-		//add skipped episodes to tree
-		for _, ep := range skippedEpisodes {
-			target.AddChild(ep)
-		}
-		doneLoading = true
-		app.Draw()
 	}
+
+	//add skipped episodes to tree
+	for _, ep := range skippedEpisodes {
+		target.AddChild(ep)
+	}
+	doneLoading = true
+	app.Draw()
+}
+func addPlaybackNodes(node *tview.TreeNode, url string, title string) {
+	playNode := tview.NewTreeNode("Play with MPV")
+	playNode.SetReference(url)
+	node.AddChild(playNode)
+
+	if checkArgs("-vlc") {
+		streamNode := tview.NewTreeNode("Stream with VLC")
+		streamNode.SetReference(url)
+		node.AddChild(streamNode)
+	}
+
+	downloadNode := tview.NewTreeNode("Download .m3u8")
+	downloadNode.SetReference([]string{url, title})
+	node.AddChild(downloadNode)
+}
+
+func checkArgs(searchArg string) bool {
+	for _, arg := range os.Args {
+		if arg == searchArg {
+			return true
+		}
+	}
+	return false
 }
