@@ -2,7 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"reflect"
@@ -16,7 +19,14 @@ import (
 	"github.com/rivo/tview"
 )
 
+type config struct {
+	Lang    string `json:"preferred_language"`
+	VLCport string `json:"vlc_telnet_port"`
+	VLCpass string `json:"vlc_telnet_pass"`
+}
+
 var vodTypes vodTypesStruct
+var con config
 var episodeMap map[string]episodeStruct
 var driverMap map[string]driverStruct
 var teamMap map[string]teamStruct
@@ -31,6 +41,17 @@ var debugText *tview.TextView
 var tree *tview.TreeView
 
 func main() {
+
+	file, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = json.Unmarshal(file, &con)
+	if err != nil {
+		log.Fatalf("malformed configuration file: %v\n", err)
+	}
+
 	//TODO: add config for preserred audio language
 	//cache
 	episodeMap = make(map[string]episodeStruct)
@@ -147,7 +168,7 @@ func main() {
 			//TODO: handle mpv not installed
 			//TODO: move language selection to config file
 			debugPrint(reference.(string))
-			cmd := exec.Command("mpv", reference.(string), "--alang=en", "--start=0")
+			cmd := exec.Command("mpv", reference.(string), "--alang="+con.Lang, "--start=0")
 			stdoutIn, _ := cmd.StdoutPipe()
 			cmd.Start()
 			scanner := bufio.NewScanner(stdoutIn)
@@ -174,7 +195,7 @@ func main() {
 			urlAndTitle := reference.([]string)
 			downloadAsset(urlAndTitle[0], urlAndTitle[1])
 		} else if node.GetText() == "Stream with VLC" {
-			cmd := exec.Command("vlc", "--intf", "telnet", "--telnet-port", "55001", "--telnet-password", "pass", reference.(string), "--sout", "'#duplicate{dst=std{access=http,mux=ts,dst=:8080}'")
+			cmd := exec.Command("vlc", "--intf", "telnet", "--telnet-port", con.VLCport, "--telnet-password", con.VLCpass, reference.(string), "--sout", "'#duplicate{dst=std{access=http,mux=ts,dst=:8080}'")
 			cmd.Start()
 			debugPrint("sent VLC command")
 			node.SetColor(tcell.ColorBlue)
