@@ -14,6 +14,7 @@ Some files have audio desync issues with VLC.
 
 **USAGE**
 
+    $ cp sample-config.json config.json
     $ go get github.com/rivo/tview
     $ go build
     $ .\F1viewer
