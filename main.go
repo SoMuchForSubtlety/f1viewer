@@ -44,7 +44,7 @@ func main() {
 
 	file, err := ioutil.ReadFile("config.json")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("no config file found, try \"cp sample-config.json config.json\"")
 	}
 
 	err = json.Unmarshal(file, &con)
