@@ -19,3 +19,11 @@ Some files have audio desync issues with VLC.
     $ go build
     $ .\F1viewer
     
+
+**FLAGS**
+
+    -d
+shows a debug window
+
+    -vlc
+enables the VLC http stream option
