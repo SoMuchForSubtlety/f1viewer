@@ -114,13 +114,18 @@ func fixm3u8(lines []string, url string, filePath string) {
 
 	//fix URLs in m3u8
 	for _, line := range lines {
-		if len(line) > 0 && (line[:5] == "layer" || strings.Contains(line, "clip")) {
+		debugPrint(line)
+		if strings.Contains(line, "https") {
+		} else if len(line) > 6 && (line[:5] == "layer" || line[:4] == "clip") {
 			line = url + line
 		} else {
 			var re = regexp.MustCompile(`[^"]*m3u8"`)
 			tempString := re.FindString(line)
 			line = re.ReplaceAllString(line, url+tempString)
 		}
+		var re2 = regexp.MustCompile(`https:\/\/f1tv-cdn[^\.]*\.formula1\.com`)
+		line = re2.ReplaceAllString(line, "https://f1tv.secure.footprint.net")
+		debugPrint(line)
 		newLines = append(newLines, line)
 	}
 	writeLines(newLines, filePath)

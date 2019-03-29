@@ -44,12 +44,15 @@ func main() {
 
 	file, err := ioutil.ReadFile("config.json")
 	if err != nil {
-		log.Fatalln("no config file found, try \"cp sample-config.json config.json\"")
-	}
-
-	err = json.Unmarshal(file, &con)
-	if err != nil {
-		log.Fatalf("malformed configuration file: %v\n", err)
+		//log.Fatalln("no config file found, try \"cp sample-config.json config.json\"")
+		con.Lang = "en"
+		con.VLCpass = ""
+		con.VLCport = ""
+	} else {
+		err = json.Unmarshal(file, &con)
+		if err != nil {
+			log.Fatalf("malformed configuration file: %v\n", err)
+		}
 	}
 
 	//TODO: add config for preserred audio language
@@ -118,7 +121,7 @@ func main() {
 			node.SetExpanded(!node.IsExpanded()) //Collapse if visible, expand if collapsed.
 		} else if ep, ok := reference.(episodeStruct); ok {
 			//if regular episode is selected for the first time
-			addPlaybackNodes(node, getProperURL(ep.Items[0]), ep.Title)
+			addPlaybackNodes(node, getProperURL(ep.Items[0]), ep.Title, ep.Items[0])
 		} else if ep, ok := reference.(channelUrlsStruct); ok {
 			//if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
 			url := ep.Ovps[0].FullStreamURL
@@ -128,7 +131,7 @@ func main() {
 				url = newURL
 			}
 			//TODO: better name
-			addPlaybackNodes(node, url, ep.Name)
+			addPlaybackNodes(node, url, ep.Name, ep.Self)
 		} else if event, ok := reference.(eventStruct); ok {
 			//if event (eg. Australian GP 2018) is selected from full race weekends
 			done := false
@@ -199,6 +202,8 @@ func main() {
 			cmd.Start()
 			debugPrint("sent VLC command")
 			node.SetColor(tcell.ColorBlue)
+		} else if node.GetText() == "GET URL" {
+			debugPrint(getProperURL(reference.(string)))
 		} else if i, ok := reference.(int); ok {
 			//if episodes for category are not loaded yet
 			if i < len(vodTypes.Objects) {
@@ -463,6 +468,10 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 				debugPrint("loading session streams")
 				streams := getSessionStreams(session.Slug)
 				sessionNode := tview.NewTreeNode(session.Name).SetSelectable(true)
+				if session.Status == "live" {
+					sessionNode.SetText(session.Name + " - LIVE")
+					sessionNode.SetColor(tcell.ColorRed)
+				}
 				sessionNode.SetReference(streams.Objects[0].ChannelUrls)
 				sessionNode.SetExpanded(false)
 				sessions[n] = sessionNode
@@ -627,7 +636,7 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	doneLoading = true
 	app.Draw()
 }
-func addPlaybackNodes(node *tview.TreeNode, url string, title string) {
+func addPlaybackNodes(node *tview.TreeNode, url string, title string, epID string) {
 	playNode := tview.NewTreeNode("Play with MPV")
 	playNode.SetReference(url)
 	node.AddChild(playNode)
@@ -635,6 +644,12 @@ func addPlaybackNodes(node *tview.TreeNode, url string, title string) {
 	if checkArgs("-vlc") {
 		streamNode := tview.NewTreeNode("Stream with VLC")
 		streamNode.SetReference(url)
+		node.AddChild(streamNode)
+	}
+
+	if checkArgs("-d") {
+		streamNode := tview.NewTreeNode("GET URL")
+		streamNode.SetReference(epID)
 		node.AddChild(streamNode)
 	}
 
