@@ -37,7 +37,7 @@ shows debug information
 enables the VLC http stream option, requires a config with the correct parameters set.
 
 ### CONFIG
-The config is is optional. It is used to set a preferred audio language and VLC streaming credentials.
+The config is optional. It is used to set a preferred audio language and VLC streaming credentials.
 The sample config looks like this.
 
     {
