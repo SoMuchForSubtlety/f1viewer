@@ -3,3 +3,7 @@ F1viewer.exe
 config.json
 *.m3u8
 interesting API urls.txt
+goreleaser.exe
+.backup.yml
+.goreleaser.yml
+dist/
