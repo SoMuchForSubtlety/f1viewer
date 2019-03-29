@@ -21,7 +21,7 @@ Now also supports live streams.
 	    
 	**or**
     
-	or download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
+	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
 
 
  2. **Download MPV**
