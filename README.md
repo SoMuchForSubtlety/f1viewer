@@ -1,29 +1,48 @@
 ## F1Viewer
 
-Stream any F1TV VOD with [MPV](https://mpv.io/) or download the corresponding .m3u8 file. 
-Make sure MPV is added to your `PATH`.
+Stream any F1TV VOD with MPV or download the corresponding .m3u8 file. 
 
-Now also supports live streams (except the main feed).
+Now also supports live streams.
 
-You can play the downloaded files with VLC or MPV player. To play them with MPV you need to set the flag `--demuxer-lavf-o=protocol_whitelist=[http,https,tls,rtp,tcp,udp,crypto,httpproxy,file]`.
-
-Some files have audio desync issues with VLC.
-
-![alt text](https://i.imgur.com/K8yCkib.png)
+![screenshot](https://i.imgur.com/K8yCkib.png)
  
+### USAGE
 
-**USAGE**
+ 1. **Install F1Viewer** 
 
-    $ cp sample-config.json config.json
-    $ go get github.com/rivo/tview
-    $ go build
-    $ .\F1viewer
+	build it yourself
+	
+	    $ git clone https://github.com/SoMuchForSubtlety/F1viewer/
+	    $ cd F1Viewer
+	    $ cp sample-config.json config.json
+	    $ go get github.com/rivo/tview
+	    $ go build
+
+	    
+	**or**
     
+	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
 
-**FLAGS**
+
+ 2. **Download MPV**
+
+	Download it from [here](https://mpv.io/installation/) (Windows users please get the latest version from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
+
+### FLAGS
 
     -d
-shows a debug window
+shows debug information
 
     -vlc
-enables the VLC http stream option
+enables the VLC http stream option, requires a config with the correct parameters set.
+
+### CONFIG
+The config is optional. It is used to set a preferred audio language and VLC streaming credentials.
+The sample config looks like this.
+
+    {
+        "preferred_language": "en",
+        "vlc_telnet_port": "4212",
+        "vlc_telnet_pass": "admin"
+    }
+Save it as `config.json` in the same Folder as the F1Viewer binary 
