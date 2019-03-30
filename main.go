@@ -170,7 +170,7 @@ func main() {
 			//if "play" node is selected
 			//TODO: handle mpv not installed
 			//TODO: move language selection to config file
-			debugPrint(reference.(string))
+			//debugPrint(reference.(string))
 			cmd := exec.Command("mpv", reference.(string), "--alang="+con.Lang, "--start=0")
 			stdoutIn, _ := cmd.StdoutPipe()
 			cmd.Start()
@@ -191,7 +191,6 @@ func main() {
 				blinkNode(node, &done, tcell.ColorWhite)
 				node.SetText("Play with MPV")
 				app.Draw()
-
 			}()
 		} else if node.GetText() == "Download .m3u8" {
 			node.SetColor(tcell.ColorBlue)
@@ -576,6 +575,7 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	wg.Wait()
 	//sort episodes
 	sort.Slice(episodes, func(i, j int) bool {
+		//TODO: check that DataSourceID is long enough (?)
 		_, err := strconv.Atoi(episodes[i].DataSourceID[:4])
 		_, err2 := strconv.Atoi(episodes[j].DataSourceID[:4])
 		//if one of the episodes doesn't start with a date/race code just compare titles

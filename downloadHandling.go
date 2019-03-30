@@ -134,10 +134,10 @@ func fixm3u8(lines []string, url string, filePath string) {
 //write m3u8 to file
 func writeLines(lines []string, path string) error {
 	//create downloads folder if it doesnt exist
-	if _, err := os.Stat(`\downloaded\`); os.IsNotExist(err) {
-		os.MkdirAll(`.\downloaded\`, os.ModePerm)
+	if _, err := os.Stat(`/downloaded/`); os.IsNotExist(err) {
+		os.MkdirAll(`./downloaded/`, os.ModePerm)
 	}
-	file, err := os.Create(`.\downloaded\` + path)
+	file, err := os.Create(`./downloaded/` + path)
 	if err != nil {
 		return err
 	}
