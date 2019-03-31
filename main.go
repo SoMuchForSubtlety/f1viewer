@@ -121,17 +121,11 @@ func main() {
 			node.SetExpanded(!node.IsExpanded()) //Collapse if visible, expand if collapsed.
 		} else if ep, ok := reference.(episodeStruct); ok {
 			//if regular episode is selected for the first time
-			addPlaybackNodes(node, getProperURL(ep.Items[0]), ep.Title, ep.Items[0])
+			addPlaybackNodes(node, ep.Title, ep.Items[0])
 		} else if ep, ok := reference.(channelUrlsStruct); ok {
 			//if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
-			url := ep.Ovps[0].FullStreamURL
-			//TODO: see if high speed tests can be streamed (curretly return empty string)
-			newURL := getProperURL(ep.Self)
-			if len(newURL) > 5 {
-				url = newURL
-			}
 			//TODO: better name
-			addPlaybackNodes(node, url, ep.Name, ep.Self)
+			addPlaybackNodes(node, ep.Name, ep.Self)
 		} else if event, ok := reference.(eventStruct); ok {
 			//if event (eg. Australian GP 2018) is selected from full race weekends
 			done := false
@@ -171,7 +165,7 @@ func main() {
 			//TODO: handle mpv not installed
 			//TODO: move language selection to config file
 			//debugPrint(reference.(string))
-			cmd := exec.Command("mpv", reference.(string), "--alang="+con.Lang, "--start=0")
+			cmd := exec.Command("mpv", getProperURL(reference.(string)), "--alang="+con.Lang, "--start=0")
 			stdoutIn, _ := cmd.StdoutPipe()
 			cmd.Start()
 			scanner := bufio.NewScanner(stdoutIn)
@@ -195,9 +189,9 @@ func main() {
 		} else if node.GetText() == "Download .m3u8" {
 			node.SetColor(tcell.ColorBlue)
 			urlAndTitle := reference.([]string)
-			downloadAsset(urlAndTitle[0], urlAndTitle[1])
+			downloadAsset(getProperURL(urlAndTitle[0]), urlAndTitle[1])
 		} else if node.GetText() == "Stream with VLC" {
-			cmd := exec.Command("vlc", "--intf", "telnet", "--telnet-port", con.VLCport, "--telnet-password", con.VLCpass, reference.(string), "--sout", "'#duplicate{dst=std{access=http,mux=ts,dst=:8080}'")
+			cmd := exec.Command("vlc", "--intf", "telnet", "--telnet-port", con.VLCport, "--telnet-password", con.VLCpass, getProperURL(reference.(string)), "--sout", "'#duplicate{dst=std{access=http,mux=ts,dst=:8080}'")
 			cmd.Start()
 			debugPrint("sent VLC command")
 			node.SetColor(tcell.ColorBlue)
@@ -636,14 +630,18 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	doneLoading = true
 	app.Draw()
 }
-func addPlaybackNodes(node *tview.TreeNode, url string, title string, epID string) {
+func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
 	playNode := tview.NewTreeNode("Play with MPV")
-	playNode.SetReference(url)
+	playNode.SetReference(epID)
 	node.AddChild(playNode)
+
+	downloadNode := tview.NewTreeNode("Download .m3u8")
+	downloadNode.SetReference([]string{epID, title})
+	node.AddChild(downloadNode)
 
 	if checkArgs("-vlc") {
 		streamNode := tview.NewTreeNode("Stream with VLC")
-		streamNode.SetReference(url)
+		streamNode.SetReference(epID)
 		node.AddChild(streamNode)
 	}
 
@@ -652,10 +650,6 @@ func addPlaybackNodes(node *tview.TreeNode, url string, title string, epID strin
 		streamNode.SetReference(epID)
 		node.AddChild(streamNode)
 	}
-
-	downloadNode := tview.NewTreeNode("Download .m3u8")
-	downloadNode.SetReference([]string{url, title})
-	node.AddChild(downloadNode)
 }
 
 func checkArgs(searchArg string) bool {
