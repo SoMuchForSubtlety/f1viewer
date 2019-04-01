@@ -92,6 +92,24 @@ func main() {
 			fields := reflect.TypeOf(vodTypeStruct)
 			values := reflect.ValueOf(vodTypeStruct)
 			go fillTable(fields, values)
+		} else if event, ok := reference.(eventStruct); ok {
+			fields := reflect.TypeOf(event)
+			values := reflect.ValueOf(event)
+			go fillTable(fields, values)
+		} else if season, ok := reference.(seasonStruct); ok {
+			fields := reflect.TypeOf(season)
+			values := reflect.ValueOf(season)
+			go fillTable(fields, values)
+		} else if session, ok := reference.(sessionStreamsStruct); ok {
+			//TODO see if ChannelUrls can also be properly displayed
+			fields := reflect.TypeOf(session.Objects[0])
+			values := reflect.ValueOf(session.Objects[0])
+			go fillTable(fields, values)
+		} else if channel, ok := reference.(channelUrlsStruct); ok {
+			//TODO see if ChannelUrls can also be properly displayed
+			fields := reflect.TypeOf(channel)
+			values := reflect.ValueOf(channel)
+			go fillTable(fields, values)
 		} else if ep, ok := reference.(episodeStruct); ok { //check if selected node is an episode
 			//get name and value
 			titles = append(titles, "Title")
@@ -244,6 +262,7 @@ func main() {
 }
 
 //takes struct reflect Types and values and draws them as a table
+//TODO recursively enter structs
 func fillTable(titles reflect.Type, values reflect.Value) {
 	t := make([]string, 1)
 	v := make([][]string, 1)
@@ -456,7 +475,7 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 					sessionNode.SetText(session.Name + " - LIVE")
 					sessionNode.SetColor(tcell.ColorRed)
 				}
-				sessionNode.SetReference(streams.Objects[0].ChannelUrls)
+				sessionNode.SetReference(streams)
 				sessionNode.SetExpanded(false)
 				sessions[n] = sessionNode
 
