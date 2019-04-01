@@ -105,7 +105,7 @@ func main() {
 			titles = append(titles, "Teams")
 			values = append(values, ep.TeamUrls)
 			go fillTableFromSlices(titles, values)
-		} else {
+		} else if len(node.GetChildren()) != 0 {
 			infoTable.Clear()
 		}
 		infoTable.ScrollToBeginning()
@@ -351,17 +351,8 @@ func getDriverNames(lines []string) []string {
 				debugPrint("team loaded from cache")
 			}
 			//change string to driver name + number from metadata
-			number := driver.DriverRacingnumber
-			//TODO: move number to back of string
-			strNumber := ""
-			if number < 10 {
-				strNumber = " (" + strconv.Itoa(driver.DriverRacingnumber) + ") "
-			} else {
-				strNumber = "(" + strconv.Itoa(driver.DriverRacingnumber) + ") "
-
-			}
-			lines[j] = strNumber + driver.FirstName + " " + driver.LastName
-
+			name := addNumberToName(driver.DriverRacingnumber, driver.FirstName+" "+driver.LastName)
+			lines[j] = name
 			//add string to slice
 			wg.Done()
 		}(j)
@@ -491,6 +482,10 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 		go func(i int) {
 			streamPerspective := perspectives[i]
 			name := streamPerspective.Name
+			if len(streamPerspective.DriverUrls) > 0 {
+				number := streamPerspective.DriverUrls[0].DriverRacingnumber
+				name = addNumberToName(number, name)
+			}
 			if name == "WIF" {
 				name = "Main Feed"
 			}
@@ -503,6 +498,9 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 		}(i)
 	}
 	wg3.Wait()
+	sort.Slice(channels, func(i, j int) bool {
+		return !strings.Contains(channels[i].GetText(), "(")
+	})
 	return channels
 }
 
@@ -659,4 +657,13 @@ func checkArgs(searchArg string) bool {
 		}
 	}
 	return false
+}
+
+func addNumberToName(number int, name string) string {
+	if number >= 10 {
+		name = "(" + strconv.Itoa(number) + ") " + name
+	} else {
+		name = " (" + strconv.Itoa(number) + ") " + name
+	}
+	return name
 }

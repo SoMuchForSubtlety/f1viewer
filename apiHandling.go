@@ -300,9 +300,9 @@ type sessionStreamsStruct struct {
 }
 
 type channelUrlsStruct struct {
-	UID        string        `json:"uid"`
-	Self       string        `json:"self"`
-	DriverUrls []interface{} `json:"driver_urls"`
+	UID        string             `json:"uid"`
+	Self       string             `json:"self"`
+	DriverUrls []driverUrlsStruct `json:"driver_urls"`
 	Ovps       []struct {
 		AccountURL    string `json:"account_url"`
 		Path          string `json:"path"`
@@ -311,6 +311,21 @@ type channelUrlsStruct struct {
 	} `json:"ovps"`
 	Slug string `json:"slug"`
 	Name string `json:"name"`
+}
+
+type driverUrlsStruct struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	ImageUrls []struct {
+		ImageType string `json:"image_type"`
+		URL       string `json:"url"`
+	} `json:"image_urls"`
+	DriverTla string `json:"driver_tla"`
+	TeamURL   struct {
+		Colour string `json:"colour"`
+		Name   string `json:"name"`
+	} `json:"team_url"`
+	DriverRacingnumber int `json:"driver_racingnumber"`
 }
 
 //downloads json from URL and returns the json as string and whether it's valid as bool
