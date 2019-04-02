@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -20,9 +21,20 @@ import (
 )
 
 type config struct {
-	Lang    string `json:"preferred_language"`
-	VLCport string `json:"vlc_telnet_port"`
-	VLCpass string `json:"vlc_telnet_pass"`
+	Lang                  string    `json:"preferred_language"`
+	CustomPlaybackOptions []command `json:"custom_playback_options"`
+}
+
+type command struct {
+	Title          string     `json:"title"`
+	Commands       [][]string `json:"commands"`
+	Watchphrase    string     `json:"watchphrase"`
+	CommandToWatch int        `json:"command_to_watch"`
+}
+
+type nodeContext struct {
+	EpID          string
+	CustomOptions command
 }
 
 var vodTypes vodTypesStruct
@@ -46,8 +58,6 @@ func main() {
 	if err != nil {
 		//log.Fatalln("no config file found, try \"cp sample-config.json config.json\"")
 		con.Lang = "en"
-		con.VLCpass = ""
-		con.VLCport = ""
 	} else {
 		err = json.Unmarshal(file, &con)
 		if err != nil {
@@ -87,6 +97,7 @@ func main() {
 		titles := make([]string, 1)
 		values := make([][]string, 1)
 		reference := node.GetReference()
+		//TODO simplify
 		if index, ok := reference.(int); ok && index < len(vodTypes.Objects) { //check if selected node is a vod type
 			vodTypeStruct := vodTypes.Objects[index]
 			fields := reflect.TypeOf(vodTypeStruct)
@@ -178,6 +189,51 @@ func main() {
 				done = true
 			}()
 			go blinkNode(node, &done, tcell.ColorWheat)
+		} else if context, ok := reference.(nodeContext); ok {
+			//custom options
+			monitor := false
+			com := context.CustomOptions
+			if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
+				monitor = true
+			}
+			var stdoutIn io.ReadCloser
+			//run every command
+			for j := range com.Commands {
+				if len(com.Commands[j]) > 0 {
+					//replace placeholder with real URL
+					for x, s := range com.Commands[j] {
+						if s == "$url" {
+							com.Commands[j][x] = getProperURL(context.EpID)
+						}
+					}
+					//run command
+					cmd := exec.Command(com.Commands[j][0], com.Commands[j][1:]...)
+					stdoutIn, _ = cmd.StdoutPipe()
+					cmd.Start()
+					scanner := bufio.NewScanner(stdoutIn)
+					//monitor the output for loading animationif applicable
+					if monitor && com.CommandToWatch == j {
+						go func() {
+							done := false
+							go func() {
+								for scanner.Scan() {
+									sText := scanner.Text()
+									debugPrint(sText)
+									if strings.Contains(sText, com.Watchphrase) {
+										break
+									}
+								}
+								done = true
+							}()
+							blinkNode(node, &done, tcell.ColorWhite)
+							app.Draw()
+						}()
+					}
+				}
+			}
+			if !monitor {
+				node.SetColor(tcell.ColorBlue)
+			}
 		} else if node.GetText() == "Play with MPV" {
 			//if "play" node is selected
 			//TODO: handle mpv not installed
@@ -201,18 +257,12 @@ func main() {
 					done = true
 				}()
 				blinkNode(node, &done, tcell.ColorWhite)
-				node.SetText("Play with MPV")
 				app.Draw()
 			}()
 		} else if node.GetText() == "Download .m3u8" {
 			node.SetColor(tcell.ColorBlue)
 			urlAndTitle := reference.([]string)
 			downloadAsset(getProperURL(urlAndTitle[0]), urlAndTitle[1])
-		} else if node.GetText() == "Stream with VLC" {
-			cmd := exec.Command("vlc", "--intf", "telnet", "--telnet-port", con.VLCport, "--telnet-password", con.VLCpass, getProperURL(reference.(string)), "--sout", "'#duplicate{dst=std{access=http,mux=ts,dst=:8080}'")
-			cmd.Start()
-			debugPrint("sent VLC command")
-			node.SetColor(tcell.ColorBlue)
 		} else if node.GetText() == "GET URL" {
 			debugPrint(getProperURL(reference.(string)))
 		} else if i, ok := reference.(int); ok {
@@ -648,6 +698,23 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	app.Draw()
 }
 func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
+
+	//add custom options
+	if con.CustomPlaybackOptions != nil {
+		for i := range con.CustomPlaybackOptions {
+			com := con.CustomPlaybackOptions[i]
+			if len(com.Commands) > 0 {
+				var context nodeContext
+				context.EpID = epID
+				context.CustomOptions = com
+				customNode := tview.NewTreeNode(com.Title)
+				customNode.SetReference(context)
+				node.AddChild(customNode)
+			}
+		}
+	}
+
+	//TODO launch custom command
 	playNode := tview.NewTreeNode("Play with MPV")
 	playNode.SetReference(epID)
 	node.AddChild(playNode)
@@ -655,12 +722,6 @@ func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
 	downloadNode := tview.NewTreeNode("Download .m3u8")
 	downloadNode.SetReference([]string{epID, title})
 	node.AddChild(downloadNode)
-
-	if checkArgs("-vlc") {
-		streamNode := tview.NewTreeNode("Stream with VLC")
-		streamNode.SetReference(epID)
-		node.AddChild(streamNode)
-	}
 
 	if checkArgs("-d") {
 		streamNode := tview.NewTreeNode("GET URL")
