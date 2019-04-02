@@ -1,5 +1,13 @@
 {
     "preferred_language": "en",
-    "vlc_telnet_port": "4212",
-    "vlc_telnet_pass": "admin"
+    "custom_playback_options": [
+        {
+            "title": "Play with MPV custom",
+            "commands": [
+                ["mpv", "$url", "--alang=de"]
+            ],
+            "watchphrase": "Video",
+            "command_to_watch": 0
+        }
+    ]
 }
