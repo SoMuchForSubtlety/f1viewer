@@ -83,7 +83,7 @@ func getProperURL(assetID string) string {
 		urlString = finalURL.Objects[0].Tata.TokenisedURL
 	}
 	//debugPrint(urlString)
-	return urlString
+	return strings.Replace(urlString, "&", "\x26", -1)
 }
 
 //downloads m3u8
