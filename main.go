@@ -324,8 +324,10 @@ func fillTable(titles reflect.Type, values reflect.Value) {
 
 		if value.Kind() == reflect.String {
 			//if velue is a string
-			t = append(t, title.Name)
-			v = append(v, []string{value.String()})
+			if !strings.Contains(strings.ToLower(title.Name), "winner") {
+				t = append(t, title.Name)
+				v = append(v, []string{value.String()})
+			}
 		} else if value.Kind() == reflect.Slice {
 			//if value is a slice of strings
 			lines := make([]string, value.Len())
