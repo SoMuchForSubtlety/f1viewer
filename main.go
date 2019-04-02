@@ -197,17 +197,18 @@ func main() {
 				monitor = true
 			}
 			var stdoutIn io.ReadCloser
+			url := getProperURL(context.EpID)
 			//run every command
 			for j := range com.Commands {
 				if len(com.Commands[j]) > 0 {
 					//replace placeholder with real URL
-					for x, s := range com.Commands[j] {
-						if s == "$url" {
-							com.Commands[j][x] = getProperURL(context.EpID)
-						}
+					tmpCommand := make([]string, len(com.Commands[j]))
+					copy(tmpCommand, com.Commands[j])
+					for x, s := range tmpCommand {
+						tmpCommand[x] = strings.Replace(s, "$url", url, -1)
 					}
 					//run command
-					cmd := exec.Command(com.Commands[j][0], com.Commands[j][1:]...)
+					cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
 					stdoutIn, _ = cmd.StdoutPipe()
 					cmd.Start()
 					scanner := bufio.NewScanner(stdoutIn)
