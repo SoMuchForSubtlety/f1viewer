@@ -65,8 +65,9 @@ You can execute custom commands, for example to launch a different player. These
 `title` is the title. It will appear next to the standard `Play with MPV` and `Download .m3u8`.
 
 `commands` is where your custom command goes. There can be one or more. 
-Commands are saved as a list of args, like `["mpv", "$url", "--alang=de"]`. 
-`$url` will be replaced with the correct playback URL.
+Commands are saved as a list of args, like `["mpv", "$url", "--alang=de"]`.  
+`$url` will be replaced with the playback URL.  
+`$file` will be replaced with the path to a local copy of the .m3u8 file.
 
 `watchphrase` is optional. it is used to play a `loading...` animation. 
 F1Viewer can parse the output of your command and stop the animation once the `watchphrase` is found. This can be useful if your command takes a while to execute.
