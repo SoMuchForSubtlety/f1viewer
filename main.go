@@ -35,6 +35,7 @@ type command struct {
 type nodeContext struct {
 	EpID          string
 	CustomOptions command
+	Title         string
 }
 
 var vodTypes vodTypesStruct
@@ -207,19 +208,24 @@ func main() {
 					tmpCommand := make([]string, len(com.Commands[j]))
 					copy(tmpCommand, com.Commands[j])
 					for x, s := range tmpCommand {
+						tmpCommand[x] = s
 						if strings.Contains(s, "$file") {
 							if !fileused {
-								filepath = downloadAsset(url, "tempfile")
+								filepath = downloadAsset(url, context.Title)
 								fileused = true
 							}
-							tmpCommand[x] = strings.Replace(s, "$file", filepath, -1)
+							tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
 						}
-						tmpCommand[x] = strings.Replace(s, "$url", url, -1)
+						tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 					}
+					debugPrint("starting:", tmpCommand...)
 					//run command
 					cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
 					stdoutIn, _ = cmd.StdoutPipe()
-					cmd.Start()
+					err := cmd.Start()
+					if err != nil {
+						debugPrint(err.Error())
+					}
 					scanner := bufio.NewScanner(stdoutIn)
 					//monitor the output for loading animationif applicable
 					if monitor && com.CommandToWatch == j {
@@ -390,8 +396,12 @@ func getYearAndRace(input string) (string, string) {
 }
 
 //prints to debug window
-func debugPrint(s string) {
-	fmt.Fprintf(debugText, s+"\n")
+func debugPrint(s string, x ...string) {
+	y := s
+	for _, str := range x {
+		y += " " + str
+	}
+	fmt.Fprintf(debugText, y+"\n")
 	debugText.ScrollToEnd()
 }
 
@@ -712,6 +722,7 @@ func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
 				var context nodeContext
 				context.EpID = epID
 				context.CustomOptions = com
+				context.Title = title
 				customNode := tview.NewTreeNode(com.Title)
 				customNode.SetReference(context)
 				node.AddChild(customNode)

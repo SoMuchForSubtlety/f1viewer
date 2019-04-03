@@ -115,7 +115,6 @@ func fixm3u8(lines []string, url string, filePath string) {
 
 	//fix URLs in m3u8
 	for _, line := range lines {
-		debugPrint(line)
 		if strings.Contains(line, "https") {
 		} else if len(line) > 6 && (line[:5] == "layer" || line[:4] == "clip") {
 			line = url + line
@@ -126,7 +125,6 @@ func fixm3u8(lines []string, url string, filePath string) {
 		}
 		var re2 = regexp.MustCompile(`https:\/\/f1tv-cdn[^\.]*\.formula1\.com`)
 		line = re2.ReplaceAllString(line, "https://f1tv.secure.footprint.net")
-		debugPrint(line)
 		newLines = append(newLines, line)
 	}
 	writeLines(newLines, filePath)
