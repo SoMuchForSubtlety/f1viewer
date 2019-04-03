@@ -379,7 +379,7 @@ var listOfSeasons allSeasonStruct
 
 func getSeasons() allSeasonStruct {
 	if len(listOfSeasons.Seasons) < 1 {
-		_, jsonString := getJSON("https://f1tv.formula1.com/api/race-season/")
+		_, jsonString := getJSON("https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year")
 		json.Unmarshal([]byte(jsonString), &listOfSeasons)
 	}
 	return listOfSeasons

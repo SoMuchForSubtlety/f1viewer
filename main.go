@@ -198,6 +198,8 @@ func main() {
 			}
 			var stdoutIn io.ReadCloser
 			url := getProperURL(context.EpID)
+			var filepath string
+			fileused := false
 			//run every command
 			for j := range com.Commands {
 				if len(com.Commands[j]) > 0 {
@@ -205,6 +207,13 @@ func main() {
 					tmpCommand := make([]string, len(com.Commands[j]))
 					copy(tmpCommand, com.Commands[j])
 					for x, s := range tmpCommand {
+						if strings.Contains(s, "$file") {
+							if !fileused {
+								filepath = downloadAsset(url, "tempfile")
+								fileused = true
+							}
+							tmpCommand[x] = strings.Replace(s, "$file", filepath, -1)
+						}
 						tmpCommand[x] = strings.Replace(s, "$url", url, -1)
 					}
 					//run command
@@ -470,20 +479,13 @@ func getTeamNames(lines []string) []string {
 func addSeasons(parentNode *tview.TreeNode) {
 	debugPrint("loading seasons")
 	seasons := getSeasons()
-	seasonList := make([]*tview.TreeNode, len(seasons.Seasons)-68)
-	//load 2018
-	season1Node := tview.NewTreeNode(seasons.Seasons[1].Name)
-	season1Node.SetReference(seasons.Seasons[1])
-	seasonList[0] = season1Node
-	//load 2019 and onwards
-	for i := 69; i < len(seasons.Seasons); i++ {
-		seasonNode := tview.NewTreeNode(seasons.Seasons[i].Name)
-		seasonNode.SetReference(seasons.Seasons[i])
-		seasonList[i-68] = seasonNode
+
+	for _, s := range seasons.Seasons {
+		seasonNode := tview.NewTreeNode(s.Name)
+		seasonNode.SetReference(s)
+		parentNode.AddChild(seasonNode)
 	}
-	for _, season := range seasonList {
-		parentNode.AddChild(season)
-	}
+
 	parentNode.SetExpanded(true)
 }
 

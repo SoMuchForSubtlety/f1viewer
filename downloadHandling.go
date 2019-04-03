@@ -12,19 +12,20 @@ import (
 )
 
 //takes asset ID and downloads corresponding .m3u8
-func downloadAsset(url string, title string) {
+func downloadAsset(url string, title string) string {
 	//sanitize title
 	title = strings.Replace(title, ":", "", -1)
 	//get JSON containing .m3u8 url
 
 	//abort if no proper URL was found
 	if len(url) < 10 {
-		return
+		return ""
 	}
 
 	//download and patch .m3u8 file
 	//TODO: switch id to title
 	downloadM3U8(title+".m3u8", url)
+	return `./downloaded/` + title + ".m3u8"
 }
 
 //returns valid m3u8 URL as string
