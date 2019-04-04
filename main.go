@@ -320,10 +320,13 @@ func fillTable(stru interface{}, abort chan bool) {
 func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
 	select {
 	case <-abort:
+		//aborts previous call
 	default:
+		//so it doesn't lock
 	}
 	aborted := false
 	go func() {
+		//waits for abort signal
 		abort <- true
 		aborted = true
 	}()
