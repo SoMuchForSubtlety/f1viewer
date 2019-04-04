@@ -537,8 +537,15 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 				number := streamPerspective.DriverUrls[0].DriverRacingnumber
 				name = addNumberToName(number, name)
 			}
-			if name == "WIF" {
+			switch name {
+			case "WIF":
 				name = "Main Feed"
+			case "pit lane":
+				name = "Pit Lane"
+			case "driver":
+				name = "Driver Tracker"
+			case "data":
+				name = "Data Channel"
 			}
 			streamNode := tview.NewTreeNode(name).SetSelectable(true)
 			streamNode.SetReference(streamPerspective)
