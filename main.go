@@ -198,9 +198,9 @@ func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
 			}
 			rowIndex++
 		}
-		app.Draw()
 	}
 	infoTable.ScrollToBeginning()
+	app.Draw()
 }
 
 //takes year/race ID and returns full year and race nuber as strings
@@ -345,7 +345,7 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 		go func(sessionID string, n int) {
 			debugPrint("loading session")
 			session := getSession(sessionID)
-			if session.Status != "upcoming" {
+			if session.Status != "upcoming" && session.Status != "expired" {
 				debugPrint("loading session streams")
 				streams := getSessionStreams(session.Slug)
 				sessionNode := tview.NewTreeNode(session.Name).SetSelectable(true)
@@ -516,6 +516,7 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	doneLoading = true
 	app.Draw()
 }
+
 func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
 	//add custom options
 	if con.CustomPlaybackOptions != nil {
