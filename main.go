@@ -40,6 +40,7 @@ type nodeContext struct {
 
 var vodTypes vodTypesStruct
 var con config
+var abortWritingInfo chan bool
 var episodeMap map[string]episodeStruct
 var driverMap map[string]driverStruct
 var teamMap map[string]teamStruct
@@ -56,7 +57,6 @@ var tree *tview.TreeView
 func main() {
 	file, err := ioutil.ReadFile("config.json")
 	if err != nil {
-		//log.Fatalln("no config file found, try \"cp sample-config.json config.json\"")
 		con.Lang = "en"
 	} else {
 		err = json.Unmarshal(file, &con)
@@ -64,202 +64,39 @@ func main() {
 			log.Fatalf("malformed configuration file: %v\n", err)
 		}
 	}
-
-	abortTable := make(chan bool)
-
+	abortWritingInfo = make(chan bool)
 	//cache
 	episodeMap = make(map[string]episodeStruct)
 	driverMap = make(map[string]driverStruct)
 	teamMap = make(map[string]teamStruct)
 	//build base tree
-	root := tview.NewTreeNode("VOD-Types")
-	root.SetColor(tcell.ColorBlue)
-	root.SetSelectable(false)
-	tree = tview.NewTreeView().SetRoot(root).SetCurrentNode(root)
-	//add vod types to tree
+	root := tview.NewTreeNode("VOD-Types").
+		SetColor(tcell.ColorBlue).
+		SetSelectable(false)
+	tree = tview.NewTreeView().
+		SetRoot(root).
+		SetCurrentNode(root)
+	var allSeasons allSeasonStruct
+	fullSessions := tview.NewTreeNode("Full Race Weekends").
+		SetSelectable(true).
+		SetReference(allSeasons).
+		SetExpanded(false).
+		SetColor(tcell.ColorYellow)
+	root.AddChild(fullSessions)
 	vodTypes = getVodTypes()
 	for i, vType := range vodTypes.Objects {
 		if len(vType.ContentUrls) > 0 {
-			node := tview.NewTreeNode(vType.Name).SetSelectable(true)
-			node.SetReference(i)
-			node.SetColor(tcell.ColorYellow)
+			node := tview.NewTreeNode(vType.Name).
+				SetSelectable(true).
+				SetReference(i).
+				SetColor(tcell.ColorYellow)
 			root.AddChild(node)
 		}
 	}
-	fullSessions := tview.NewTreeNode("Full Race Weekends").SetSelectable(true)
-	var allSeasons allSeasonStruct
-	fullSessions.SetReference(allSeasons)
-	fullSessions.SetExpanded(false)
-	fullSessions.SetColor(tcell.ColorYellow)
-	root.AddChild(fullSessions)
-
 	//display info for the episode or VOD type the cursor is on
-	tree.SetChangedFunc(func(node *tview.TreeNode) {
-		reference := node.GetReference()
-		if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
-			v, t := getTableValuesFromInterface(vodTypes.Objects[index])
-			go fillTableFromSlices(v, t, abortTable)
-		} else if event, ok := reference.(eventStruct); ok {
-			v, t := getTableValuesFromInterface(event)
-			go fillTableFromSlices(v, t, abortTable)
-		} else if season, ok := reference.(seasonStruct); ok {
-			v, t := getTableValuesFromInterface(season)
-			go fillTableFromSlices(v, t, abortTable)
-		} else if session, ok := reference.(sessionStreamsStruct); ok {
-			v, t := getTableValuesFromInterface(session)
-			go fillTableFromSlices(v, t, abortTable)
-		} else if channel, ok := reference.(channelUrlsStruct); ok {
-			v, t := getTableValuesFromInterface(channel)
-			go fillTableFromSlices(v, t, abortTable)
-		} else if seasons, ok := reference.(allSeasonStruct); ok {
-			v, t := getTableValuesFromInterface(seasons)
-			go fillTableFromSlices(v, t, abortTable)
-		} else if ep, ok := reference.(episodeStruct); ok {
-			//get name and value
-			titles := make([]string, 1)
-			values := make([][]string, 1)
-			titles = append(titles, "Title")
-			values = append(values, []string{ep.Title})
-			titles = append(titles, "Subtitle")
-			values = append(values, []string{ep.Subtitle})
-			titles = append(titles, "Synopsis")
-			values = append(values, []string{ep.Synopsis})
-			titles = append(titles, "Drivers")
-			values = append(values, ep.DriverUrls)
-			titles = append(titles, "Teams")
-			values = append(values, ep.TeamUrls)
-			go fillTableFromSlices(titles, values, abortTable)
-		} else if len(node.GetChildren()) != 0 {
-			infoTable.Clear()
-		}
-		infoTable.ScrollToBeginning()
-	})
-
+	tree.SetChangedFunc(switchNode)
 	//what happens when a node is selected
-	tree.SetSelectedFunc(func(node *tview.TreeNode) {
-		reference := node.GetReference()
-		children := node.GetChildren()
-		if reference == nil || node.GetText() == "loading..." {
-			//Selecting the root node or a loading node does nothing
-			return
-		} else if len(children) > 0 {
-			node.SetExpanded(!node.IsExpanded())
-			//Collapse if visible, expand if collapsed.
-		} else if ep, ok := reference.(episodeStruct); ok {
-			//if regular episode is selected for the first time
-			addPlaybackNodes(node, ep.Title, ep.Items[0])
-		} else if ep, ok := reference.(channelUrlsStruct); ok {
-			//if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
-			//TODO: better name
-			addPlaybackNodes(node, ep.Name, ep.Self)
-		} else if event, ok := reference.(eventStruct); ok {
-			//if event (eg. Australian GP 2018) is selected from full race weekends
-			done := false
-			hasSessions := false
-			go func() {
-				sessions := getSessionNodes(event)
-				for _, session := range sessions {
-					if session != nil && len(session.GetChildren()) > 0 {
-						hasSessions = true
-						node.AddChild(session)
-					}
-				}
-				done = true
-			}()
-			go func() {
-				blinkNode(node, &done, tcell.ColorWhite)
-				if !hasSessions {
-					node.SetColor(tcell.ColorRed)
-					node.SetText(node.GetText() + " - NO CONTENT AVAILABLE")
-					node.SetSelectable(false)
-				}
-				app.Draw()
-			}()
-		} else if season, ok := reference.(seasonStruct); ok {
-			//if full season is selected from full race weekends
-			done := false
-			go func() {
-				events := getEventNodes(season)
-				for _, event := range events {
-					node.AddChild(event)
-				}
-				done = true
-			}()
-			go blinkNode(node, &done, tcell.ColorWheat)
-		} else if context, ok := reference.(nodeContext); ok {
-			//custom command
-			monitor := false
-			com := context.CustomOptions
-			if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
-				monitor = true
-			}
-			var stdoutIn io.ReadCloser
-			url := getPlayableURL(context.EpID)
-			var filepath string
-			fileLoaded := false
-			//run every command
-			for j := range com.Commands {
-				if len(com.Commands[j]) > 0 {
-					tmpCommand := make([]string, len(com.Commands[j]))
-					copy(tmpCommand, com.Commands[j])
-					//replace $url and $file
-					for x, s := range tmpCommand {
-						tmpCommand[x] = s
-						if strings.Contains(s, "$file") {
-							if !fileLoaded {
-								filepath = downloadAsset(url, context.Title)
-								fileLoaded = true
-							}
-							tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
-						}
-						tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
-					}
-					//run command
-					debugPrint("starting:", tmpCommand...)
-					cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
-					stdoutIn, _ = cmd.StdoutPipe()
-					err := cmd.Start()
-					if err != nil {
-						debugPrint(err.Error())
-					}
-					if monitor && com.CommandToWatch == j {
-						go monitorCommand(node, com.Watchphrase, stdoutIn)
-					}
-				}
-			}
-			if !monitor {
-				node.SetColor(tcell.ColorBlue)
-			}
-		} else if node.GetText() == "Play with MPV" {
-			cmd := exec.Command("mpv", getPlayableURL(reference.(string)), "--alang="+con.Lang, "--start=0")
-			stdoutIn, _ := cmd.StdoutPipe()
-			err := cmd.Start()
-			if err != nil {
-				debugPrint(err.Error())
-			}
-			go monitorCommand(node, "Video", stdoutIn)
-		} else if node.GetText() == "Download .m3u8" {
-			node.SetColor(tcell.ColorBlue)
-			urlAndTitle := reference.([]string)
-			downloadAsset(getPlayableURL(urlAndTitle[0]), urlAndTitle[1])
-		} else if node.GetText() == "GET URL" {
-			debugPrint(getPlayableURL(reference.(string)))
-		} else if i, ok := reference.(int); ok {
-			//if episodes for category are not loaded yet
-			if i < len(vodTypes.Objects) {
-				go addEpisodes(node, i)
-			}
-		} else if _, ok := reference.(allSeasonStruct); ok {
-			done := false
-			go func() {
-				seasons := addSeasons(node)
-				node.SetReference(seasons)
-				done = true
-			}()
-			go blinkNode(node, &done, tcell.ColorYellow)
-		}
-	})
-
+	tree.SetSelectedFunc(nodeSelected)
 	//start UI
 	app = tview.NewApplication()
 	//flex containing everything
@@ -267,13 +104,12 @@ func main() {
 	//flex containing metadata and debug
 	rowFlex := tview.NewFlex()
 	rowFlex.SetDirection(tview.FlexRow)
-	//metadate window
+	//metadata window
 	infoTable = tview.NewTable()
 	infoTable.SetBorder(true).SetTitle(" Info ")
 	//debug window
 	debugText = tview.NewTextView()
-	debugText.SetBorder(true)
-	debugText.SetTitle("Debug")
+	debugText.SetBorder(true).SetTitle("Debug")
 	debugText.SetChangedFunc(func() {
 		app.Draw()
 	})
@@ -412,7 +248,6 @@ func getDriverNames(lines []string) []string {
 	//iterate over all lines
 	for j := 0; j < len(lines); j++ {
 		go func(j int) {
-			//TODO: do the same for teams, etc.
 			//check if driver metadata is already cached
 			driverMapMutex.RLock()
 			driver, ok := driverMap[lines[j]]
@@ -428,7 +263,6 @@ func getDriverNames(lines []string) []string {
 			//change string to driver name + number from metadata
 			name := addNumberToName(driver.DriverRacingnumber, driver.FirstName+" "+driver.LastName)
 			lines[j] = name
-			//add string to slice
 			wg.Done()
 		}(j)
 	}
@@ -456,7 +290,6 @@ func getTeamNames(lines []string) []string {
 				teamMap[lines[j]] = team
 				teamMapMutex.Unlock()
 			}
-			//add string to slice
 			lines[j] = team.Name
 			wg.Done()
 		}(j)
@@ -470,13 +303,11 @@ func getTeamNames(lines []string) []string {
 func addSeasons(parentNode *tview.TreeNode) allSeasonStruct {
 	debugPrint("loading seasons")
 	seasons := getSeasons()
-
 	for _, s := range seasons.Seasons {
 		seasonNode := tview.NewTreeNode(s.Name)
 		seasonNode.SetReference(s)
 		parentNode.AddChild(seasonNode)
 	}
-
 	parentNode.SetExpanded(true)
 	return seasons
 }
@@ -566,7 +397,6 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 			streamNode.SetReference(streamPerspective)
 			streamNode.SetColor(tcell.ColorGreen)
 			channels[i] = streamNode
-
 			wg3.Done()
 		}(i)
 	}
@@ -596,23 +426,15 @@ func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 
 //add episodes to VOD type
 func addEpisodes(target *tview.TreeNode, parentType int) {
-	//store loaded episodes to be sorted at the end
 	var episodes []episodeStruct
-
-	//waitgroup so sorting doesn't get skipped
 	var wg sync.WaitGroup
 	wg.Add(len(vodTypes.Objects[parentType].ContentUrls))
-
-	//blink category node until loading is complete
 	doneLoading := false
 	go blinkNode(target, &doneLoading, tcell.ColorYellow)
-
-	//load every episode
 	//TODO: tweak number of threads
 	guard := make(chan struct{}, 100)
 	go func() {
 		for i := range vodTypes.Objects[parentType].ContentUrls {
-			//multithread loading the apisodes
 			//wait for space in guard
 			guard <- struct{}{}
 			go func(i int) {
@@ -622,14 +444,12 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 				ep, ok := episodeMap[epID]
 				episodeMapMutex.RUnlock()
 				if !ok {
-					//load episode metadata if not already cached
+					//load episode metadata and add to cache
 					ep = getEpisode(epID)
-					//add metadata to cache
 					episodeMapMutex.Lock()
 					episodeMap[epID] = ep
 					episodeMapMutex.Unlock()
 				}
-				//temporarily save loaded episodes
 				episodes = append(episodes, ep)
 				//make room in guard
 				<-guard
@@ -637,9 +457,7 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 			}(i)
 		}
 	}()
-	//wait for loading to complete
 	wg.Wait()
-	//sort episodes
 	sort.Slice(episodes, func(i, j int) bool {
 		//TODO: check that DataSourceID is long enough (?)
 		_, err := strconv.Atoi(episodes[i].DataSourceID[:4])
@@ -656,9 +474,9 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	//add loaded and sorted episodes to tree
 	var skippedEpisodes []*tview.TreeNode
 	for _, ep := range episodes {
-		node := tview.NewTreeNode(ep.Title).SetSelectable(true)
-		node.SetReference(ep)
-		node.SetColor(tcell.ColorGreen)
+		node := tview.NewTreeNode(ep.Title).SetSelectable(true).
+			SetReference(ep).
+			SetColor(tcell.ColorGreen)
 		yearRaceID := ep.DataSourceID[:4]
 		//check for year/ race code
 		if _, err := strconv.Atoi(yearRaceID); err == nil {
@@ -670,16 +488,15 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 			} else {
 				year = yearRaceID
 			}
+			//check if there is a node for the specified year, if not create one
 			fatherFound := false
 			var fatherNode *tview.TreeNode
-			//check if there is a node for the specified year
 			for _, subNode := range target.GetChildren() {
 				if subNode.GetReference() == year {
 					fatherNode = subNode
 					fatherFound = true
 				}
 			}
-			//if there is no node for the year, create one
 			if !fatherFound {
 				yearNode := tview.NewTreeNode(year).SetSelectable(true)
 				yearNode.SetReference(year)
@@ -687,15 +504,12 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 				target.AddChild(yearNode)
 				fatherNode = yearNode
 			}
-			//add episode to mathcing year
 			fatherNode.AddChild(node)
 		} else {
 			//save episodes with no year/race ID to be added at the end
 			skippedEpisodes = append(skippedEpisodes, node)
 		}
 	}
-
-	//add skipped episodes to tree
 	for _, ep := range skippedEpisodes {
 		target.AddChild(ep)
 	}
@@ -703,7 +517,6 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	app.Draw()
 }
 func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
-
 	//add custom options
 	if con.CustomPlaybackOptions != nil {
 		for i := range con.CustomPlaybackOptions {
@@ -768,4 +581,169 @@ func monitorCommand(node *tview.TreeNode, watchphrase string, output io.ReadClos
 	}()
 	blinkNode(node, &done, tcell.ColorWhite)
 	app.Draw()
+}
+
+func switchNode(node *tview.TreeNode) {
+	reference := node.GetReference()
+	if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
+		v, t := getTableValuesFromInterface(vodTypes.Objects[index])
+		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if event, ok := reference.(eventStruct); ok {
+		v, t := getTableValuesFromInterface(event)
+		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if season, ok := reference.(seasonStruct); ok {
+		v, t := getTableValuesFromInterface(season)
+		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if session, ok := reference.(sessionStreamsStruct); ok {
+		v, t := getTableValuesFromInterface(session)
+		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if channel, ok := reference.(channelUrlsStruct); ok {
+		v, t := getTableValuesFromInterface(channel)
+		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if seasons, ok := reference.(allSeasonStruct); ok {
+		v, t := getTableValuesFromInterface(seasons)
+		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if ep, ok := reference.(episodeStruct); ok {
+		//get name and value
+		titles := make([]string, 1)
+		values := make([][]string, 1)
+		titles = append(titles, "Title")
+		values = append(values, []string{ep.Title})
+		titles = append(titles, "Subtitle")
+		values = append(values, []string{ep.Subtitle})
+		titles = append(titles, "Synopsis")
+		values = append(values, []string{ep.Synopsis})
+		titles = append(titles, "Drivers")
+		values = append(values, ep.DriverUrls)
+		titles = append(titles, "Teams")
+		values = append(values, ep.TeamUrls)
+		go fillTableFromSlices(titles, values, abortWritingInfo)
+	} else if len(node.GetChildren()) != 0 {
+		infoTable.Clear()
+	}
+	infoTable.ScrollToBeginning()
+}
+
+func nodeSelected(node *tview.TreeNode) {
+	reference := node.GetReference()
+	children := node.GetChildren()
+	if reference == nil || node.GetText() == "loading..." {
+		//Selecting the root node or a loading node does nothing
+		return
+	} else if len(children) > 0 {
+		//Collapse if visible, expand if collapsed.
+		node.SetExpanded(!node.IsExpanded())
+	} else if ep, ok := reference.(episodeStruct); ok {
+		//if regular episode is selected for the first time
+		addPlaybackNodes(node, ep.Title, ep.Items[0])
+	} else if ep, ok := reference.(channelUrlsStruct); ok {
+		//if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
+		//TODO: better name
+		addPlaybackNodes(node, node.GetText(), ep.Self)
+	} else if event, ok := reference.(eventStruct); ok {
+		//if event (eg. Australian GP 2018) is selected from full race weekends
+		done := false
+		hasSessions := false
+		go func() {
+			sessions := getSessionNodes(event)
+			for _, session := range sessions {
+				if session != nil && len(session.GetChildren()) > 0 {
+					hasSessions = true
+					node.AddChild(session)
+				}
+			}
+			done = true
+		}()
+		go func() {
+			blinkNode(node, &done, tcell.ColorWhite)
+			if !hasSessions {
+				node.SetColor(tcell.ColorRed)
+				node.SetText(node.GetText() + " - NO CONTENT AVAILABLE")
+				node.SetSelectable(false)
+			}
+			app.Draw()
+		}()
+	} else if season, ok := reference.(seasonStruct); ok {
+		//if full season is selected from full race weekends
+		done := false
+		go func() {
+			events := getEventNodes(season)
+			for _, event := range events {
+				node.AddChild(event)
+			}
+			done = true
+		}()
+		go blinkNode(node, &done, tcell.ColorWheat)
+	} else if context, ok := reference.(nodeContext); ok {
+		//custom command
+		monitor := false
+		com := context.CustomOptions
+		if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
+			monitor = true
+		}
+		var stdoutIn io.ReadCloser
+		url := getPlayableURL(context.EpID)
+		var filepath string
+		fileLoaded := false
+		//run every command
+		for j := range com.Commands {
+			if len(com.Commands[j]) > 0 {
+				tmpCommand := make([]string, len(com.Commands[j]))
+				copy(tmpCommand, com.Commands[j])
+				//replace $url and $file
+				for x, s := range tmpCommand {
+					tmpCommand[x] = s
+					if strings.Contains(s, "$file") {
+						if !fileLoaded {
+							filepath = downloadAsset(url, context.Title)
+							fileLoaded = true
+						}
+						tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
+					}
+					tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
+				}
+				//run command
+				debugPrint("starting:", tmpCommand...)
+				cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
+				stdoutIn, _ = cmd.StdoutPipe()
+				err := cmd.Start()
+				if err != nil {
+					debugPrint(err.Error())
+				}
+				if monitor && com.CommandToWatch == j {
+					go monitorCommand(node, com.Watchphrase, stdoutIn)
+				}
+			}
+		}
+		if !monitor {
+			node.SetColor(tcell.ColorBlue)
+		}
+	} else if node.GetText() == "Play with MPV" {
+		cmd := exec.Command("mpv", getPlayableURL(reference.(string)), "--alang="+con.Lang, "--start=0")
+		stdoutIn, _ := cmd.StdoutPipe()
+		err := cmd.Start()
+		if err != nil {
+			debugPrint(err.Error())
+		}
+		go monitorCommand(node, "Video", stdoutIn)
+	} else if node.GetText() == "Download .m3u8" {
+		node.SetColor(tcell.ColorBlue)
+		urlAndTitle := reference.([]string)
+		downloadAsset(getPlayableURL(urlAndTitle[0]), urlAndTitle[1])
+	} else if node.GetText() == "GET URL" {
+		debugPrint(getPlayableURL(reference.(string)))
+	} else if i, ok := reference.(int); ok {
+		//if episodes for category are not loaded yet
+		if i < len(vodTypes.Objects) {
+			go addEpisodes(node, i)
+		}
+	} else if _, ok := reference.(allSeasonStruct); ok {
+		done := false
+		go func() {
+			seasons := addSeasons(node)
+			node.SetReference(seasons)
+			done = true
+		}()
+		go blinkNode(node, &done, tcell.ColorYellow)
+	}
 }

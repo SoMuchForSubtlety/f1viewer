@@ -7,3 +7,4 @@ goreleaser.exe
 .backup.yml
 .goreleaser.yml
 dist/
+*.exe~
