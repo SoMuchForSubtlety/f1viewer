@@ -705,7 +705,6 @@ func addPlaybackNodes(node *tview.TreeNode, title string, epID string) {
 		}
 	}
 
-	//TODO launch custom command
 	playNode := tview.NewTreeNode("Play with MPV")
 	playNode.SetReference(epID)
 	node.AddChild(playNode)

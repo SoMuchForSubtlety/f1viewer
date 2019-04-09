@@ -25,7 +25,7 @@ func downloadAsset(url string, title string) string {
 	//download and patch .m3u8 file
 	//TODO: switch id to title
 	downloadM3U8(title+".m3u8", url)
-	return `./downloaded/` + title + ".m3u8"
+	return `./downloaded/` + strings.Replace(title, " ", "\x20", -1) + ".m3u8"
 }
 
 //returns valid m3u8 URL as string
@@ -116,7 +116,7 @@ func fixm3u8(lines []string, url string, filePath string) {
 	//fix URLs in m3u8
 	for _, line := range lines {
 		if strings.Contains(line, "https") {
-		} else if len(line) > 6 && (line[:5] == "layer" || line[:4] == "clip") {
+		} else if len(line) > 6 && (line[:5] == "layer" || line[:4] == "clip" || line[:3] == "OTT") {
 			line = url + line
 		} else {
 			var re = regexp.MustCompile(`[^"]*m3u8"`)
