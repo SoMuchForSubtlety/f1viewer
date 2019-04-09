@@ -15,21 +15,19 @@ import (
 func downloadAsset(url string, title string) string {
 	//sanitize title
 	title = strings.Replace(title, ":", "", -1)
-	//get JSON containing .m3u8 url
-
-	//abort if no proper URL was found
+	//abort if the URL is not valid
 	if len(url) < 10 {
 		return ""
 	}
-
 	//download and patch .m3u8 file
-	//TODO: switch id to title
-	downloadM3U8(title+".m3u8", url)
-	return `./downloaded/` + strings.Replace(title, " ", "\x20", -1) + ".m3u8"
+	data := downloadData(url)
+	fixedLineArray := fixData(data, url)
+	path := writeToFile(fixedLineArray, title+".m3u8")
+	return strings.Replace(path, " ", "\x20", -1)
 }
 
 //returns valid m3u8 URL as string
-func getProperURL(assetID string) string {
+func getPlayableURL(assetID string) string {
 	formattedID := ""
 	isChannel := false
 	if strings.Contains(assetID, "/api/channels/") {
@@ -87,8 +85,8 @@ func getProperURL(assetID string) string {
 	return strings.Replace(urlString, "&", "\x26", -1)
 }
 
-//downloads m3u8
-func downloadM3U8(filepath string, url string) {
+//downloads m3u8 data and returns it as slice
+func downloadData(url string) []string {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -100,15 +98,12 @@ func downloadM3U8(filepath string, url string) {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	lineArray := strings.Split(buf.String(), "\n")
-	//apply fix and save
-	fixm3u8(lineArray, url, filepath)
+	return lineArray
 }
 
-//chage URIs in m3u8 to full URLs
-func fixm3u8(lines []string, url string, filePath string) {
-	//lines, _ := readLines(filePath)
+//chage URIs in m3u8 data to full URLs
+func fixData(lines []string, url string) []string {
 	var newLines []string
-
 	//trim url
 	var re1 = regexp.MustCompile(`[^\/]*$`)
 	url = re1.ReplaceAllString(url, "")
@@ -127,18 +122,19 @@ func fixm3u8(lines []string, url string, filePath string) {
 		line = re2.ReplaceAllString(line, "https://f1tv.secure.footprint.net")
 		newLines = append(newLines, line)
 	}
-	writeLines(newLines, filePath)
+	return newLines
 }
 
-//write m3u8 to file
-func writeLines(lines []string, path string) error {
+//write slice of lines to file and return the full file path
+func writeToFile(lines []string, path string) string {
 	//create downloads folder if it doesnt exist
 	if _, err := os.Stat(`/downloaded/`); os.IsNotExist(err) {
 		os.MkdirAll(`./downloaded/`, os.ModePerm)
 	}
-	file, err := os.Create(`./downloaded/` + path)
+	path = `./downloaded/` + path
+	file, err := os.Create(path)
 	if err != nil {
-		return err
+		debugPrint(err.Error())
 	}
 	defer file.Close()
 
@@ -146,5 +142,9 @@ func writeLines(lines []string, path string) error {
 	for _, line := range lines {
 		fmt.Fprintln(w, line)
 	}
-	return w.Flush()
+	err = w.Flush()
+	if err != nil {
+		debugPrint(err.Error())
+	}
+	return path
 }

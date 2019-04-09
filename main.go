@@ -67,7 +67,6 @@ func main() {
 
 	abortTable := make(chan bool)
 
-	//TODO: add config for preserred audio language
 	//cache
 	episodeMap = make(map[string]episodeStruct)
 	driverMap = make(map[string]driverStruct)
@@ -98,17 +97,23 @@ func main() {
 	tree.SetChangedFunc(func(node *tview.TreeNode) {
 		reference := node.GetReference()
 		if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
-			go fillTable(vodTypes.Objects[index], abortTable)
+			v, t := getTableValuesFromInterface(vodTypes.Objects[index])
+			go fillTableFromSlices(v, t, abortTable)
 		} else if event, ok := reference.(eventStruct); ok {
-			go fillTable(event, abortTable)
+			v, t := getTableValuesFromInterface(event)
+			go fillTableFromSlices(v, t, abortTable)
 		} else if season, ok := reference.(seasonStruct); ok {
-			go fillTable(season, abortTable)
+			v, t := getTableValuesFromInterface(season)
+			go fillTableFromSlices(v, t, abortTable)
 		} else if session, ok := reference.(sessionStreamsStruct); ok {
-			go fillTable(session, abortTable)
+			v, t := getTableValuesFromInterface(session)
+			go fillTableFromSlices(v, t, abortTable)
 		} else if channel, ok := reference.(channelUrlsStruct); ok {
-			go fillTable(channel, abortTable)
+			v, t := getTableValuesFromInterface(channel)
+			go fillTableFromSlices(v, t, abortTable)
 		} else if seasons, ok := reference.(allSeasonStruct); ok {
-			go fillTable(seasons, abortTable)
+			v, t := getTableValuesFromInterface(seasons)
+			go fillTableFromSlices(v, t, abortTable)
 		} else if ep, ok := reference.(episodeStruct); ok {
 			//get name and value
 			titles := make([]string, 1)
@@ -189,7 +194,7 @@ func main() {
 				monitor = true
 			}
 			var stdoutIn io.ReadCloser
-			url := getProperURL(context.EpID)
+			url := getPlayableURL(context.EpID)
 			var filepath string
 			fileLoaded := false
 			//run every command
@@ -226,7 +231,7 @@ func main() {
 				node.SetColor(tcell.ColorBlue)
 			}
 		} else if node.GetText() == "Play with MPV" {
-			cmd := exec.Command("mpv", getProperURL(reference.(string)), "--alang="+con.Lang, "--start=0")
+			cmd := exec.Command("mpv", getPlayableURL(reference.(string)), "--alang="+con.Lang, "--start=0")
 			stdoutIn, _ := cmd.StdoutPipe()
 			err := cmd.Start()
 			if err != nil {
@@ -236,9 +241,9 @@ func main() {
 		} else if node.GetText() == "Download .m3u8" {
 			node.SetColor(tcell.ColorBlue)
 			urlAndTitle := reference.([]string)
-			downloadAsset(getProperURL(urlAndTitle[0]), urlAndTitle[1])
+			downloadAsset(getPlayableURL(urlAndTitle[0]), urlAndTitle[1])
 		} else if node.GetText() == "GET URL" {
-			debugPrint(getProperURL(reference.(string)))
+			debugPrint(getPlayableURL(reference.(string)))
 		} else if i, ok := reference.(int); ok {
 			//if episodes for category are not loaded yet
 			if i < len(vodTypes.Objects) {
@@ -284,8 +289,7 @@ func main() {
 }
 
 //takes struct reflect Types and values and draws them as a table
-//TODO recursively enter structs
-func fillTable(stru interface{}, abort chan bool) {
+func getTableValuesFromInterface(stru interface{}) ([]string, [][]string) {
 	titles := reflect.TypeOf(stru)
 	values := reflect.ValueOf(stru)
 	t := make([]string, 1)
@@ -296,23 +300,34 @@ func fillTable(stru interface{}, abort chan bool) {
 		title := titles.Field(i)
 		value := values.Field(i)
 
-		if value.Kind() == reflect.String {
-			//if velue is a string
+		if value.Kind() == reflect.Slice {
+			lines := make([]string, value.Len())
+			for j := 0; j < value.Len(); j++ {
+				if value.Index(j).Kind() == reflect.String {
+					lines[j] = value.Index(j).String()
+				} else if value.Index(j).Kind() == reflect.Struct {
+					a, b := getTableValuesFromInterface(value.Index(j).Interface())
+					t = append(t, title.Name)
+					v = append(v, []string{"================================"})
+					t = append(t, a...)
+					v = append(v, b...)
+					t = append(t, " ")
+					v = append(v, []string{"================================"})
+				}
+			}
+			t = append(t, title.Name)
+			v = append(v, lines)
+		} else if time, ok := value.Interface().(time.Time); ok {
+			t = append(t, title.Name)
+			v = append(v, []string{time.Format("2006-01-02 15:04:05")})
+		} else {
 			if !strings.Contains(strings.ToLower(title.Name), "winner") {
 				t = append(t, title.Name)
 				v = append(v, []string{value.String()})
 			}
-		} else if value.Kind() == reflect.Slice {
-			//if value is a slice of strings
-			lines := make([]string, value.Len())
-			for j := 0; j < value.Len(); j++ {
-				lines[j] = value.Index(j).String()
-			}
-			t = append(t, title.Name)
-			v = append(v, lines)
 		}
 	}
-	fillTableFromSlices(t, v, abort)
+	return t, v
 }
 
 //TODO add channel to abort
