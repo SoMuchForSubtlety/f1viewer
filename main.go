@@ -687,7 +687,12 @@ func nodeSelected(node *tview.TreeNode) {
 		go func() {
 			events := getEventNodes(season)
 			for _, event := range events {
-				node.AddChild(event)
+				layout := "2006-01-02"
+				e := event.GetReference().(eventStruct)
+				t, _ := time.Parse(layout, e.StartDate)
+				if t.Before(time.Now()) {
+					node.AddChild(event)
+				}
 			}
 			done = true
 		}()
