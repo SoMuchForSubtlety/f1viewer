@@ -56,6 +56,7 @@ var debugText *tview.TextView
 var tree *tview.TreeView
 
 func main() {
+	fmt.Println("Loading")
 	file, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		con.Lang = "en"
@@ -78,6 +79,9 @@ func main() {
 		SetRoot(root).
 		SetCurrentNode(root)
 	var allSeasons allSeasonStruct
+	if isLive, liveNode := getLive(); isLive {
+		root.AddChild(liveNode)
+	}
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
 		SetSelectable(true).
 		SetReference(allSeasons).
@@ -361,14 +365,15 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 			if session.Status != "upcoming" && session.Status != "expired" {
 				debugPrint("loading session streams")
 				streams := getSessionStreams(session.Slug)
-				sessionNode := tview.NewTreeNode(session.Name).SetSelectable(true)
-				bonusIDs[n] = session.ContentUrls
+				sessionNode := tview.NewTreeNode(session.Name).
+					SetSelectable(true).
+					SetReference(streams).
+					SetExpanded(false)
 				if session.Status == "live" {
 					sessionNode.SetText(session.Name + " - LIVE")
 					sessionNode.SetColor(tcell.ColorRed)
 				}
-				sessionNode.SetReference(streams)
-				sessionNode.SetExpanded(false)
+				bonusIDs[n] = session.ContentUrls
 				sessions[n] = sessionNode
 
 				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
@@ -690,7 +695,7 @@ func nodeSelected(node *tview.TreeNode) {
 				layout := "2006-01-02"
 				e := event.GetReference().(eventStruct)
 				t, _ := time.Parse(layout, e.StartDate)
-				if t.Before(time.Now()) {
+				if t.Before(time.Now().AddDate(0, 0, 1)) {
 					node.AddChild(event)
 				}
 			}
@@ -774,4 +779,29 @@ func nodeSelected(node *tview.TreeNode) {
 		}()
 		go blinkNode(node, &done, tcell.ColorYellow)
 	}
+}
+
+func getLive() (bool, *tview.TreeNode) {
+	home := getHomepageContent()
+	firstContent := home.Objects[0].Items[0].ContentURL.Items[0].ContentURL.Self
+	if strings.Contains(firstContent, "/api/event-occurrence/") {
+		event := getEvent(firstContent)
+		for _, sessionID := range event.SessionoccurrenceUrls {
+			session := getSession(sessionID)
+			if session.Status == "live" {
+				streams := getSessionStreams(session.Slug)
+				sessionNode := tview.NewTreeNode(session.Name + " - LIVE").
+					SetSelectable(true).
+					SetColor(tcell.ColorRed).
+					SetReference(streams).
+					SetExpanded(false)
+				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
+				for _, stream := range channels {
+					sessionNode.AddChild(stream)
+				}
+				return true, sessionNode
+			}
+		}
+	}
+	return false, nil
 }

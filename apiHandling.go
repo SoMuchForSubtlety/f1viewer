@@ -327,6 +327,31 @@ type driverUrlsStruct struct {
 	} `json:"team_url"`
 	DriverRacingnumber int `json:"driver_racingnumber"`
 }
+type homepageContentStruct struct {
+	Objects []struct {
+		Items []struct {
+			Position   int `json:"position"`
+			ContentURL struct {
+				Items []struct {
+					Position    int    `json:"position"`
+					ContentType string `json:"content_type"`
+					ContentURL  struct {
+						Self string `json:"self"`
+						UID  string `json:"uid"`
+					} `json:"content_url"`
+				} `json:"items"`
+				Self        string `json:"self"`
+				UID         string `json:"uid"`
+				SetTypeSlug string `json:"set_type_slug"`
+				Title       string `json:"title"`
+			} `json:"content_url"`
+			ContentType string `json:"content_type"`
+			DisplayType string `json:"display_type,omitempty"`
+		} `json:"items"`
+		Slug        string `json:"slug"`
+		SetTypeSlug string `json:"set_type_slug"`
+	} `json:"objects"`
+}
 
 //downloads json from URL and returns the json as string and whether it's valid as bool
 func getJSON(url string) (bool, string) {
@@ -366,6 +391,13 @@ func getEpisode(episodeID string) episodeStruct {
 	_, jsonString := getJSON(urlStart + episodeID)
 	json.Unmarshal([]byte(jsonString), &ep)
 	return ep
+}
+
+func getHomepageContent() homepageContentStruct {
+	var home homepageContentStruct
+	_, jsonString := getJSON("https://f1tv.formula1.com/api/sets/?slug=home&fields=slug,set_type_slug,items,items__position,items__content_type,items__display_type,items__content_url,items__content_url__uid,items__content_url__self,items__content_url__set_type_slug,items__content_url__display_type_slug,items__content_url__title,items__content_url__items,items__content_url__items__set_type_slug,items__content_url__items__position,items__content_url__items__content_type,items__content_url__items__content_url,items__content_url__items__content_url__self,items__content_url__items__content_url__uid&fields_to_expand=items__content_url,items__content_url__items__content_url")
+	json.Unmarshal([]byte(jsonString), &home)
+	return home
 }
 
 func getVodTypes() vodTypesStruct {
