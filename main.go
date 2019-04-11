@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -204,18 +205,29 @@ func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
 }
 
 //takes year/race ID and returns full year and race nuber as strings
-func getYearAndRace(input string) (string, string) {
+func getYearAndRace(input string) (string, string, error) {
+	var fullYear string
+	var raceNumber string
+	if len(input) < 4 {
+		return fullYear, raceNumber, errors.New("not long enough")
+	}
+	_, err := strconv.Atoi(input[:4])
+	if err != nil {
+		return fullYear, raceNumber, errors.New("not a valid RearRaceID")
+	}
+	if input[:4] == "2018" || input[:4] == "2019" {
+		return input[:4], "0", nil
+	}
 	year := input[:2]
 	intYear, _ := strconv.Atoi(year)
-	var fullYear string
 	//TODO: change before 2030
 	if intYear < 30 {
 		fullYear = "20" + year
 	} else {
 		fullYear = "19" + year
 	}
-	raceNumber := input[2:4]
-	return fullYear, raceNumber
+	raceNumber = input[2:4]
+	return fullYear, raceNumber, nil
 }
 
 //prints to debug window
@@ -459,35 +471,28 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	}()
 	wg.Wait()
 	sort.Slice(episodes, func(i, j int) bool {
-		//TODO: check that DataSourceID is long enough (?)
-		_, err := strconv.Atoi(episodes[i].DataSourceID[:4])
-		_, err2 := strconv.Atoi(episodes[j].DataSourceID[:4])
-		//if one of the episodes doesn't start with a date/race code just compare titles
-		if err != nil || err2 != nil {
-			return episodes[i].Title < episodes[j].Title
+		//TODO: move the checks to getYearAndRace
+		if len(episodes[i].DataSourceID) >= 4 && len(episodes[j].DataSourceID) >= 4 {
+			year1, race1, err := getYearAndRace(episodes[i].DataSourceID)
+			year2, race2, err2 := getYearAndRace(episodes[j].DataSourceID)
+			if err == nil && err2 == nil {
+				//sort chronologically by year and race number
+				return year1 < year2 || ((year1 == year2) && (race1 < race2))
+			}
 		}
-		year1, race1 := getYearAndRace(episodes[i].DataSourceID)
-		year2, race2 := getYearAndRace(episodes[j].DataSourceID)
-		//sort chronologically by year and race number
-		return year1 < year2 || ((year1 == year2) && (race1 < race2))
+		return episodes[i].Title < episodes[j].Title
 	})
 	//add loaded and sorted episodes to tree
 	var skippedEpisodes []*tview.TreeNode
 	for _, ep := range episodes {
+		if len(ep.Items) < 1 {
+			continue
+		}
 		node := tview.NewTreeNode(ep.Title).SetSelectable(true).
 			SetReference(ep).
 			SetColor(tcell.ColorGreen)
-		yearRaceID := ep.DataSourceID[:4]
 		//check for year/ race code
-		if _, err := strconv.Atoi(yearRaceID); err == nil {
-			year := ""
-			//TODO: better solution for "2018/19[..]" IDs before
-			//special case for IDs that start with 2018/19 since they don't  match the pattern
-			if yearRaceID != "2018" && yearRaceID != "2019" {
-				year, _ = getYearAndRace(ep.DataSourceID)
-			} else {
-				year = yearRaceID
-			}
+		if year, _, err := getYearAndRace(ep.DataSourceID); err == nil {
 			//check if there is a node for the specified year, if not create one
 			fatherFound := false
 			var fatherNode *tview.TreeNode
