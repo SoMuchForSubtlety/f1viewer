@@ -6,7 +6,7 @@ Stream any F1TV VOD with MPV or download the corresponding .m3u8 file.
 
 Now also supports live streams.
 
-![alt text](https://i.imgur.com/8fldjRA.png)
+![alt text](https://i.imgur.com/5wLXFaC.png)
 
 ### USAGE
 

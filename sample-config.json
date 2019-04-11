@@ -8,6 +8,14 @@
             ],
             "watchphrase": "Video",
             "command_to_watch": 0
+        },
+        {
+            "title": "download with youtube-dl",
+            "commands": [
+                ["youtube-dl", "$url"]
+            ],
+            "watchphrase": "100%",
+            "command_to_watch": 0
         }
     ]
 }
