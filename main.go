@@ -320,8 +320,8 @@ func addSeasons(parentNode *tview.TreeNode) allSeasonStruct {
 	debugPrint("loading seasons")
 	seasons := getSeasons()
 	for _, s := range seasons.Seasons {
-		seasonNode := tview.NewTreeNode(s.Name)
-		seasonNode.SetReference(s)
+		seasonNode := tview.NewTreeNode(s.Name).
+			SetReference(s)
 		parentNode.AddChild(seasonNode)
 	}
 	parentNode.SetExpanded(true)
@@ -362,6 +362,7 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 		go func(sessionID string, n int) {
 			debugPrint("loading session")
 			session := getSession(sessionID)
+			bonusIDs[n] = session.ContentUrls
 			if session.Status != "upcoming" && session.Status != "expired" {
 				debugPrint("loading session streams")
 				streams := getSessionStreams(session.Slug)
@@ -370,10 +371,9 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 					SetReference(streams).
 					SetExpanded(false)
 				if session.Status == "live" {
-					sessionNode.SetText(session.Name + " - LIVE")
-					sessionNode.SetColor(tcell.ColorRed)
+					sessionNode.SetText(session.Name + " - LIVE").
+						SetColor(tcell.ColorRed)
 				}
-				bonusIDs[n] = session.ContentUrls
 				sessions[n] = sessionNode
 
 				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
@@ -390,6 +390,7 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 		allIDs = append(allIDs, idList...)
 	}
 	if len(allIDs) > 0 {
+		debugPrint("has bonus")
 		bonusNode := tview.NewTreeNode("Bonus Content").SetSelectable(true).SetExpanded(false).SetReference("bonus")
 		addEpisodes(bonusNode, allIDs)
 		return append(sessions, bonusNode)
@@ -421,9 +422,10 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 			case "data":
 				name = "Data Channel"
 			}
-			streamNode := tview.NewTreeNode(name).SetSelectable(true)
-			streamNode.SetReference(streamPerspective)
-			streamNode.SetColor(tcell.ColorGreen)
+			streamNode := tview.NewTreeNode(name).
+				SetSelectable(true).
+				SetReference(streamPerspective).
+				SetColor(tcell.ColorGreen)
 			channels[i] = streamNode
 			wg3.Done()
 		}(i)
@@ -485,7 +487,6 @@ func addEpisodes(target *tview.TreeNode, IDs []string) {
 	}()
 	wg.Wait()
 	sort.Slice(episodes, func(i, j int) bool {
-		//TODO: move the checks to getYearAndRace
 		if len(episodes[i].DataSourceID) >= 4 && len(episodes[j].DataSourceID) >= 4 {
 			year1, race1, err := getYearAndRace(episodes[i].DataSourceID)
 			year2, race2, err2 := getYearAndRace(episodes[j].DataSourceID)
@@ -521,9 +522,10 @@ func addEpisodes(target *tview.TreeNode, IDs []string) {
 				}
 			}
 			if !fatherFound {
-				yearNode := tview.NewTreeNode(year).SetSelectable(true)
-				yearNode.SetReference(year)
-				yearNode.SetExpanded(false)
+				yearNode := tview.NewTreeNode(year).
+					SetSelectable(true).
+					SetReference(year).
+					SetExpanded(false)
 				target.AddChild(yearNode)
 				fatherNode = yearNode
 			}
