@@ -40,7 +40,7 @@ shows debug information
 
 ### CONFIG
 The config is is optional. It is used to set a preferred audio language and custom commands.
-The sample config looks like this.
+It should look like this.
 
     {
         "preferred_language": "en",
@@ -56,7 +56,7 @@ The sample config looks like this.
         ]
     }
 
-Save it as `config.json` in the same Folder as the F1Viewer binary 
+Save `sample-config.json` as `config.json` in the same Folder as the F1Viewer binary and edit it so it fits your needs.
 
 ### CUSTOM COMMANDS
 You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options`. You can add as many as you want. 
