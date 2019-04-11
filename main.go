@@ -350,6 +350,7 @@ func getEventNodes(season seasonStruct) []*tview.TreeNode {
 //returns node for every session (FP1, FP2, etc.)
 func getSessionNodes(event eventStruct) []*tview.TreeNode {
 	sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
+	bonusIDs := make([][]string, len(event.SessionoccurrenceUrls))
 	var wg2 sync.WaitGroup
 	wg2.Add(len(event.SessionoccurrenceUrls))
 	//iterate through sessions
@@ -361,6 +362,7 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 				debugPrint("loading session streams")
 				streams := getSessionStreams(session.Slug)
 				sessionNode := tview.NewTreeNode(session.Name).SetSelectable(true)
+				bonusIDs[n] = session.ContentUrls
 				if session.Status == "live" {
 					sessionNode.SetText(session.Name + " - LIVE")
 					sessionNode.SetColor(tcell.ColorRed)
@@ -378,6 +380,15 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 		}(sessionID, n)
 	}
 	wg2.Wait()
+	var allIDs []string
+	for _, idList := range bonusIDs {
+		allIDs = append(allIDs, idList...)
+	}
+	if len(allIDs) > 0 {
+		bonusNode := tview.NewTreeNode("Bonus Content").SetSelectable(true).SetExpanded(false).SetReference("bonus")
+		addEpisodes(bonusNode, allIDs)
+		return append(sessions, bonusNode)
+	}
 	return sessions
 }
 
@@ -437,20 +448,18 @@ func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 }
 
 //add episodes to VOD type
-func addEpisodes(target *tview.TreeNode, parentType int) {
+func addEpisodes(target *tview.TreeNode, IDs []string) {
 	var episodes []episodeStruct
 	var wg sync.WaitGroup
-	wg.Add(len(vodTypes.Objects[parentType].ContentUrls))
-	doneLoading := false
-	go blinkNode(target, &doneLoading, tcell.ColorYellow)
+	wg.Add(len(IDs))
 	//TODO: tweak number of threads
 	guard := make(chan struct{}, 100)
 	go func() {
-		for i := range vodTypes.Objects[parentType].ContentUrls {
+		for i := range IDs {
 			//wait for space in guard
 			guard <- struct{}{}
 			go func(i int) {
-				epID := vodTypes.Objects[parentType].ContentUrls[i]
+				epID := IDs[i]
 				//check if episode metadata is already cached
 				episodeMapMutex.RLock()
 				ep, ok := episodeMap[epID]
@@ -477,7 +486,11 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 			year2, race2, err2 := getYearAndRace(episodes[j].DataSourceID)
 			if err == nil && err2 == nil {
 				//sort chronologically by year and race number
-				return year1 < year2 || ((year1 == year2) && (race1 < race2))
+				if year1 != year2 {
+					return year1 < year2
+				} else if race1 != race2 {
+					return race1 < race2
+				}
 			}
 		}
 		return episodes[i].Title < episodes[j].Title
@@ -518,7 +531,6 @@ func addEpisodes(target *tview.TreeNode, parentType int) {
 	for _, ep := range skippedEpisodes {
 		target.AddChild(ep)
 	}
-	doneLoading = true
 	app.Draw()
 }
 
@@ -741,7 +753,12 @@ func nodeSelected(node *tview.TreeNode) {
 	} else if i, ok := reference.(int); ok {
 		//if episodes for category are not loaded yet
 		if i < len(vodTypes.Objects) {
-			go addEpisodes(node, i)
+			go func() {
+				doneLoading := false
+				go blinkNode(node, &doneLoading, tcell.ColorYellow)
+				addEpisodes(node, vodTypes.Objects[i].ContentUrls)
+				doneLoading = true
+			}()
 		}
 	} else if _, ok := reference.(allSeasonStruct); ok {
 		done := false
