@@ -357,7 +357,7 @@ type homepageContentStruct struct {
 func getJSON(url string) (bool, string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		debugPrint(err.Error())
 	}
 	defer resp.Body.Close()
 

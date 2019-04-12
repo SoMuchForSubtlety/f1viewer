@@ -390,7 +390,6 @@ func getSessionNodes(event eventStruct) []*tview.TreeNode {
 		allIDs = append(allIDs, idList...)
 	}
 	if len(allIDs) > 0 {
-		debugPrint("has bonus")
 		bonusNode := tview.NewTreeNode("Bonus Content").SetSelectable(true).SetExpanded(false).SetReference("bonus")
 		addEpisodes(bonusNode, allIDs)
 		return append(sessions, bonusNode)
@@ -613,38 +612,11 @@ func switchNode(node *tview.TreeNode) {
 	if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
 		v, t := getTableValuesFromInterface(vodTypes.Objects[index])
 		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if event, ok := reference.(eventStruct); ok {
-		v, t := getTableValuesFromInterface(event)
-		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if season, ok := reference.(seasonStruct); ok {
-		v, t := getTableValuesFromInterface(season)
-		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if session, ok := reference.(sessionStreamsStruct); ok {
-		v, t := getTableValuesFromInterface(session)
-		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if channel, ok := reference.(channelUrlsStruct); ok {
-		v, t := getTableValuesFromInterface(channel)
-		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if seasons, ok := reference.(allSeasonStruct); ok {
-		v, t := getTableValuesFromInterface(seasons)
-		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if ep, ok := reference.(episodeStruct); ok {
-		//get name and value
-		titles := make([]string, 1)
-		values := make([][]string, 1)
-		titles = append(titles, "Title")
-		values = append(values, []string{ep.Title})
-		titles = append(titles, "Subtitle")
-		values = append(values, []string{ep.Subtitle})
-		titles = append(titles, "Synopsis")
-		values = append(values, []string{ep.Synopsis})
-		titles = append(titles, "Drivers")
-		values = append(values, ep.DriverUrls)
-		titles = append(titles, "Teams")
-		values = append(values, ep.TeamUrls)
-		go fillTableFromSlices(titles, values, abortWritingInfo)
 	} else if len(node.GetChildren()) != 0 {
 		infoTable.Clear()
+	} else if x := reflect.ValueOf(reference); x.Kind() == reflect.Struct {
+		v, t := getTableValuesFromInterface(reference)
+		go fillTableFromSlices(v, t, abortWritingInfo)
 	}
 	infoTable.ScrollToBeginning()
 }
