@@ -165,8 +165,6 @@ func getTableValuesFromInterface(stru interface{}) ([]string, [][]string) {
 					v = append(v, []string{"================================"})
 					t = append(t, a...)
 					v = append(v, b...)
-					t = append(t, " ")
-					v = append(v, []string{"================================"})
 				}
 			}
 			t = append(t, title.Name)
@@ -174,6 +172,12 @@ func getTableValuesFromInterface(stru interface{}) ([]string, [][]string) {
 		} else if time, ok := value.Interface().(time.Time); ok {
 			t = append(t, title.Name)
 			v = append(v, []string{time.Format("2006-01-02 15:04:05")})
+		} else if number, ok := value.Interface().(int); ok {
+			t = append(t, title.Name)
+			v = append(v, []string{strconv.Itoa(number)})
+		} else if b, ok := value.Interface().(bool); ok {
+			t = append(t, title.Name)
+			v = append(v, []string{strconv.FormatBool(b)})
 		} else {
 			if !strings.Contains(strings.ToLower(title.Name), "winner") {
 				t = append(t, title.Name)
@@ -629,11 +633,11 @@ func switchNode(node *tview.TreeNode) {
 	if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
 		v, t := getTableValuesFromInterface(vodTypes.Objects[index])
 		go fillTableFromSlices(v, t, abortWritingInfo)
-	} else if len(node.GetChildren()) != 0 {
-		infoTable.Clear()
 	} else if x := reflect.ValueOf(reference); x.Kind() == reflect.Struct {
 		v, t := getTableValuesFromInterface(reference)
 		go fillTableFromSlices(v, t, abortWritingInfo)
+	} else if len(node.GetChildren()) != 0 {
+		infoTable.Clear()
 	}
 	infoTable.ScrollToBeginning()
 }
