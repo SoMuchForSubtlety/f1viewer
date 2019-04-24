@@ -28,7 +28,7 @@ https://github.com/SoMuchForSubtlety/F1viewer/releases/
 
  2. **Download MPV**
 
-	Download it from [here](https://mpv.io/installation/) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
+	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
 
 
     
