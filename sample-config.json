@@ -1,5 +1,6 @@
 {
     "preferred_language": "en",
+    "check_updates": true,
     "custom_playback_options": [
         {
             "title": "Play with MPV custom",
@@ -10,9 +11,11 @@
             "command_to_watch": 0
         },
         {
-            "title": "download with youtube-dl",
+            "title": "download with youtube-dl and play with MPV",
+            "concurrent": true,
             "commands": [
-                ["youtube-dl", "$url"]
+                ["youtube-dl", "$url"],
+                ["mpv", "$url"]
             ],
             "watchphrase": "100%",
             "command_to_watch": 0
