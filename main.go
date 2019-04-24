@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"reflect"
@@ -60,14 +59,16 @@ var tree *tview.TreeView
 func main() {
 	//start UI
 	app = tview.NewApplication()
-	fmt.Println("Loading")
 	file, err := ioutil.ReadFile("config.json")
 	con.CheckUpdate = true
 	con.Lang = "en"
-	if err == nil {
+	if err != nil {
+		debugPrint(err.Error())
+	} else {
 		err = json.Unmarshal(file, &con)
 		if err != nil {
-			log.Fatalf("malformed configuration file: %v\n", err)
+			debugPrint("malformed configuration file:")
+			debugPrint(err.Error())
 		}
 	}
 	abortWritingInfo = make(chan bool)
@@ -83,32 +84,40 @@ func main() {
 		SetRoot(root).
 		SetCurrentNode(root)
 	var allSeasons allSeasonStruct
-	if isLive, liveNode := getLive(); isLive {
-		root.AddChild(liveNode)
-	}
+	//check for live session
+	go func() {
+		if isLive, liveNode := getLive(); isLive {
+			insertNodeAtTop(root, liveNode)
+			app.Draw()
+		}
+	}()
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
 		SetSelectable(true).
 		SetReference(allSeasons).
 		SetExpanded(false).
 		SetColor(tcell.ColorYellow)
 	root.AddChild(fullSessions)
-	vodTypes = getVodTypes()
-	for i, vType := range vodTypes.Objects {
-		if len(vType.ContentUrls) > 0 {
-			node := tview.NewTreeNode(vType.Name).
-				SetSelectable(true).
-				SetReference(i).
-				SetColor(tcell.ColorYellow)
-			root.AddChild(node)
+	go func() {
+		vodTypes = getVodTypes()
+		for i, vType := range vodTypes.Objects {
+			if len(vType.ContentUrls) > 0 {
+				node := tview.NewTreeNode(vType.Name).
+					SetSelectable(true).
+					SetReference(i).
+					SetColor(tcell.ColorYellow)
+				root.AddChild(node)
+			}
 		}
-	}
+		app.Draw()
+	}()
+	//check if an update is available
 	if con.CheckUpdate {
 		go func() {
 			node, err := getUpdateNode()
 			if err != nil {
 				debugPrint(err.Error())
 			} else {
-				root.AddChild(node)
+				insertNodeAtTop(root, node)
 				app.Draw()
 			}
 		}()
@@ -178,6 +187,10 @@ func getTableValuesFromInterface(stru interface{}) ([]string, [][]string) {
 		} else if b, ok := value.Interface().(bool); ok {
 			t = append(t, title.Name)
 			v = append(v, []string{strconv.FormatBool(b)})
+		} else if s, ok := value.Interface().(string); ok {
+			lineArray := strings.FieldsFunc(s, func(r rune) bool { return r == '\n' || r == '\r' })
+			t = append(t, title.Name)
+			v = append(v, lineArray)
 		} else {
 			if !strings.Contains(strings.ToLower(title.Name), "winner") {
 				t = append(t, title.Name)
@@ -236,6 +249,7 @@ func getYearAndRace(input string) (string, string, error) {
 	if err != nil {
 		return fullYear, raceNumber, errors.New("not a valid RearRaceID")
 	}
+	//TODO fix before 2020
 	if input[:4] == "2018" || input[:4] == "2019" {
 		return input[:4], "0", nil
 	}
@@ -294,7 +308,7 @@ func getDriverNames(lines []string) []string {
 				driverMapMutex.Unlock()
 			}
 			//change string to driver name + number from metadata
-			name := addNumberToName(driver.DriverRacingnumber, driver.FirstName+" "+driver.LastName)
+			name := fmt.Sprintf("%4v "+driver.FirstName+" "+driver.LastName, "("+strconv.Itoa(driver.DriverRacingnumber)+")")
 			lines[j] = name
 			wg.Done()
 		}(j)
@@ -426,7 +440,7 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 			name := streamPerspective.Name
 			if len(streamPerspective.DriverUrls) > 0 {
 				number := streamPerspective.DriverUrls[0].DriverRacingnumber
-				name = addNumberToName(number, name)
+				name = fmt.Sprintf("%4v "+name, "("+strconv.Itoa(number)+")")
 			}
 			switch name {
 			case "WIF":
@@ -602,15 +616,6 @@ func checkArgs(searchArg string) bool {
 	return false
 }
 
-func addNumberToName(number int, name string) string {
-	if number >= 10 {
-		name = "(" + strconv.Itoa(number) + ") " + name
-	} else {
-		name = " (" + strconv.Itoa(number) + ") " + name
-	}
-	return name
-}
-
 func monitorCommand(node *tview.TreeNode, watchphrase string, output io.ReadCloser) {
 	scanner := bufio.NewScanner(output)
 	done := false
@@ -739,7 +744,10 @@ func nodeSelected(node *tview.TreeNode) {
 					}
 					//wait for exit code if commands should not be executed concurrently
 					if !com.Concurrent {
-						cmd.Wait()
+						err := cmd.Wait()
+						if err != nil {
+							debugPrint(err.Error())
+						}
 					}
 				}
 			}
@@ -791,6 +799,8 @@ func nodeSelected(node *tview.TreeNode) {
 		if err != nil {
 			debugPrint(err.Error())
 		}
+		node.SetColor(tcell.ColorBlue)
+		node.SetText("update notifications turned off")
 	}
 }
 
@@ -831,4 +841,11 @@ func (cfg *config) save() error {
 		return fmt.Errorf("error saving config: %v", err)
 	}
 	return nil
+}
+
+//probably needs mutex
+func insertNodeAtTop(parentNode *tview.TreeNode, childNode *tview.TreeNode) {
+	children := parentNode.GetChildren()
+	children = append([]*tview.TreeNode{childNode}, children...)
+	parentNode.SetChildren(children)
 }

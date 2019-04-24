@@ -18,10 +18,25 @@ import (
 )
 
 type release struct {
+	Name   string `json:"name"`
+	Body   string `json:"body"`
 	Assets []struct {
 		Name               string `json:"name"`
 		BrowserDownloadURL string `json:"browser_download_url"`
 	} `json:"assets"`
+}
+
+func getRelease() (release, error) {
+	var re release
+	jsonString, err := getJSON("https://api.github.com/repos/SoMuchForSubtlety/F1viewer/releases/latest")
+	if err != nil {
+		return re, err
+	}
+	err = json.Unmarshal([]byte(jsonString), &re)
+	if err != nil {
+		return re, err
+	}
+	return re, nil
 }
 
 func updateAvailable() (bool, error) {
@@ -48,12 +63,10 @@ func updateAvailable() (bool, error) {
 }
 
 func getHashfileLink() (string, error) {
-	var re release
-	jsonString, err := getJSON("https://api.github.com/repos/SoMuchForSubtlety/F1viewer/releases/latest")
+	re, err := getRelease()
 	if err != nil {
 		return "", err
 	}
-	json.Unmarshal([]byte(jsonString), &re)
 	for _, asset := range re.Assets {
 		if asset.Name == "checksums.txt" {
 			return asset.BrowserDownloadURL, nil
@@ -80,7 +93,8 @@ func getUpdateNode() (*tview.TreeNode, error) {
 	if !hasUpdate {
 		err = errors.New("no update available")
 	}
-	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(tcell.ColorRed).SetExpanded(false).SetReference("ref")
+	re, _ := getRelease()
+	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(tcell.ColorRed).SetExpanded(false).SetReference(re)
 	getUpdateNode := tview.NewTreeNode("download update").SetColor(tcell.ColorRed).SetReference("update")
 	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(tcell.ColorRed).SetReference("don't check")
 	updateNode.AddChild(getUpdateNode)
