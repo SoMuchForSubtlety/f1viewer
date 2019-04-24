@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,18 +13,21 @@ import (
 )
 
 //takes asset ID and downloads corresponding .m3u8
-func downloadAsset(url string, title string) string {
+func downloadAsset(url string, title string) (string, error) {
 	//sanitize title
 	title = strings.Replace(title, ":", "", -1)
 	//abort if the URL is not valid
 	if len(url) < 10 {
-		return ""
+		return "", errors.New("invalid url")
 	}
 	//download and patch .m3u8 file
-	data := downloadData(url)
+	data, err := downloadData(url)
+	if err != nil {
+		return "", err
+	}
 	fixedLineArray := fixData(data, url)
 	path := writeToFile(fixedLineArray, title+".m3u8")
-	return strings.Replace(path, " ", "\x20", -1)
+	return strings.Replace(path, " ", "\x20", -1), nil
 }
 
 //returns valid m3u8 URL as string
@@ -86,11 +90,11 @@ func getPlayableURL(assetID string) string {
 }
 
 //downloads m3u8 data and returns it as slice
-func downloadData(url string) []string {
+func downloadData(url string) ([]string, error) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -98,7 +102,7 @@ func downloadData(url string) []string {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	lineArray := strings.Split(buf.String(), "\n")
-	return lineArray
+	return lineArray, nil
 }
 
 //chage URIs in m3u8 data to full URLs

@@ -23,11 +23,13 @@ import (
 
 type config struct {
 	Lang                  string    `json:"preferred_language"`
+	CheckUpdate           bool      `json:"check_updates"`
 	CustomPlaybackOptions []command `json:"custom_playback_options"`
 }
 
 type command struct {
 	Title          string     `json:"title"`
+	Concurrent     bool       `json:"concurrent"`
 	Commands       [][]string `json:"commands"`
 	Watchphrase    string     `json:"watchphrase"`
 	CommandToWatch int        `json:"command_to_watch"`
@@ -56,11 +58,13 @@ var debugText *tview.TextView
 var tree *tview.TreeView
 
 func main() {
+	//start UI
+	app = tview.NewApplication()
 	fmt.Println("Loading")
 	file, err := ioutil.ReadFile("config.json")
-	if err != nil {
-		con.Lang = "en"
-	} else {
+	con.CheckUpdate = true
+	con.Lang = "en"
+	if err == nil {
 		err = json.Unmarshal(file, &con)
 		if err != nil {
 			log.Fatalf("malformed configuration file: %v\n", err)
@@ -98,12 +102,21 @@ func main() {
 			root.AddChild(node)
 		}
 	}
+	if con.CheckUpdate {
+		go func() {
+			node, err := getUpdateNode()
+			if err != nil {
+				debugPrint(err.Error())
+			} else {
+				root.AddChild(node)
+				app.Draw()
+			}
+		}()
+	}
 	//display info for the episode or VOD type the cursor is on
 	tree.SetChangedFunc(switchNode)
 	//what happens when a node is selected
 	tree.SetSelectedFunc(nodeSelected)
-	//start UI
-	app = tview.NewApplication()
 	//flex containing everything
 	flex := tview.NewFlex()
 	//flex containing metadata and debug
@@ -439,16 +452,20 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 //blinks node until bool is changed
 //TODO replace done bool with channel?
 func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
+	colors := []tcell.Color{tcell.ColorRed, tcell.ColorOrange, tcell.ColorYellow, tcell.ColorGreen, tcell.ColorBlue, tcell.ColorIndigo, tcell.ColorViolet}
 	originalText := node.GetText()
 	node.SetText("loading...")
 	for !*done {
-		node.SetColor(tcell.ColorBlue)
-		app.Draw()
-		time.Sleep(200 * time.Millisecond)
-		node.SetColor(originalColor)
-		app.Draw()
-		time.Sleep(200 * time.Millisecond)
+		for _, color := range colors {
+			if *done {
+				break
+			}
+			node.SetColor(color)
+			app.Draw()
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
+	node.SetColor(originalColor)
 	node.SetText(originalText)
 	app.Draw()
 }
@@ -688,38 +705,44 @@ func nodeSelected(node *tview.TreeNode) {
 		var filepath string
 		fileLoaded := false
 		//run every command
-		for j := range com.Commands {
-			if len(com.Commands[j]) > 0 {
-				tmpCommand := make([]string, len(com.Commands[j]))
-				copy(tmpCommand, com.Commands[j])
-				//replace $url and $file
-				for x, s := range tmpCommand {
-					tmpCommand[x] = s
-					if strings.Contains(s, "$file") {
-						if !fileLoaded {
-							filepath = downloadAsset(url, context.Title)
-							fileLoaded = true
+		go func() {
+			for j := range com.Commands {
+				if len(com.Commands[j]) > 0 {
+					tmpCommand := make([]string, len(com.Commands[j]))
+					copy(tmpCommand, com.Commands[j])
+					//replace $url and $file
+					for x, s := range tmpCommand {
+						tmpCommand[x] = s
+						if strings.Contains(s, "$file") {
+							if !fileLoaded {
+								filepath, _ = downloadAsset(url, context.Title)
+								fileLoaded = true
+							}
+							tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
 						}
-						tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
+						tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 					}
-					tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
-				}
-				//run command
-				debugPrint("starting:", tmpCommand...)
-				cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
-				stdoutIn, _ = cmd.StdoutPipe()
-				err := cmd.Start()
-				if err != nil {
-					debugPrint(err.Error())
-				}
-				if monitor && com.CommandToWatch == j {
-					go monitorCommand(node, com.Watchphrase, stdoutIn)
+					//run command
+					debugPrint("starting:", tmpCommand...)
+					cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
+					stdoutIn, _ = cmd.StdoutPipe()
+					err := cmd.Start()
+					if err != nil {
+						debugPrint(err.Error())
+					}
+					if monitor && com.CommandToWatch == j {
+						go monitorCommand(node, com.Watchphrase, stdoutIn)
+					}
+					//wait for exit code if commands should not be executed concurrently
+					if !com.Concurrent {
+						cmd.Wait()
+					}
 				}
 			}
-		}
-		if !monitor {
-			node.SetColor(tcell.ColorBlue)
-		}
+			if !monitor {
+				node.SetColor(tcell.ColorBlue)
+			}
+		}()
 	} else if node.GetText() == "Play with MPV" {
 		cmd := exec.Command("mpv", getPlayableURL(reference.(string)), "--alang="+con.Lang, "--start=0")
 		stdoutIn, _ := cmd.StdoutPipe()
@@ -752,6 +775,18 @@ func nodeSelected(node *tview.TreeNode) {
 			done = true
 		}()
 		go blinkNode(node, &done, tcell.ColorYellow)
+	} else if node.GetText() == "download update" {
+		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
+		if err != nil {
+			debugPrint(err.Error())
+		}
+	} else if node.GetText() == "don't tell me about updates" {
+		debugPrint("meme")
+		con.CheckUpdate = false
+		err := con.save()
+		if err != nil {
+			debugPrint(err.Error())
+		}
 	}
 }
 
@@ -778,4 +813,18 @@ func getLive() (bool, *tview.TreeNode) {
 		}
 	}
 	return false, nil
+}
+
+func (cfg *config) save() error {
+
+	d, err := json.MarshalIndent(&cfg, "", "\t")
+	if err != nil {
+		return fmt.Errorf("error marshaling config: %v", err)
+	}
+
+	err = ioutil.WriteFile("config.json", d, 0600)
+	if err != nil {
+		return fmt.Errorf("error saving config: %v", err)
+	}
+	return nil
 }

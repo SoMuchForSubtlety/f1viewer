@@ -354,17 +354,17 @@ type homepageContentStruct struct {
 }
 
 //downloads json from URL and returns the json as string and whether it's valid as bool
-func getJSON(url string) (bool, string) {
+func getJSON(url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		debugPrint(err.Error())
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	response := buf.String()
-	return isJSON(response), response
+	return response, nil
 }
 
 func isJSON(s string) bool {
@@ -374,35 +374,50 @@ func isJSON(s string) bool {
 
 func getDriver(driverID string) driverStruct {
 	var driver driverStruct
-	_, jsonString := getJSON(urlStart + driverID)
+	jsonString, err := getJSON(urlStart + driverID)
+	if err != nil {
+		return driver
+	}
 	json.Unmarshal([]byte(jsonString), &driver)
 	return driver
 }
 
 func getTeam(teamID string) teamStruct {
 	var team teamStruct
-	_, jsonString := getJSON(urlStart + teamID)
+	jsonString, err := getJSON(urlStart + teamID)
+	if err != nil {
+		return team
+	}
 	json.Unmarshal([]byte(jsonString), &team)
 	return team
 }
 
 func getEpisode(episodeID string) episodeStruct {
 	var ep episodeStruct
-	_, jsonString := getJSON(urlStart + episodeID)
+	jsonString, err := getJSON(urlStart + episodeID)
+	if err != nil {
+		return ep
+	}
 	json.Unmarshal([]byte(jsonString), &ep)
 	return ep
 }
 
 func getHomepageContent() homepageContentStruct {
 	var home homepageContentStruct
-	_, jsonString := getJSON("https://f1tv.formula1.com/api/sets/?slug=home&fields=slug,set_type_slug,items,items__position,items__content_type,items__display_type,items__content_url,items__content_url__uid,items__content_url__self,items__content_url__set_type_slug,items__content_url__display_type_slug,items__content_url__title,items__content_url__items,items__content_url__items__set_type_slug,items__content_url__items__position,items__content_url__items__content_type,items__content_url__items__content_url,items__content_url__items__content_url__self,items__content_url__items__content_url__uid&fields_to_expand=items__content_url,items__content_url__items__content_url")
+	jsonString, err := getJSON("https://f1tv.formula1.com/api/sets/?slug=home&fields=slug,set_type_slug,items,items__position,items__content_type,items__display_type,items__content_url,items__content_url__uid,items__content_url__self,items__content_url__set_type_slug,items__content_url__display_type_slug,items__content_url__title,items__content_url__items,items__content_url__items__set_type_slug,items__content_url__items__position,items__content_url__items__content_type,items__content_url__items__content_url,items__content_url__items__content_url__self,items__content_url__items__content_url__uid&fields_to_expand=items__content_url,items__content_url__items__content_url")
+	if err != nil {
+		return home
+	}
 	json.Unmarshal([]byte(jsonString), &home)
 	return home
 }
 
 func getVodTypes() vodTypesStruct {
 	var types vodTypesStruct
-	_, jsonString := getJSON(vodTypesURL)
+	jsonString, err := getJSON(vodTypesURL)
+	if err != nil {
+		return types
+	}
 	json.Unmarshal([]byte(jsonString), &types)
 	return types
 }
@@ -411,7 +426,10 @@ var listOfSeasons allSeasonStruct
 
 func getSeasons() allSeasonStruct {
 	if len(listOfSeasons.Seasons) < 1 {
-		_, jsonString := getJSON("https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year")
+		jsonString, err := getJSON("https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year")
+		if err != nil {
+			return listOfSeasons
+		}
 		json.Unmarshal([]byte(jsonString), &listOfSeasons)
 	}
 	return listOfSeasons
@@ -419,21 +437,30 @@ func getSeasons() allSeasonStruct {
 
 func getEvent(eventID string) eventStruct {
 	var event eventStruct
-	_, jsonString := getJSON(urlStart + eventID)
+	jsonString, err := getJSON(urlStart + eventID)
+	if err != nil {
+		return event
+	}
 	json.Unmarshal([]byte(jsonString), &event)
 	return event
 }
 
 func getSession(sessionID string) sessionStruct {
 	var session sessionStruct
-	_, jsonString := getJSON(urlStart + sessionID)
+	jsonString, err := getJSON(urlStart + sessionID)
+	if err != nil {
+		return session
+	}
 	json.Unmarshal([]byte(jsonString), &session)
 	return session
 }
 
 func getSessionStreams(sessionSlug string) sessionStreamsStruct {
 	var sessionStreams sessionStreamsStruct
-	_, jsonString := getJSON(sessionURLstart + sessionSlug)
+	jsonString, err := getJSON(sessionURLstart + sessionSlug)
+	if err != nil {
+		return sessionStreams
+	}
 	json.Unmarshal([]byte(jsonString), &sessionStreams)
 	return sessionStreams
 }
