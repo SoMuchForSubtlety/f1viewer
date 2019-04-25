@@ -3,7 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"sort"
+	"strconv"
+	"sync"
 	"time"
 )
 
@@ -463,4 +467,128 @@ func getSessionStreams(sessionSlug string) sessionStreamsStruct {
 	}
 	json.Unmarshal([]byte(jsonString), &sessionStreams)
 	return sessionStreams
+}
+
+//checks for driver or team IDs for the info table
+func convertIDs(lines []string) []string {
+	if len(lines) < 1 {
+		return lines
+	}
+	if len(lines[0]) > 12 && lines[0][:12] == "/api/driver/" {
+		lines = substituteDriverNames(lines)
+	} else if len(lines[0]) > 12 && lines[0][:10] == "/api/team/" {
+		lines = substituteTeamNames(lines)
+	}
+	return lines
+}
+
+//turns slice of driver IDs to their names
+func substituteDriverNames(lines []string) []string {
+	var wg sync.WaitGroup
+	wg.Add(len(lines))
+	//iterate over all lines
+	for j := 0; j < len(lines); j++ {
+		go func(j int) {
+			//check if driver metadata is already cached
+			driverMapMutex.RLock()
+			driver, ok := driverMap[lines[j]]
+			driverMapMutex.RUnlock()
+			if !ok {
+				//load driver metadata if not already cached
+				driver = getDriver(lines[j])
+				//add metadata to cache
+				driverMapMutex.Lock()
+				driverMap[lines[j]] = driver
+				driverMapMutex.Unlock()
+			}
+			//change string to driver name + number from metadata
+			name := fmt.Sprintf("%4v "+driver.FirstName+" "+driver.LastName, "("+strconv.Itoa(driver.DriverRacingnumber)+")")
+			lines[j] = name
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	sort.Strings(lines)
+	return lines
+}
+
+//turns array of team IDs to their names
+func substituteTeamNames(lines []string) []string {
+	var wg sync.WaitGroup
+	wg.Add(len(lines))
+	//iterate over all lines
+	for j := 0; j < len(lines); j++ {
+		go func(j int) {
+			//check if team metadata is already cached
+			teamMapMutex.RLock()
+			team, ok := teamMap[lines[j]]
+			teamMapMutex.RUnlock()
+			if !ok {
+				//load team metadata if not already cached
+				team = getTeam(lines[j])
+				//add metadata to cache
+				teamMapMutex.Lock()
+				teamMap[lines[j]] = team
+				teamMapMutex.Unlock()
+			}
+			lines[j] = team.Name
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	sort.Strings(lines)
+	return lines
+}
+
+func loadEpisodes(IDs []string) []episodeStruct {
+	var episodes []episodeStruct
+	var wg sync.WaitGroup
+	wg.Add(len(IDs))
+	//TODO: tweak number of threads
+	guard := make(chan struct{}, 100)
+	go func() {
+		for i := range IDs {
+			//wait for space in guard
+			guard <- struct{}{}
+			go func(i int) {
+				epID := IDs[i]
+				//check if episode metadata is already cached
+				episodeMapMutex.RLock()
+				ep, ok := episodeMap[epID]
+				episodeMapMutex.RUnlock()
+				if !ok {
+					//load episode metadata and add to cache
+					ep = getEpisode(epID)
+					episodeMapMutex.Lock()
+					episodeMap[epID] = ep
+					episodeMapMutex.Unlock()
+				}
+				episodes = append(episodes, ep)
+				//make room in guard
+				<-guard
+				defer wg.Done()
+			}(i)
+		}
+	}()
+	wg.Wait()
+	return episodes
+}
+
+func sortEpisodes(episodes []episodeStruct) []episodeStruct {
+	sort.Slice(episodes, func(i, j int) bool {
+		if len(episodes[i].DataSourceID) >= 4 && len(episodes[j].DataSourceID) >= 4 {
+			year1, race1, err := getYearAndRace(episodes[i].DataSourceID)
+			year2, race2, err2 := getYearAndRace(episodes[j].DataSourceID)
+			if err == nil && err2 == nil {
+				//sort chronologically by year and race number
+				if year1 != year2 {
+					return year1 < year2
+				} else if race1 != race2 {
+					return race1 < race2
+				}
+			}
+		}
+		return episodes[i].Title < episodes[j].Title
+	})
+	return episodes
 }
