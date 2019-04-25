@@ -208,28 +208,31 @@ func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
 	default:
 		//so it doesn't lock
 	}
-	aborted := false
+	aborted := make(chan bool)
 	go func() {
 		//waits for abort signal
 		abort <- true
-		aborted = true
+		aborted <- true
 	}()
 	infoTable.Clear()
 	rowIndex := 0
 	for index, title := range titles {
 		//convert supported API IDs to reasonable strings
 		lines := convertIDs(values[index])
-		if aborted {
+		select {
+		case <-aborted:
 			return
-		} else if len(values[index]) > 0 && len(values[index][0]) > 1 {
-			//print title
-			infoTable.SetCell(rowIndex, 1, tview.NewTableCell(title).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
-			//print values
-			for _, line := range lines {
-				infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
+		default:
+			if len(values[index]) > 0 && len(values[index][0]) > 1 {
+				//print title
+				infoTable.SetCell(rowIndex, 1, tview.NewTableCell(title).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
+				//print values
+				for _, line := range lines {
+					infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
+					rowIndex++
+				}
 				rowIndex++
 			}
-			rowIndex++
 		}
 	}
 	infoTable.ScrollToBeginning()
