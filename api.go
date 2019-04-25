@@ -3,10 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -235,6 +233,11 @@ type eventStruct struct {
 }
 
 type sessionStruct struct {
+	Name                     string        `json:"name"`
+	Slug                     string        `json:"slug"`
+	Status                   string        `json:"status"`
+	ContentUrls              []string      `json:"content_urls"`
+	SessionName              string        `json:"session_name"`
 	UID                      string        `json:"uid"`
 	ScheduleAfterMidnightURL string        `json:"schedule_after_midnight_url"`
 	ScheduleUrls             []string      `json:"schedule_urls"`
@@ -248,7 +251,6 @@ type sessionStruct struct {
 	ReplayStartTime          time.Time     `json:"replay_start_time"`
 	DataSourceFields         []interface{} `json:"data_source_fields"`
 	DataSourceID             string        `json:"data_source_id"`
-	Status                   string        `json:"status"`
 	ScheduleAfter14DaysURL   string        `json:"schedule_after_14_days_url"`
 	EventoccurrenceURL       string        `json:"eventoccurrence_url"`
 	DriveroccurrenceUrls     []interface{} `json:"driveroccurrence_urls"`
@@ -258,9 +260,7 @@ type sessionStruct struct {
 	StatusOverride           interface{}   `json:"status_override"`
 	NbcPid                   int           `json:"nbc_pid"`
 	LiveSourcesMd5           string        `json:"live_sources_md5"`
-	Slug                     string        `json:"slug"`
 	LastDataIngest           time.Time     `json:"last_data_ingest"`
-	Name                     string        `json:"name"`
 	SessionTypeURL           string        `json:"session_type_url"`
 	EditorialStartTime       time.Time     `json:"editorial_start_time"`
 	EventConfigMd5           string        `json:"event_config_md5"`
@@ -268,11 +268,9 @@ type sessionStruct struct {
 	Language                 string        `json:"language"`
 	Created                  time.Time     `json:"created"`
 	Modified                 time.Time     `json:"modified"`
-	ContentUrls              []string      `json:"content_urls"`
 	ScheduleAfter24HURL      string        `json:"schedule_after_24h_url"`
 	EndTime                  time.Time     `json:"end_time"`
 	SeriesURL                string        `json:"series_url"`
-	SessionName              string        `json:"session_name"`
 	Editability              string        `json:"editability"`
 }
 
@@ -467,77 +465,6 @@ func getSessionStreams(sessionSlug string) sessionStreamsStruct {
 	}
 	json.Unmarshal([]byte(jsonString), &sessionStreams)
 	return sessionStreams
-}
-
-//checks for driver or team IDs for the info table
-func convertIDs(lines []string) []string {
-	if len(lines) < 1 {
-		return lines
-	}
-	if len(lines[0]) > 12 && lines[0][:12] == "/api/driver/" {
-		lines = substituteDriverNames(lines)
-	} else if len(lines[0]) > 12 && lines[0][:10] == "/api/team/" {
-		lines = substituteTeamNames(lines)
-	}
-	return lines
-}
-
-//turns slice of driver IDs to their names
-func substituteDriverNames(lines []string) []string {
-	var wg sync.WaitGroup
-	wg.Add(len(lines))
-	//iterate over all lines
-	for j := 0; j < len(lines); j++ {
-		go func(j int) {
-			//check if driver metadata is already cached
-			driverMapMutex.RLock()
-			driver, ok := driverMap[lines[j]]
-			driverMapMutex.RUnlock()
-			if !ok {
-				//load driver metadata if not already cached
-				driver = getDriver(lines[j])
-				//add metadata to cache
-				driverMapMutex.Lock()
-				driverMap[lines[j]] = driver
-				driverMapMutex.Unlock()
-			}
-			//change string to driver name + number from metadata
-			name := fmt.Sprintf("%4v "+driver.FirstName+" "+driver.LastName, "("+strconv.Itoa(driver.DriverRacingnumber)+")")
-			lines[j] = name
-			wg.Done()
-		}(j)
-	}
-	wg.Wait()
-	sort.Strings(lines)
-	return lines
-}
-
-//turns array of team IDs to their names
-func substituteTeamNames(lines []string) []string {
-	var wg sync.WaitGroup
-	wg.Add(len(lines))
-	//iterate over all lines
-	for j := 0; j < len(lines); j++ {
-		go func(j int) {
-			//check if team metadata is already cached
-			teamMapMutex.RLock()
-			team, ok := teamMap[lines[j]]
-			teamMapMutex.RUnlock()
-			if !ok {
-				//load team metadata if not already cached
-				team = getTeam(lines[j])
-				//add metadata to cache
-				teamMapMutex.Lock()
-				teamMap[lines[j]] = team
-				teamMapMutex.Unlock()
-			}
-			lines[j] = team.Name
-			wg.Done()
-		}(j)
-	}
-	wg.Wait()
-	sort.Strings(lines)
-	return lines
 }
 
 func loadEpisodes(IDs []string) []episodeStruct {

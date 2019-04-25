@@ -20,7 +20,7 @@ func getPlaybackNodes(title string, epID string) []*tview.TreeNode {
 		for i := range con.CustomPlaybackOptions {
 			com := con.CustomPlaybackOptions[i]
 			if len(com.Commands) > 0 {
-				var context nodeContext
+				var context commandContext
 				context.EpID = epID
 				context.CustomOptions = com
 				context.Title = title
@@ -105,7 +105,7 @@ func getEventNodes(season seasonStruct) []*tview.TreeNode {
 			event := getEvent(eventID)
 			//if the events actually has saved sassions add it to the tree
 			if len(event.SessionoccurrenceUrls) > 0 {
-				eventNode := tview.NewTreeNode(event.OfficialName).SetSelectable(true)
+				eventNode := tview.NewTreeNode(strings.Replace(event.OfficialName, "™", "", -1)).SetSelectable(true)
 				eventNode.SetReference(event)
 				events[m] = eventNode
 			}
@@ -206,11 +206,13 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 func getSeasonNodes() []*tview.TreeNode {
 	debugPrint("loading seasons")
 	seasons := getSeasons()
-	nodes := make([]*tview.TreeNode, len(seasons.Seasons))
-	for i, s := range seasons.Seasons {
-		seasonNode := tview.NewTreeNode(s.Name).
-			SetReference(s)
-		nodes[i] = seasonNode
+	var nodes []*tview.TreeNode
+	for _, s := range seasons.Seasons {
+		if s.HasContent {
+			seasonNode := tview.NewTreeNode(s.Name).
+				SetReference(s)
+			nodes = append(nodes, seasonNode)
+		}
 	}
 	return nodes
 }
@@ -255,7 +257,25 @@ func getEpisodeNodes(IDs []string) []*tview.TreeNode {
 			skippedEpisodes = append(skippedEpisodes, node)
 		}
 	}
+	if len(yearNodes) == 1 {
+		return append(yearNodes[0].GetChildren(), skippedEpisodes...)
+	}
 	return append(yearNodes, skippedEpisodes...)
+}
+
+func getVodTypeNodes() []*tview.TreeNode {
+	var nodes []*tview.TreeNode
+	vodTypes = getVodTypes()
+	for i, vType := range vodTypes.Objects {
+		if len(vType.ContentUrls) > 0 {
+			node := tview.NewTreeNode(vType.Name).
+				SetSelectable(true).
+				SetReference(i).
+				SetColor(tcell.ColorYellow)
+			nodes = append(nodes, node)
+		}
+	}
+	return nodes
 }
 
 //appends children to parent

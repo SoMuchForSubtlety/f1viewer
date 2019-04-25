@@ -33,7 +33,7 @@ type command struct {
 	CommandToWatch int        `json:"command_to_watch"`
 }
 
-type nodeContext struct {
+type commandContext struct {
 	EpID          string
 	CustomOptions command
 	Title         string
@@ -90,24 +90,6 @@ func main() {
 			app.Draw()
 		}
 	}()
-	fullSessions := tview.NewTreeNode("Full Race Weekends").
-		SetSelectable(true).
-		SetReference(allSeasons).
-		SetColor(tcell.ColorYellow)
-	root.AddChild(fullSessions)
-	go func() {
-		vodTypes = getVodTypes()
-		for i, vType := range vodTypes.Objects {
-			if len(vType.ContentUrls) > 0 {
-				node := tview.NewTreeNode(vType.Name).
-					SetSelectable(true).
-					SetReference(i).
-					SetColor(tcell.ColorYellow)
-				root.AddChild(node)
-			}
-		}
-		app.Draw()
-	}()
 	//check if an update is available
 	if con.CheckUpdate {
 		go func() {
@@ -120,9 +102,19 @@ func main() {
 			}
 		}()
 	}
-	//display info for the episode or VOD type the cursor is on
-	tree.SetChangedFunc(switchNode)
-	//what happens when a node is selected
+	//set vod types nodes
+	go func() {
+		nodes := getVodTypeNodes()
+		appendNodes(root, nodes...)
+		app.Draw()
+	}()
+	//set full race weekends node
+	fullSessions := tview.NewTreeNode("Full Race Weekends").
+		SetSelectable(true).
+		SetReference(allSeasons).
+		SetColor(tcell.ColorYellow)
+	root.AddChild(fullSessions)
+	tree.SetChangedFunc(nodeSwitched)
 	tree.SetSelectedFunc(nodeSelected)
 	//flex containing everything
 	flex := tview.NewFlex()
@@ -147,96 +139,6 @@ func main() {
 		rowFlex.AddItem(debugText, 0, 1, false)
 	}
 	app.SetRoot(flex, true).Run()
-}
-
-//takes struct reflect Types and values and draws them as a table
-func getTableValuesFromInterface(stru interface{}) ([]string, [][]string) {
-	titles := reflect.TypeOf(stru)
-	values := reflect.ValueOf(stru)
-	t := make([]string, 1)
-	v := make([][]string, 1)
-
-	//iterate through titles and values and add them to the slices
-	for i := 0; i < titles.NumField(); i++ {
-		title := titles.Field(i)
-		value := values.Field(i)
-
-		if value.Kind() == reflect.Slice {
-			lines := make([]string, value.Len())
-			for j := 0; j < value.Len(); j++ {
-				if value.Index(j).Kind() == reflect.String {
-					lines[j] = value.Index(j).String()
-				} else if value.Index(j).Kind() == reflect.Struct {
-					a, b := getTableValuesFromInterface(value.Index(j).Interface())
-					t = append(t, title.Name)
-					v = append(v, []string{"================================"})
-					t = append(t, a...)
-					v = append(v, b...)
-				}
-			}
-			t = append(t, title.Name)
-			v = append(v, lines)
-		} else if time, ok := value.Interface().(time.Time); ok {
-			t = append(t, title.Name)
-			v = append(v, []string{time.Format("2006-01-02 15:04:05")})
-		} else if number, ok := value.Interface().(int); ok {
-			t = append(t, title.Name)
-			v = append(v, []string{strconv.Itoa(number)})
-		} else if b, ok := value.Interface().(bool); ok {
-			t = append(t, title.Name)
-			v = append(v, []string{strconv.FormatBool(b)})
-		} else if s, ok := value.Interface().(string); ok {
-			lineArray := strings.FieldsFunc(s, func(r rune) bool { return r == '\n' || r == '\r' })
-			t = append(t, title.Name)
-			v = append(v, lineArray)
-		} else {
-			if !strings.Contains(strings.ToLower(title.Name), "winner") {
-				t = append(t, title.Name)
-				v = append(v, []string{value.String()})
-			}
-		}
-	}
-	return t, v
-}
-
-//TODO add channel to abort
-//takes title and values slices and draws them as table
-func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
-	select {
-	case <-abort:
-		//aborts previous call
-	default:
-		//so it doesn't lock
-	}
-	aborted := make(chan bool)
-	go func() {
-		//waits for abort signal
-		abort <- true
-		aborted <- true
-	}()
-	infoTable.Clear()
-	rowIndex := 0
-	for index, title := range titles {
-		//convert supported API IDs to reasonable strings
-		lines := convertIDs(values[index])
-		select {
-		case <-aborted:
-			return
-		default:
-			if len(values[index]) > 0 && len(values[index][0]) > 1 {
-				//print title
-				infoTable.SetCell(rowIndex, 1, tview.NewTableCell(title).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
-				//print values
-				for _, line := range lines {
-					infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
-					rowIndex++
-				}
-				rowIndex++
-			}
-		}
-	}
-	infoTable.ScrollToBeginning()
-	app.Draw()
 }
 
 //takes year/race ID and returns full year and race nuber as strings
@@ -304,7 +206,7 @@ func monitorCommand(node *tview.TreeNode, watchphrase string, output io.ReadClos
 	app.Draw()
 }
 
-func switchNode(node *tview.TreeNode) {
+func nodeSwitched(node *tview.TreeNode) {
 	reference := node.GetReference()
 	if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
 		v, t := getTableValuesFromInterface(vodTypes.Objects[index])
@@ -316,6 +218,7 @@ func switchNode(node *tview.TreeNode) {
 		infoTable.Clear()
 	}
 	infoTable.ScrollToBeginning()
+	app.Draw()
 }
 
 func nodeSelected(node *tview.TreeNode) {
@@ -375,69 +278,18 @@ func nodeSelected(node *tview.TreeNode) {
 			done = true
 		}()
 		go blinkNode(node, &done, tcell.ColorWheat)
-	} else if context, ok := reference.(nodeContext); ok {
-		//custom command
-		monitor := false
-		com := context.CustomOptions
-		if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
-			monitor = true
-		}
-		var stdoutIn io.ReadCloser
-		url := getPlayableURL(context.EpID)
-		var filepath string
-		fileLoaded := false
-		//run every command
-		go func() {
-			for j := range com.Commands {
-				if len(com.Commands[j]) > 0 {
-					tmpCommand := make([]string, len(com.Commands[j]))
-					copy(tmpCommand, com.Commands[j])
-					//replace $url and $file
-					for x, s := range tmpCommand {
-						tmpCommand[x] = s
-						if strings.Contains(s, "$file") {
-							if !fileLoaded {
-								filepath, _ = downloadAsset(url, context.Title)
-								fileLoaded = true
-							}
-							tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
-						}
-						tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
-					}
-					//run command
-					debugPrint("starting:", tmpCommand...)
-					cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
-					stdoutIn, _ = cmd.StdoutPipe()
-					err := cmd.Start()
-					if err != nil {
-						debugPrint(err.Error())
-					}
-					if monitor && com.CommandToWatch == j {
-						go monitorCommand(node, com.Watchphrase, stdoutIn)
-					}
-					//wait for exit code if commands should not be executed concurrently
-					if !com.Concurrent {
-						err := cmd.Wait()
-						if err != nil {
-							debugPrint(err.Error())
-						}
-					}
-				}
-			}
-			if !monitor {
-				node.SetColor(tcell.ColorBlue)
-			}
-		}()
+	} else if context, ok := reference.(commandContext); ok {
+		runCustomCommand(context, node)
 	} else if i, ok := reference.(int); ok {
 		//if episodes for category are not loaded yet
 		if i < len(vodTypes.Objects) {
+			done := false
 			go func() {
-				doneLoading := false
-				go blinkNode(node, &doneLoading, tcell.ColorYellow)
 				episodes := getEpisodeNodes(vodTypes.Objects[i].ContentUrls)
 				appendNodes(node, episodes...)
-				doneLoading = true
+				done = true
 			}()
+			go blinkNode(node, &done, tcell.ColorYellow)
 		}
 	} else if _, ok := reference.(allSeasonStruct); ok {
 		done := false
@@ -477,6 +329,63 @@ func nodeSelected(node *tview.TreeNode) {
 		node.SetColor(tcell.ColorBlue)
 		node.SetText("update notifications turned off")
 	}
+}
+
+func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
+	//custom command
+	monitor := false
+	com := cc.CustomOptions
+	if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
+		monitor = true
+	}
+	var stdoutIn io.ReadCloser
+	url := getPlayableURL(cc.EpID)
+	var filepath string
+	fileLoaded := false
+	//run every command
+	go func() {
+		for j := range com.Commands {
+			if len(com.Commands[j]) > 0 {
+				tmpCommand := make([]string, len(com.Commands[j]))
+				copy(tmpCommand, com.Commands[j])
+				//replace $url and $file
+				for x, s := range tmpCommand {
+					tmpCommand[x] = s
+					if strings.Contains(s, "$file") {
+						if !fileLoaded {
+							filepath, _ = downloadAsset(url, cc.Title)
+							fileLoaded = true
+						}
+						tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
+					}
+					tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
+				}
+				//run command
+				debugPrint("starting:", tmpCommand...)
+				cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
+				stdoutIn, _ = cmd.StdoutPipe()
+				err := cmd.Start()
+				if err != nil {
+					debugPrint(err.Error())
+				}
+				if monitor && com.CommandToWatch == j {
+					go monitorCommand(node, com.Watchphrase, stdoutIn)
+				}
+				//wait for exit code if commands should not be executed concurrently
+				if !com.Concurrent {
+					err := cmd.Wait()
+					if err != nil {
+						debugPrint(err.Error())
+					}
+				}
+			}
+		}
+		if !monitor {
+			node.SetColor(tcell.ColorBlue)
+			app.Draw()
+		}
+	}()
+	return nil
 }
 
 func (cfg *config) save() error {
