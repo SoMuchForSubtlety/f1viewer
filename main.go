@@ -56,12 +56,7 @@ var infoTable *tview.Table
 var debugText *tview.TextView
 var tree *tview.TreeView
 
-var (
-	_ = determineWorkingDirectory()
-	configFile = "config.json"
-)
-
-func determineWorkingDirectory() string {
+func setWorkingDirectory() {
 	// Get the absolute path this executable is located in.
 	executablePath, err := os.Executable()
 	if err != nil {
@@ -70,13 +65,13 @@ func determineWorkingDirectory() string {
 	}
 	// Set the working directory to the path the executable is located in.
 	os.Chdir(filepath.Dir(executablePath))
-	return ""
 }
 
 func main() {
 	//start UI
 	app = tview.NewApplication()
-	file, err := ioutil.ReadFile(configFile)
+	setWorkingDirectory()
+	file, err := ioutil.ReadFile("config.json")
 	con.CheckUpdate = true
 	con.Lang = "en"
 	if err != nil {
