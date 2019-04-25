@@ -1,5 +1,6 @@
 
 
+
 ## F1Viewer
 
 Stream any F1TV VOD with MPV or download the corresponding .m3u8 file. 
@@ -12,20 +13,17 @@ Now also supports live streams.
 
  1. **install F1Viewer** 
 
+	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
+
+	**or**
+
 	build it yourself
 	
 	    $ git clone https://github.com/SoMuchForSubtlety/F1viewer/
 	    $ cd F1Viewer
-	    $ cp sample-config.json config.json
 	    $ go get github.com/rivo/tview
 	    $ go build
-
 	    
-	**or**
-    
-	or download pre-compiled binaries
-https://github.com/SoMuchForSubtlety/F1viewer/releases/
-
  2. **Download MPV**
 
 	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
@@ -39,11 +37,12 @@ https://github.com/SoMuchForSubtlety/F1viewer/releases/
 shows debug information
 
 ### CONFIG
-The config is is optional. It is used to set a preferred audio language and custom commands.
+The config is is optional. It is used to set a preferred audio language and custom commands. It can also be used to stop checking for updates. 
 It should look like this.
 
     {
         "preferred_language": "en",
+        "check_updates": true,
         "custom_playback_options": [
             {
                 "title": "Play with MPV custom",
@@ -67,6 +66,8 @@ You can execute custom commands, for example to launch a different player. These
 Commands are saved as a list of args, like `["mpv", "$url", "--alang=de"]`.  
 `$url` will be replaced with the playback URL.  
 `$file` will be replaced with the path to a local copy of the .m3u8 file.
+
+With `concurrent` you can set whether one command should finish before the next one is executed, or they all launch simultaneously. It defaults to false and is only needed if there is more than one command. (see `sample-config.json` for example)
 
 `watchphrase` is optional. it is used to play a `loading...` animation. 
 F1Viewer can parse the output of your command and stop the animation once the `watchphrase` is found. This can be useful if your command takes a while to execute.
