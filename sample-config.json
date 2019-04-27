@@ -1,6 +1,7 @@
 {
     "preferred_language": "en",
     "check_updates": true,
+    "live_retry_timeout": 60,
     "custom_playback_options": [
         {
             "title": "Play with MPV custom",

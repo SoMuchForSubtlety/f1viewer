@@ -21,6 +21,7 @@ import (
 )
 
 type config struct {
+	LiveRetryTimeout      int       `json:"live_retry_timeout"`
 	Lang                  string    `json:"preferred_language"`
 	CheckUpdate           bool      `json:"check_updates"`
 	CustomPlaybackOptions []command `json:"custom_playback_options"`
@@ -72,8 +73,10 @@ func main() {
 	app = tview.NewApplication()
 	setWorkingDirectory()
 	file, err := ioutil.ReadFile("config.json")
+	//set defaults
 	con.CheckUpdate = true
 	con.Lang = "en"
+	con.LiveRetryTimeout = 60
 	if err != nil {
 		debugPrint(err.Error())
 	} else {
@@ -98,9 +101,18 @@ func main() {
 	var allSeasons allSeasonStruct
 	//check for live session
 	go func() {
-		if isLive, liveNode := getLiveNode(); isLive {
-			insertNodeAtTop(root, liveNode)
-			app.Draw()
+		for {
+			debugPrint("trying for live")
+			debugPrint(strconv.Itoa(con.LiveRetryTimeout))
+			if isLive, liveNode := getLiveNode(); isLive {
+				insertNodeAtTop(root, liveNode)
+				app.Draw()
+				break
+			} else if con.LiveRetryTimeout < 0 {
+				break
+			} else {
+				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
+			}
 		}
 	}()
 	//check if an update is available
