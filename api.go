@@ -374,131 +374,136 @@ func isJSON(s string) bool {
 	return json.Unmarshal([]byte(s), &js) == nil
 }
 
-func getDriver(driverID string) driverStruct {
+func getDriver(driverID string) (driverStruct, error) {
 	var driver driverStruct
 	jsonString, err := getJSON(urlStart + driverID)
 	if err != nil {
-		return driver
+		return driver, err
 	}
 	json.Unmarshal([]byte(jsonString), &driver)
-	return driver
+	return driver, nil
 }
 
-func getTeam(teamID string) teamStruct {
+func getTeam(teamID string) (teamStruct, error) {
 	var team teamStruct
 	jsonString, err := getJSON(urlStart + teamID)
 	if err != nil {
-		return team
+		return team, err
 	}
 	json.Unmarshal([]byte(jsonString), &team)
-	return team
+	return team, nil
 }
 
-func getEpisode(episodeID string) episodeStruct {
+func getEpisode(episodeID string) (episodeStruct, error) {
 	var ep episodeStruct
 	jsonString, err := getJSON(urlStart + episodeID)
 	if err != nil {
-		return ep
+		return ep, err
 	}
 	json.Unmarshal([]byte(jsonString), &ep)
-	return ep
+	return ep, nil
 }
 
-func getHomepageContent() homepageContentStruct {
+func getHomepageContent() (homepageContentStruct, error) {
 	var home homepageContentStruct
 	jsonString, err := getJSON("https://f1tv.formula1.com/api/sets/?slug=home&fields=slug,set_type_slug,items,items__position,items__content_type,items__display_type,items__content_url,items__content_url__uid,items__content_url__self,items__content_url__set_type_slug,items__content_url__display_type_slug,items__content_url__title,items__content_url__items,items__content_url__items__set_type_slug,items__content_url__items__position,items__content_url__items__content_type,items__content_url__items__content_url,items__content_url__items__content_url__self,items__content_url__items__content_url__uid&fields_to_expand=items__content_url,items__content_url__items__content_url")
 	if err != nil {
-		return home
+		return home, err
 	}
 	json.Unmarshal([]byte(jsonString), &home)
-	return home
+	return home, nil
 }
 
-func getVodTypes() vodTypesStruct {
+func getVodTypes() (vodTypesStruct, error) {
 	var types vodTypesStruct
 	jsonString, err := getJSON(vodTypesURL)
 	if err != nil {
-		return types
+		return types, err
 	}
 	json.Unmarshal([]byte(jsonString), &types)
-	return types
+	return types, nil
 }
 
 var listOfSeasons allSeasonStruct
 
-func getSeasons() allSeasonStruct {
+func getSeasons() (allSeasonStruct, error) {
 	if len(listOfSeasons.Seasons) < 1 {
 		jsonString, err := getJSON("https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year")
 		if err != nil {
-			return listOfSeasons
+			return listOfSeasons, err
 		}
 		json.Unmarshal([]byte(jsonString), &listOfSeasons)
 	}
-	return listOfSeasons
+	return listOfSeasons, nil
 }
 
-func getEvent(eventID string) eventStruct {
+func getEvent(eventID string) (eventStruct, error) {
 	var event eventStruct
 	jsonString, err := getJSON(urlStart + eventID)
 	if err != nil {
-		return event
+		return event, err
 	}
 	json.Unmarshal([]byte(jsonString), &event)
-	return event
+	return event, nil
 }
 
-func getSession(sessionID string) sessionStruct {
+func getSession(sessionID string) (sessionStruct, error) {
 	var session sessionStruct
 	jsonString, err := getJSON(urlStart + sessionID)
 	if err != nil {
-		return session
+		return session, err
 	}
 	json.Unmarshal([]byte(jsonString), &session)
-	return session
+	return session, nil
 }
 
-func getSessionStreams(sessionSlug string) sessionStreamsStruct {
+func getSessionStreams(sessionSlug string) (sessionStreamsStruct, error) {
 	var sessionStreams sessionStreamsStruct
 	jsonString, err := getJSON(sessionURLstart + sessionSlug)
 	if err != nil {
-		return sessionStreams
+		return sessionStreams, err
 	}
 	json.Unmarshal([]byte(jsonString), &sessionStreams)
-	return sessionStreams
+	return sessionStreams, nil
 }
 
-func loadEpisodes(IDs []string) []episodeStruct {
+func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 	var episodes []episodeStruct
 	var wg sync.WaitGroup
 	wg.Add(len(IDs))
 	//TODO: tweak number of threads
 	guard := make(chan struct{}, 100)
-	go func() {
-		for i := range IDs {
-			//wait for space in guard
-			guard <- struct{}{}
-			go func(i int) {
-				epID := IDs[i]
-				//check if episode metadata is already cached
-				episodeMapMutex.RLock()
-				ep, ok := episodeMap[epID]
-				episodeMapMutex.RUnlock()
-				if !ok {
-					//load episode metadata and add to cache
-					ep = getEpisode(epID)
-					episodeMapMutex.Lock()
-					episodeMap[epID] = ep
-					episodeMapMutex.Unlock()
+	var er error
+	for i := range IDs {
+		//wait for space in guard
+		guard <- struct{}{}
+		go func(i int) {
+			epID := IDs[i]
+			defer wg.Done()
+			//check if episode metadata is already cached
+			episodeMapMutex.RLock()
+			ep, ok := episodeMap[epID]
+			episodeMapMutex.RUnlock()
+			if !ok {
+				//load episode metadata and add to cache
+				var err error
+				ep, err = getEpisode(epID)
+				if err != nil {
+					er = err
+					return
 				}
-				episodes = append(episodes, ep)
-				//make room in guard
-				<-guard
-				defer wg.Done()
-			}(i)
-		}
-	}()
+				episodeMapMutex.Lock()
+				episodeMap[epID] = ep
+				episodeMapMutex.Unlock()
+			}
+			//maybe not thread safe
+			episodes = append(episodes, ep)
+			//make room in guard
+			<-guard
+		}(i)
+	}
 	wg.Wait()
-	return episodes
+	return episodes, er
 }
 
 func sortEpisodes(episodes []episodeStruct) []episodeStruct {

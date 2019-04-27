@@ -123,13 +123,18 @@ func substituteDriverNames(lines []string) []string {
 	//iterate over all lines
 	for j := 0; j < len(lines); j++ {
 		go func(j int) {
+			defer wg.Done()
 			//check if driver metadata is already cached
 			driverMapMutex.RLock()
 			driver, ok := driverMap[lines[j]]
 			driverMapMutex.RUnlock()
 			if !ok {
+				var err error
 				//load driver metadata if not already cached
-				driver = getDriver(lines[j])
+				driver, err = getDriver(lines[j])
+				if err != nil {
+					return
+				}
 				//add metadata to cache
 				driverMapMutex.Lock()
 				driverMap[lines[j]] = driver
@@ -138,7 +143,6 @@ func substituteDriverNames(lines []string) []string {
 			//change string to driver name + number from metadata
 			name := fmt.Sprintf("%4v "+driver.FirstName+" "+driver.LastName, "("+strconv.Itoa(driver.DriverRacingnumber)+")")
 			lines[j] = name
-			wg.Done()
 		}(j)
 	}
 	wg.Wait()
@@ -153,20 +157,24 @@ func substituteTeamNames(lines []string) []string {
 	//iterate over all lines
 	for j := 0; j < len(lines); j++ {
 		go func(j int) {
+			defer wg.Done()
 			//check if team metadata is already cached
 			teamMapMutex.RLock()
 			team, ok := teamMap[lines[j]]
 			teamMapMutex.RUnlock()
 			if !ok {
 				//load team metadata if not already cached
-				team = getTeam(lines[j])
+				var err error
+				team, err = getTeam(lines[j])
+				if err != nil {
+					return
+				}
 				//add metadata to cache
 				teamMapMutex.Lock()
 				teamMap[lines[j]] = team
 				teamMapMutex.Unlock()
 			}
 			lines[j] = team.Name
-			wg.Done()
 		}(j)
 	}
 	wg.Wait()

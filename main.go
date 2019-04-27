@@ -102,9 +102,11 @@ func main() {
 	//check for live session
 	go func() {
 		for {
-			debugPrint("trying for live")
-			debugPrint(strconv.Itoa(con.LiveRetryTimeout))
-			if isLive, liveNode := getLiveNode(); isLive {
+			debugPrint("checking for live session")
+			isLive, liveNode, err := getLiveNode()
+			if err != nil {
+				debugPrint(err.Error())
+			} else if isLive {
 				insertNodeAtTop(root, liveNode)
 				app.Draw()
 				break
@@ -129,9 +131,13 @@ func main() {
 	}
 	//set vod types nodes
 	go func() {
-		nodes := getVodTypeNodes()
-		appendNodes(root, nodes...)
-		app.Draw()
+		nodes, err := getVodTypeNodes()
+		if err != nil {
+			debugPrint(err.Error())
+		} else {
+			appendNodes(root, nodes...)
+			app.Draw()
+		}
 	}()
 	//set full race weekends node
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
@@ -269,11 +275,15 @@ func nodeSelected(node *tview.TreeNode) {
 		done := false
 		hasSessions := false
 		go func() {
-			sessions := getSessionNodes(event)
-			for _, session := range sessions {
-				if session != nil && len(session.GetChildren()) > 0 {
-					hasSessions = true
-					node.AddChild(session)
+			sessions, err := getSessionNodes(event)
+			if err != nil {
+				debugPrint(err.Error())
+			} else {
+				for _, session := range sessions {
+					if session != nil && len(session.GetChildren()) > 0 {
+						hasSessions = true
+						node.AddChild(session)
+					}
 				}
 			}
 			done = true
@@ -291,13 +301,19 @@ func nodeSelected(node *tview.TreeNode) {
 		//if full season is selected from full race weekends
 		done := false
 		go func() {
-			events := getEventNodes(season)
-			for _, event := range events {
-				layout := "2006-01-02"
-				e := event.GetReference().(eventStruct)
-				t, _ := time.Parse(layout, e.StartDate)
-				if t.Before(time.Now().AddDate(0, 0, 1)) {
-					node.AddChild(event)
+			events, err := getEventNodes(season)
+			if err != nil {
+				debugPrint(err.Error())
+			} else {
+				for _, event := range events {
+					if event != nil {
+						layout := "2006-01-02"
+						e := event.GetReference().(eventStruct)
+						t, _ := time.Parse(layout, e.StartDate)
+						if t.Before(time.Now().AddDate(0, 0, 1)) {
+							node.AddChild(event)
+						}
+					}
 				}
 			}
 			done = true
@@ -310,8 +326,12 @@ func nodeSelected(node *tview.TreeNode) {
 		if i < len(vodTypes.Objects) {
 			done := false
 			go func() {
-				episodes := getEpisodeNodes(vodTypes.Objects[i].ContentUrls)
-				appendNodes(node, episodes...)
+				episodes, err := getEpisodeNodes(vodTypes.Objects[i].ContentUrls)
+				if err != nil {
+					debugPrint(err.Error())
+				} else {
+					appendNodes(node, episodes...)
+				}
 				done = true
 			}()
 			go blinkNode(node, &done, tcell.ColorYellow)
@@ -319,9 +339,13 @@ func nodeSelected(node *tview.TreeNode) {
 	} else if _, ok := reference.(allSeasonStruct); ok {
 		done := false
 		go func() {
-			seasons := getSeasonNodes()
-			appendNodes(node, seasons...)
-			node.SetReference(seasons)
+			seasons, err := getSeasonNodes()
+			if err != nil {
+				debugPrint(err.Error())
+			} else {
+				appendNodes(node, seasons...)
+				node.SetReference(seasons)
+			}
 			done = true
 		}()
 		go blinkNode(node, &done, tcell.ColorYellow)
@@ -345,7 +369,6 @@ func nodeSelected(node *tview.TreeNode) {
 			debugPrint(err.Error())
 		}
 	} else if node.GetText() == "don't tell me about updates" {
-		debugPrint("meme")
 		con.CheckUpdate = false
 		err := con.save()
 		if err != nil {

@@ -85,7 +85,6 @@ func getPlayableURL(assetID string) string {
 		json.Unmarshal([]byte(repsAsString), &finalURL)
 		urlString = finalURL.Objects[0].Tata.TokenisedURL
 	}
-	//debugPrint(urlString)
 	return strings.Replace(urlString, "&", "\x26", -1)
 }
 
