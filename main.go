@@ -105,15 +105,19 @@ func main() {
 			debugPrint("checking for live session")
 			isLive, liveNode, err := getLiveNode()
 			if err != nil {
+				debugPrint("error looking for live session")
 				debugPrint(err.Error())
 				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 			} else if isLive {
+				debugPrint("live session found")
 				insertNodeAtTop(root, liveNode)
 				app.Draw()
 				break
 			} else if con.LiveRetryTimeout < 0 {
+				debugPrint("no live session found")
 				break
 			} else {
+				debugPrint("no live session found")
 				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 			}
 		}
@@ -322,7 +326,12 @@ func nodeSelected(node *tview.TreeNode) {
 		}()
 		go blinkNode(node, &done, tcell.ColorWheat)
 	} else if context, ok := reference.(commandContext); ok {
-		runCustomCommand(context, node)
+		go func() {
+			err := runCustomCommand(context, node)
+			if err != nil {
+				debugPrint(err.Error())
+			}
+		}()
 	} else if i, ok := reference.(int); ok {
 		//if episodes for category are not loaded yet
 		if i < len(vodTypes.Objects) {
@@ -352,35 +361,44 @@ func nodeSelected(node *tview.TreeNode) {
 		}()
 		go blinkNode(node, &done, tcell.ColorYellow)
 	} else if node.GetText() == "Play with MPV" {
-		url, err := getPlayableURL(reference.(string))
-		if err != nil {
-			debugPrint(err.Error())
-			return
-		}
-		cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
-		stdoutIn, _ := cmd.StdoutPipe()
-		err = cmd.Start()
-		if err != nil {
-			debugPrint(err.Error())
-			return
-		}
-		go monitorCommand(node, "Video", stdoutIn)
+		go func() {
+			url, err := getPlayableURL(reference.(string))
+			if err != nil {
+				debugPrint(err.Error())
+				return
+			}
+			cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
+			stdoutIn, _ := cmd.StdoutPipe()
+			err = cmd.Start()
+			if err != nil {
+				debugPrint(err.Error())
+				return
+			}
+			go monitorCommand(node, "Video", stdoutIn)
+		}()
 	} else if node.GetText() == "Download .m3u8" {
-		node.SetColor(tcell.ColorBlue)
-		urlAndTitle := reference.([]string)
-		url, err := getPlayableURL(urlAndTitle[0])
-		if err != nil {
-			debugPrint(err.Error())
-			return
-		}
-		downloadAsset(url, urlAndTitle[1])
+		go func() {
+			node.SetColor(tcell.ColorBlue)
+			urlAndTitle := reference.([]string)
+			url, err := getPlayableURL(urlAndTitle[0])
+			if err != nil {
+				debugPrint(err.Error())
+				return
+			}
+			_, err = downloadAsset(url, urlAndTitle[1])
+			if err != nil {
+				debugPrint(err.Error())
+			}
+		}()
 	} else if node.GetText() == "GET URL" {
-		url, err := getPlayableURL(reference.(string))
-		if err != nil {
-			debugPrint(err.Error())
-			return
-		}
-		debugPrint(url)
+		go func() {
+			url, err := getPlayableURL(reference.(string))
+			if err != nil {
+				debugPrint(err.Error())
+				return
+			}
+			debugPrint(url)
+		}()
 	} else if node.GetText() == "download update" {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 		if err != nil {
@@ -407,11 +425,13 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 	var stdoutIn io.ReadCloser
 	url, err := getPlayableURL(cc.EpID)
 	if err != nil {
+		debugPrint(err.Error())
 		return err
 	}
 	var filepath string
 	fileLoaded := false
 	//run every command
+	errChan := make(chan error)
 	go func() {
 		for j := range com.Commands {
 			if len(com.Commands[j]) > 0 {
@@ -422,7 +442,11 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 					tmpCommand[x] = s
 					if strings.Contains(s, "$file") {
 						if !fileLoaded {
-							filepath, _ = downloadAsset(url, cc.Title)
+							filepath, err = downloadAsset(url, cc.Title)
+							if err != nil {
+								errChan <- err
+								return
+							}
 							fileLoaded = true
 						}
 						tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
@@ -435,7 +459,8 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 				stdoutIn, _ = cmd.StdoutPipe()
 				err := cmd.Start()
 				if err != nil {
-					debugPrint(err.Error())
+					errChan <- err
+					return
 				}
 				if monitor && com.CommandToWatch == j {
 					go monitorCommand(node, com.Watchphrase, stdoutIn)
@@ -444,7 +469,8 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 				if !com.Concurrent {
 					err := cmd.Wait()
 					if err != nil {
-						debugPrint(err.Error())
+						errChan <- err
+						return
 					}
 				}
 			}
@@ -453,8 +479,10 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 			node.SetColor(tcell.ColorBlue)
 			app.Draw()
 		}
+		errChan <- nil
 	}()
-	return nil
+	err = <-errChan
+	return err
 }
 
 func (cfg *config) save() error {
