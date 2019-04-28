@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gdamore/tcell"
@@ -203,36 +202,30 @@ func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
 //returns nodes for every perspective (main feed, data feed, drivers, etc.)
 func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 	channels := make([]*tview.TreeNode, len(perspectives))
-	var wg3 sync.WaitGroup
-	wg3.Add(len(perspectives))
 	//iterate through all available streams for the session
 	for i := range perspectives {
-		go func(i int) {
-			defer wg3.Done()
-			streamPerspective := perspectives[i]
-			name := streamPerspective.Name
-			if len(streamPerspective.DriverUrls) > 0 {
-				number := streamPerspective.DriverUrls[0].DriverRacingnumber
-				name = fmt.Sprintf("%4v "+name, "("+strconv.Itoa(number)+")")
-			}
-			switch name {
-			case "WIF":
-				name = "Main Feed"
-			case "pit lane":
-				name = "Pit Lane"
-			case "driver":
-				name = "Driver Tracker"
-			case "data":
-				name = "Data Channel"
-			}
-			streamNode := tview.NewTreeNode(name).
-				SetSelectable(true).
-				SetReference(streamPerspective).
-				SetColor(tcell.ColorGreen)
-			channels[i] = streamNode
-		}(i)
+		streamPerspective := perspectives[i]
+		name := streamPerspective.Name
+		if len(streamPerspective.DriverUrls) > 0 {
+			number := streamPerspective.DriverUrls[0].DriverRacingnumber
+			name = fmt.Sprintf("%4v "+name, "("+strconv.Itoa(number)+")")
+		}
+		switch name {
+		case "WIF":
+			name = "Main Feed"
+		case "pit lane":
+			name = "Pit Lane"
+		case "driver":
+			name = "Driver Tracker"
+		case "data":
+			name = "Data Channel"
+		}
+		streamNode := tview.NewTreeNode(name).
+			SetSelectable(true).
+			SetReference(streamPerspective).
+			SetColor(tcell.ColorGreen)
+		channels[i] = streamNode
 	}
-	wg3.Wait()
 	sort.Slice(channels, func(i, j int) bool {
 		return !strings.Contains(channels[i].GetText(), "(")
 	})
