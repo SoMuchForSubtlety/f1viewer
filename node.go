@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -333,4 +334,21 @@ func insertNodeAtTop(parentNode *tview.TreeNode, childNode *tview.TreeNode) {
 	children := parentNode.GetChildren()
 	children = append([]*tview.TreeNode{childNode}, children...)
 	parentNode.SetChildren(children)
+}
+
+func removeChild(node, childNode *tview.TreeNode) error {
+	if node == nil || childNode == nil {
+		return errors.New("node can't be nil")
+	}
+	children := node.GetChildren()
+	for i, child := range children {
+		if child != nil && (child.GetReference() == childNode.GetReference()) && (child.GetText() == childNode.GetText()) {
+			copy(children[i:], children[i+1:])
+			children = children[:len(children)-1]
+			node.ClearChildren()
+			node.SetChildren(children)
+			return nil
+		}
+	}
+	return errors.New("child not found")
 }

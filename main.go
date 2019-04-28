@@ -100,24 +100,51 @@ func main() {
 		SetCurrentNode(root)
 	var allSeasons allSeasonStruct
 	//check for live session
+	//TODO move to separate function?
 	go func() {
+		var savedNode *tview.TreeNode
 		for {
 			debugPrint("checking for live session")
 			isLive, liveNode, err := getLiveNode()
 			if err != nil {
-				debugPrint("error looking for live session")
+				debugPrint("error looking for live session:")
 				debugPrint(err.Error())
 				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 			} else if isLive {
-				debugPrint("live session found")
-				insertNodeAtTop(root, liveNode)
+				if savedNode != nil {
+					if savedNode.GetText() != liveNode.GetText() {
+						debugPrint("new live session found")
+						err := removeChild(root, savedNode)
+						if err != nil {
+							debugPrint(err.Error())
+						}
+						insertNodeAtTop(root, liveNode)
+						savedNode = liveNode
+					} else {
+						debugPrint("no new live session foud")
+					}
+				} else {
+					debugPrint("live session found")
+					insertNodeAtTop(root, savedNode)
+					savedNode = liveNode
+				}
 				app.Draw()
-				break
+				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 			} else if con.LiveRetryTimeout < 0 {
 				debugPrint("no live session found")
 				break
 			} else {
-				debugPrint("no live session found")
+				if savedNode != nil {
+					//maybe don't remove live session until a new one starts
+					debugPrint("live session has ended")
+					err := removeChild(root, savedNode)
+					if err != nil {
+						debugPrint(err.Error())
+					}
+					savedNode = nil
+				} else {
+					debugPrint("no live session found")
+				}
 				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 			}
 		}
