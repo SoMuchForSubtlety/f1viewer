@@ -26,12 +26,15 @@ func downloadAsset(url string, title string) (string, error) {
 		return "", err
 	}
 	fixedLineArray := fixData(data, url)
-	path := writeToFile(fixedLineArray, title+".m3u8")
+	path, err := writeToFile(fixedLineArray, title+".m3u8")
+	if err != nil {
+		return "", err
+	}
 	return strings.Replace(path, " ", "\x20", -1), nil
 }
 
 //returns valid m3u8 URL as string
-func getPlayableURL(assetID string) string {
+func getPlayableURL(assetID string) (string, error) {
 	formattedID := ""
 	isChannel := false
 	if strings.Contains(assetID, "/api/channels/") {
@@ -44,12 +47,11 @@ func getPlayableURL(assetID string) string {
 	body := strings.NewReader(formattedID)
 	req, err := http.NewRequest("POST", "https://f1tv.formula1.com/api/viewings/", body)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	resp, err := http.DefaultClient.Do(req)
-
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -76,16 +78,18 @@ func getPlayableURL(assetID string) string {
 		var finalURL channelURLstruct
 		err = json.Unmarshal([]byte(repsAsString), &finalURL)
 		if err != nil {
-			fmt.Println(err)
+			return "", err
 		}
 		urlString = finalURL.TokenisedURL
-
 	} else {
 		var finalURL urlStruct
-		json.Unmarshal([]byte(repsAsString), &finalURL)
+		err = json.Unmarshal([]byte(repsAsString), &finalURL)
+		if err != nil {
+			return "", err
+		}
 		urlString = finalURL.Objects[0].Tata.TokenisedURL
 	}
-	return strings.Replace(urlString, "&", "\x26", -1)
+	return strings.Replace(urlString, "&", "\x26", -1), nil
 }
 
 //downloads m3u8 data and returns it as slice
@@ -129,15 +133,15 @@ func fixData(lines []string, url string) []string {
 }
 
 //write slice of lines to file and return the full file path
-func writeToFile(lines []string, path string) string {
+func writeToFile(lines []string, path string) (string, error) {
 	//create downloads folder if it doesnt exist
-	if _, err := os.Stat(`/downloaded/`); os.IsNotExist(err) {
-		os.MkdirAll(`./downloaded/`, os.ModePerm)
+	if _, err := os.Stat(`/downloads/`); os.IsNotExist(err) {
+		os.MkdirAll(`./downloads/`, os.ModePerm)
 	}
-	path = `./downloaded/` + path
+	path = `./downloads/` + path
 	file, err := os.Create(path)
 	if err != nil {
-		debugPrint(err.Error())
+		return "", err
 	}
 	defer file.Close()
 
@@ -147,7 +151,7 @@ func writeToFile(lines []string, path string) string {
 	}
 	err = w.Flush()
 	if err != nil {
-		debugPrint(err.Error())
+		return "", err
 	}
-	return path
+	return path, nil
 }

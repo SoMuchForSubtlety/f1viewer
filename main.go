@@ -106,6 +106,7 @@ func main() {
 			isLive, liveNode, err := getLiveNode()
 			if err != nil {
 				debugPrint(err.Error())
+				time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 			} else if isLive {
 				insertNodeAtTop(root, liveNode)
 				app.Draw()
@@ -278,6 +279,7 @@ func nodeSelected(node *tview.TreeNode) {
 			sessions, err := getSessionNodes(event)
 			if err != nil {
 				debugPrint(err.Error())
+				hasSessions = true
 			} else {
 				for _, session := range sessions {
 					if session != nil && len(session.GetChildren()) > 0 {
@@ -350,19 +352,35 @@ func nodeSelected(node *tview.TreeNode) {
 		}()
 		go blinkNode(node, &done, tcell.ColorYellow)
 	} else if node.GetText() == "Play with MPV" {
-		cmd := exec.Command("mpv", getPlayableURL(reference.(string)), "--alang="+con.Lang, "--start=0")
-		stdoutIn, _ := cmd.StdoutPipe()
-		err := cmd.Start()
+		url, err := getPlayableURL(reference.(string))
 		if err != nil {
 			debugPrint(err.Error())
+			return
+		}
+		cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
+		stdoutIn, _ := cmd.StdoutPipe()
+		err = cmd.Start()
+		if err != nil {
+			debugPrint(err.Error())
+			return
 		}
 		go monitorCommand(node, "Video", stdoutIn)
 	} else if node.GetText() == "Download .m3u8" {
 		node.SetColor(tcell.ColorBlue)
 		urlAndTitle := reference.([]string)
-		downloadAsset(getPlayableURL(urlAndTitle[0]), urlAndTitle[1])
+		url, err := getPlayableURL(urlAndTitle[0])
+		if err != nil {
+			debugPrint(err.Error())
+			return
+		}
+		downloadAsset(url, urlAndTitle[1])
 	} else if node.GetText() == "GET URL" {
-		debugPrint(getPlayableURL(reference.(string)))
+		url, err := getPlayableURL(reference.(string))
+		if err != nil {
+			debugPrint(err.Error())
+			return
+		}
+		debugPrint(url)
 	} else if node.GetText() == "download update" {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 		if err != nil {
@@ -387,7 +405,10 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		monitor = true
 	}
 	var stdoutIn io.ReadCloser
-	url := getPlayableURL(cc.EpID)
+	url, err := getPlayableURL(cc.EpID)
+	if err != nil {
+		return err
+	}
 	var filepath string
 	fileLoaded := false
 	//run every command
@@ -437,7 +458,6 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 }
 
 func (cfg *config) save() error {
-
 	d, err := json.MarshalIndent(&cfg, "", "\t")
 	if err != nil {
 		return fmt.Errorf("error marshaling config: %v", err)

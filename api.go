@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
-	"sync"
 	"time"
 )
 
@@ -469,8 +468,7 @@ func getSessionStreams(sessionSlug string) (sessionStreamsStruct, error) {
 
 func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 	var episodes []episodeStruct
-	var wg sync.WaitGroup
-	wg.Add(len(IDs))
+	errChan := make(chan error)
 	//TODO: tweak number of threads
 	guard := make(chan struct{}, 100)
 	var er error
@@ -479,7 +477,6 @@ func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 		guard <- struct{}{}
 		go func(i int) {
 			epID := IDs[i]
-			defer wg.Done()
 			//check if episode metadata is already cached
 			episodeMapMutex.RLock()
 			ep, ok := episodeMap[epID]
@@ -489,7 +486,7 @@ func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 				var err error
 				ep, err = getEpisode(epID)
 				if err != nil {
-					er = err
+					errChan <- err
 					return
 				}
 				episodeMapMutex.Lock()
@@ -500,9 +497,17 @@ func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 			episodes = append(episodes, ep)
 			//make room in guard
 			<-guard
+			errChan <- nil
 		}(i)
 	}
-	wg.Wait()
+	for index := 0; index < len(IDs); index++ {
+		select {
+		case err := <-errChan:
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return episodes, er
 }
 

@@ -51,7 +51,7 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 	var sessionNode *tview.TreeNode
 	home, err := getHomepageContent()
 	if err != nil {
-		return false, sessionNode, nil
+		return false, sessionNode, err
 	}
 	firstContent := home.Objects[0].Items[0].ContentURL.Items[0].ContentURL.Self
 	if strings.Contains(firstContent, "/api/event-occurrence/") {
@@ -108,17 +108,14 @@ func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 
 //returns node for every event (Australian GP, Bahrain GP, etc.)
 func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
-	var wg1 sync.WaitGroup
-	wg1.Add(len(season.EventoccurrenceUrls))
+	errChan := make(chan error)
 	events := make([]*tview.TreeNode, len(season.EventoccurrenceUrls))
 	//iterate through events
 	for m, eventID := range season.EventoccurrenceUrls {
-		var er error
 		go func(eventID string, m int) {
-			debugPrint("loading event")
 			event, err := getEvent(eventID)
 			if err != nil {
-				er = err
+				errChan <- err
 				return
 			}
 			//if the events actually has saved sassions add it to the tree
@@ -127,38 +124,38 @@ func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 				eventNode.SetReference(event)
 				events[m] = eventNode
 			}
-			wg1.Done()
+			errChan <- nil
 		}(eventID, m)
-		if er != nil {
-			return events, er
+	}
+	for index := 0; index < len(season.EventoccurrenceUrls); index++ {
+		select {
+		case err := <-errChan:
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	wg1.Wait()
 	return events, nil
 }
 
 //returns node for every session (FP1, FP2, etc.)
 func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
+	errChan := make(chan error)
 	sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
 	bonusIDs := make([][]string, len(event.SessionoccurrenceUrls))
-	var wg2 sync.WaitGroup
-	wg2.Add(len(event.SessionoccurrenceUrls))
 	//iterate through sessions
 	for n, sessionID := range event.SessionoccurrenceUrls {
-		var eventError error
 		go func(sessionID string, n int) {
-			debugPrint("loading session")
 			session, err := getSession(sessionID)
 			if err != nil {
-				eventError = err
+				errChan <- err
 				return
 			}
 			bonusIDs[n] = session.ContentUrls
 			if session.Status != "upcoming" && session.Status != "expired" {
-				debugPrint("loading session streams")
 				streams, err := getSessionStreams(session.Slug)
 				if err != nil {
-					eventError = err
+					errChan <- err
 					return
 				}
 				sessionNode := tview.NewTreeNode(session.Name).
@@ -176,13 +173,17 @@ func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
 					sessionNode.AddChild(stream)
 				}
 			}
-			wg2.Done()
+			errChan <- nil
 		}(sessionID, n)
-		if eventError != nil {
-			return sessions, eventError
+	}
+	for index := 0; index < len(event.SessionoccurrenceUrls); index++ {
+		select {
+		case err := <-errChan:
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	wg2.Wait()
 	var allIDs []string
 	for _, idList := range bonusIDs {
 		allIDs = append(allIDs, idList...)
@@ -207,6 +208,7 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 	//iterate through all available streams for the session
 	for i := range perspectives {
 		go func(i int) {
+			defer wg3.Done()
 			streamPerspective := perspectives[i]
 			name := streamPerspective.Name
 			if len(streamPerspective.DriverUrls) > 0 {
@@ -228,7 +230,6 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 				SetReference(streamPerspective).
 				SetColor(tcell.ColorGreen)
 			channels[i] = streamNode
-			wg3.Done()
 		}(i)
 	}
 	wg3.Wait()
@@ -240,7 +241,6 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 
 //returns nodes for every season of "Full Race Weekends"
 func getSeasonNodes() ([]*tview.TreeNode, error) {
-	debugPrint("loading seasons")
 	seasons, err := getSeasons()
 	if err != nil {
 		return nil, err
@@ -267,10 +267,8 @@ func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 	}
 	episodes := sortEpisodes(eps)
 	//add loaded and sorted episodes to tree
-	count := 0
 	for _, ep := range episodes {
 		if len(ep.Items) < 1 {
-			count++
 			continue
 		}
 		node := tview.NewTreeNode(ep.Title).SetSelectable(true).
