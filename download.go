@@ -73,7 +73,7 @@ func getPlayableURL(assetID string) (string, error) {
 		TokenisedURL string `json:"tokenised_url"`
 	}
 
-	var urlString = ""
+	var urlString string
 	if isChannel {
 		var finalURL channelURLstruct
 		err = json.Unmarshal([]byte(repsAsString), &finalURL)
