@@ -408,55 +408,48 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 	}
 	var filepath string
 	//run every command
-	errChan := make(chan error)
-	go func() {
-		for j := range com.Commands {
-			if len(com.Commands[j]) == 0 {
-				continue
-			}
-			tmpCommand := make([]string, len(com.Commands[j]))
-			copy(tmpCommand, com.Commands[j])
-			//replace $url and $file
-			for x, s := range tmpCommand {
-				tmpCommand[x] = s
-				if strings.Contains(s, "$file") && filepath == "" {
-					filepath, err = downloadAsset(url, cc.Title)
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
-				tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
-				tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
-			}
-			//run command
-			debugPrint("starting:", tmpCommand...)
-			cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
-			stdoutIn, _ = cmd.StdoutPipe()
-			err := cmd.Start()
-			if err != nil {
-				errChan <- err
-				return
-			}
-			if monitor && com.CommandToWatch == j {
-				go monitorCommand(node, com.Watchphrase, stdoutIn)
-			}
-			//wait for exit code if commands should not be executed concurrently
-			if !com.Concurrent {
-				err := cmd.Wait()
+	for j := range com.Commands {
+		if len(com.Commands[j]) == 0 {
+			continue
+		}
+		tmpCommand := make([]string, len(com.Commands[j]))
+		copy(tmpCommand, com.Commands[j])
+		//replace $url and $file
+		for x, s := range tmpCommand {
+			tmpCommand[x] = s
+			if strings.Contains(s, "$file") && filepath == "" {
+				filepath, err = downloadAsset(url, cc.Title)
 				if err != nil {
-					errChan <- err
-					return
+					return err
 				}
+			}
+			tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
+			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
+		}
+		//run command
+		debugPrint("starting:", tmpCommand...)
+		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
+		stdoutIn, _ = cmd.StdoutPipe()
+		err := cmd.Start()
+		if err != nil {
+			return err
+		}
+		if monitor && com.CommandToWatch == j {
+			go monitorCommand(node, com.Watchphrase, stdoutIn)
+		}
+		//wait for exit code if commands should not be executed concurrently
+		if !com.Concurrent {
+			err := cmd.Wait()
+			if err != nil {
+				return err
 			}
 		}
-		errChan <- nil
-	}()
+	}
 	if !monitor {
 		node.SetColor(tcell.ColorBlue)
 		app.Draw()
 	}
-	return <-errChan
+	return nil
 }
 
 func (cfg *config) save() error {
