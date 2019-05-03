@@ -184,13 +184,14 @@ func getYearAndRace(input string) (string, string, error) {
 }
 
 //prints to debug window
-func debugPrint(s string, x ...string) {
-	y := s
-	for _, str := range x {
-		y += " " + str
+func debugPrint(i interface{}) {
+	var output string
+	switch v := i.(type) {
+	default:
+		output = fmt.Sprintf("%v", v)
 	}
 	if debugText != nil {
-		fmt.Fprintf(debugText, y+"\n")
+		fmt.Fprintf(debugText, output+"\n")
 		debugText.ScrollToEnd()
 	}
 }
@@ -427,7 +428,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 		}
 		//run command
-		debugPrint("starting:", tmpCommand...)
+		debugPrint(append([]string{"starting: "}, tmpCommand...))
 		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
 		stdoutIn, _ = cmd.StdoutPipe()
 		err := cmd.Start()

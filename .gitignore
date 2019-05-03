@@ -8,3 +8,5 @@ goreleaser.exe
 .goreleaser.yml
 dist/
 *.exe~
+.vscode/
+downloads/
