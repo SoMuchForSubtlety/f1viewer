@@ -354,7 +354,7 @@ type homepageContentStruct struct {
 	} `json:"objects"`
 }
 
-//downloads json from URL and returns the json as string and whether it's valid as bool
+// downloads json from URL and returns the json as string and whether it's valid as bool
 func getJSON(url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -469,20 +469,20 @@ func getSessionStreams(sessionSlug string) (sessionStreamsStruct, error) {
 func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 	var episodes []episodeStruct
 	errChan := make(chan error)
-	//TODO: tweak number of threads
+	// TODO: tweak number of threads
 	guard := make(chan struct{}, 100)
 	var er error
 	for i := range IDs {
-		//wait for space in guard
+		// wait for space in guard
 		guard <- struct{}{}
 		go func(i int) {
 			epID := IDs[i]
-			//check if episode metadata is already cached
+			// check if episode metadata is already cached
 			episodeMapMutex.RLock()
 			ep, ok := episodeMap[epID]
 			episodeMapMutex.RUnlock()
 			if !ok {
-				//load episode metadata and add to cache
+				// load episode metadata and add to cache
 				var err error
 				ep, err = getEpisode(epID)
 				if err != nil {
@@ -493,9 +493,9 @@ func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 				episodeMap[epID] = ep
 				episodeMapMutex.Unlock()
 			}
-			//maybe not thread safe
+			// maybe not thread safe
 			episodes = append(episodes, ep)
-			//make room in guard
+			// make room in guard
 			<-guard
 			errChan <- nil
 		}(i)
@@ -517,7 +517,7 @@ func sortEpisodes(episodes []episodeStruct) []episodeStruct {
 			year1, race1, err := getYearAndRace(episodes[i].DataSourceID)
 			year2, race2, err2 := getYearAndRace(episodes[j].DataSourceID)
 			if err == nil && err2 == nil {
-				//sort chronologically by year and race number
+				// sort chronologically by year and race number
 				if year1 != year2 {
 					return year1 < year2
 				} else if race1 != race2 {

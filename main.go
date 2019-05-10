@@ -58,22 +58,22 @@ var debugText *tview.TextView
 var tree *tview.TreeView
 
 func setWorkingDirectory() {
-	// Get the absolute path this executable is located in.
+	//  Get the absolute path this executable is located in.
 	executablePath, err := os.Executable()
 	if err != nil {
 		debugPrint("Error: Couldn't determine working directory:")
 		debugPrint(err.Error())
 	}
-	// Set the working directory to the path the executable is located in.
+	//  Set the working directory to the path the executable is located in.
 	os.Chdir(filepath.Dir(executablePath))
 }
 
 func main() {
-	//start UI
+	// start UI
 	app = tview.NewApplication()
 	setWorkingDirectory()
 	file, err := ioutil.ReadFile("config.json")
-	//set defaults
+	// set defaults
 	con.CheckUpdate = true
 	con.Lang = "en"
 	con.LiveRetryTimeout = 60
@@ -87,11 +87,11 @@ func main() {
 		}
 	}
 	abortWritingInfo = make(chan bool)
-	//cache
+	// cache
 	episodeMap = make(map[string]episodeStruct)
 	driverMap = make(map[string]driverStruct)
 	teamMap = make(map[string]teamStruct)
-	//build base tree
+	// build base tree
 	root := tview.NewTreeNode("VOD-Types").
 		SetColor(tcell.ColorBlue).
 		SetSelectable(false)
@@ -99,9 +99,9 @@ func main() {
 		SetRoot(root).
 		SetCurrentNode(root)
 	var allSeasons allSeasonStruct
-	//check for live session
+	// check for live session
 	go liveHandler(root)
-	//check if an update is available
+	// check if an update is available
 	if con.CheckUpdate {
 		go func() {
 			node, err := getUpdateNode()
@@ -113,7 +113,7 @@ func main() {
 			}
 		}()
 	}
-	//set vod types nodes
+	// set vod types nodes
 	go func() {
 		nodes, err := getVodTypeNodes()
 		if err != nil {
@@ -123,7 +123,7 @@ func main() {
 			app.Draw()
 		}
 	}()
-	//set full race weekends node
+	// set full race weekends node
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
 		SetSelectable(true).
 		SetReference(allSeasons).
@@ -131,15 +131,15 @@ func main() {
 	root.AddChild(fullSessions)
 	tree.SetChangedFunc(nodeSwitched)
 	tree.SetSelectedFunc(nodeSelected)
-	//flex containing everything
+	// flex containing everything
 	flex := tview.NewFlex()
-	//flex containing metadata and debug
+	// flex containing metadata and debug
 	rowFlex := tview.NewFlex()
 	rowFlex.SetDirection(tview.FlexRow)
-	//metadata window
+	// metadata window
 	infoTable = tview.NewTable()
 	infoTable.SetBorder(true).SetTitle(" Info ")
-	//debug window
+	// debug window
 	debugText = tview.NewTextView()
 	debugText.SetBorder(true).SetTitle("Debug")
 	debugText.SetChangedFunc(func() {
@@ -149,14 +149,14 @@ func main() {
 	flex.AddItem(tree, 0, 2, true)
 	flex.AddItem(rowFlex, 0, 2, false)
 	rowFlex.AddItem(infoTable, 0, 2, false)
-	//flag -d enables debug window
+	// flag -d enables debug window
 	if checkArgs("-d") {
 		rowFlex.AddItem(debugText, 0, 1, false)
 	}
 	app.SetRoot(flex, true).Run()
 }
 
-//takes year/race ID and returns full year and race nuber as strings
+// takes year/race ID and returns full year and race nuber as strings
 func getYearAndRace(input string) (string, string, error) {
 	var fullYear string
 	var raceNumber string
@@ -167,13 +167,13 @@ func getYearAndRace(input string) (string, string, error) {
 	if err != nil {
 		return fullYear, raceNumber, errors.New("not a valid RearRaceID")
 	}
-	//TODO fix before 2020
+	// TODO fix before 2020
 	if input[:4] == "2018" || input[:4] == "2019" {
 		return input[:4], "0", nil
 	}
 	year := input[:2]
 	intYear, _ := strconv.Atoi(year)
-	//TODO: change before 2030
+	// TODO: change before 2030
 	if intYear < 30 {
 		fullYear = "20" + year
 	} else {
@@ -183,7 +183,7 @@ func getYearAndRace(input string) (string, string, error) {
 	return fullYear, raceNumber, nil
 }
 
-//prints to debug window
+// prints to debug window
 func debugPrint(i interface{}) {
 	var output string
 	switch v := i.(type) {
@@ -241,22 +241,22 @@ func nodeSelected(node *tview.TreeNode) {
 	reference := node.GetReference()
 	children := node.GetChildren()
 	if reference == nil || node.GetText() == "loading..." {
-		//Selecting the root node or a loading node does nothing
+		// Selecting the root node or a loading node does nothing
 		return
 	} else if len(children) > 0 {
-		//Collapse if visible, expand if collapsed.
+		// Collapse if visible, expand if collapsed.
 		node.SetExpanded(!node.IsExpanded())
 	} else if ep, ok := reference.(episodeStruct); ok {
-		//if regular episode is selected for the first time
+		// if regular episode is selected for the first time
 		nodes := getPlaybackNodes(ep.Title, ep.Items[0])
 		appendNodes(node, nodes...)
 	} else if ep, ok := reference.(channelUrlsStruct); ok {
-		//if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
-		//TODO: better name
+		// if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
+		// TODO: better name
 		nodes := getPlaybackNodes(node.GetText(), ep.Self)
 		appendNodes(node, nodes...)
 	} else if event, ok := reference.(eventStruct); ok {
-		//if event (eg. Australian GP 2018) is selected from full race weekends
+		// if event (eg. Australian GP 2018) is selected from full race weekends
 		done := false
 		hasSessions := false
 		go func() {
@@ -284,7 +284,7 @@ func nodeSelected(node *tview.TreeNode) {
 			app.Draw()
 		}()
 	} else if season, ok := reference.(seasonStruct); ok {
-		//if full season is selected from full race weekends
+		// if full season is selected from full race weekends
 		done := false
 		go func() {
 			events, err := getEventNodes(season)
@@ -313,7 +313,7 @@ func nodeSelected(node *tview.TreeNode) {
 			}
 		}()
 	} else if i, ok := reference.(int); ok {
-		//if episodes for category are not loaded yet
+		// if episodes for category are not loaded yet
 		if i < len(vodTypes.Objects) {
 			done := false
 			go func() {
@@ -396,7 +396,7 @@ func nodeSelected(node *tview.TreeNode) {
 }
 
 func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
-	//custom command
+	// custom command
 	monitor := false
 	com := cc.CustomOptions
 	if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
@@ -408,14 +408,14 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		return err
 	}
 	var filepath string
-	//run every command
+	// run every command
 	for j := range com.Commands {
 		if len(com.Commands[j]) == 0 {
 			continue
 		}
 		tmpCommand := make([]string, len(com.Commands[j]))
 		copy(tmpCommand, com.Commands[j])
-		//replace $url and $file
+		// replace $url and $file
 		for x, s := range tmpCommand {
 			tmpCommand[x] = s
 			if strings.Contains(s, "$file") && filepath == "" {
@@ -427,7 +427,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 		}
-		//run command
+		// run command
 		debugPrint(append([]string{"starting: "}, tmpCommand...))
 		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
 		stdoutIn, _ = cmd.StdoutPipe()
@@ -438,7 +438,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		if monitor && com.CommandToWatch == j {
 			go monitorCommand(node, com.Watchphrase, stdoutIn)
 		}
-		//wait for exit code if commands should not be executed concurrently
+		// wait for exit code if commands should not be executed concurrently
 		if !com.Concurrent {
 			err := cmd.Wait()
 			if err != nil {

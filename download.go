@@ -12,15 +12,15 @@ import (
 	"strings"
 )
 
-//takes asset ID and downloads corresponding .m3u8
+// takes asset ID and downloads corresponding .m3u8
 func downloadAsset(url string, title string) (string, error) {
-	//sanitize title
+	// sanitize title
 	title = strings.Replace(title, ":", "", -1)
-	//abort if the URL is not valid
+	// abort if the URL is not valid
 	if len(url) < 10 {
 		return "", errors.New("invalid url")
 	}
-	//download and patch .m3u8 file
+	// download and patch .m3u8 file
 	data, err := downloadData(url)
 	if err != nil {
 		return "", err
@@ -33,7 +33,7 @@ func downloadAsset(url string, title string) (string, error) {
 	return strings.Replace(path, " ", "\x20", -1), nil
 }
 
-//returns valid m3u8 URL as string
+// returns valid m3u8 URL as string
 func getPlayableURL(assetID string) (string, error) {
 	formattedID := ""
 	isChannel := false
@@ -43,7 +43,7 @@ func getPlayableURL(assetID string) (string, error) {
 	} else {
 		formattedID = `{"asset_url":"` + assetID + `"}`
 	}
-	//make request
+	// make request
 	body := strings.NewReader(formattedID)
 	req, err := http.NewRequest("POST", "https://f1tv.formula1.com/api/viewings/", body)
 	if err != nil {
@@ -55,12 +55,12 @@ func getPlayableURL(assetID string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	//converts response body to string
+	// converts response body to string
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	repsAsString := buf.String()
 
-	//extract url form json
+	// extract url form json
 	type urlStruct struct {
 		Objects []struct {
 			Tata struct {
@@ -92,30 +92,30 @@ func getPlayableURL(assetID string) (string, error) {
 	return strings.Replace(urlString, "&", "\x26", -1), nil
 }
 
-//downloads m3u8 data and returns it as slice
+// downloads m3u8 data and returns it as slice
 func downloadData(url string) ([]string, error) {
-	// Get the data
+	//  Get the data
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	// convert body to string array
+	//  convert body to string array
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	lineArray := strings.Split(buf.String(), "\n")
 	return lineArray, nil
 }
 
-//chage URIs in m3u8 data to full URLs
+// chage URIs in m3u8 data to full URLs
 func fixData(lines []string, url string) []string {
 	var newLines []string
-	//trim url
+	// trim url
 	var re1 = regexp.MustCompile(`[^\/]*$`)
 	url = re1.ReplaceAllString(url, "")
 
-	//fix URLs in m3u8
+	// fix URLs in m3u8
 	for _, line := range lines {
 		if strings.Contains(line, "https") {
 		} else if len(line) > 6 && (line[:5] == "layer" || line[:4] == "clip" || line[:3] == "OTT") {
@@ -132,11 +132,14 @@ func fixData(lines []string, url string) []string {
 	return newLines
 }
 
-//write slice of lines to file and return the full file path
+// write slice of lines to file and return the full file path
 func writeToFile(lines []string, path string) (string, error) {
-	//create downloads folder if it doesnt exist
+	// create downloads folder if it doesnt exist
 	if _, err := os.Stat(`/downloads/`); os.IsNotExist(err) {
-		os.MkdirAll(`./downloads/`, os.ModePerm)
+		err := os.MkdirAll(`./downloads/`, os.ModePerm)
+		if err != nil {
+			return "", err
+		}
 	}
 	path = `./downloads/` + path
 	file, err := os.Create(path)

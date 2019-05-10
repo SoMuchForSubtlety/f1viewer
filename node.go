@@ -15,7 +15,7 @@ import (
 func getPlaybackNodes(title string, epID string) []*tview.TreeNode {
 	nodes := make([]*tview.TreeNode, 0)
 
-	//add custom options
+	// add custom options
 	if con.CustomPlaybackOptions != nil {
 		for i := range con.CustomPlaybackOptions {
 			com := con.CustomPlaybackOptions[i]
@@ -85,8 +85,8 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 	return false, sessionNode, nil
 }
 
-//blinks node until bool is changed
-//TODO replace done bool with channel?
+// blinks node until bool is changed
+// TODO replace done bool with channel?
 func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 	colors := []tcell.Color{tcell.ColorRed, tcell.ColorOrange, tcell.ColorYellow, tcell.ColorGreen, tcell.ColorBlue, tcell.ColorIndigo, tcell.ColorViolet}
 	originalText := node.GetText()
@@ -106,11 +106,11 @@ func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 	app.Draw()
 }
 
-//returns node for every event (Australian GP, Bahrain GP, etc.)
+// returns node for every event (Australian GP, Bahrain GP, etc.)
 func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 	errChan := make(chan error)
 	events := make([]*tview.TreeNode, len(season.EventoccurrenceUrls))
-	//iterate through events
+	// iterate through events
 	for m, eventID := range season.EventoccurrenceUrls {
 		go func(eventID string, m int) {
 			event, err := getEvent(eventID)
@@ -118,7 +118,7 @@ func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 				errChan <- err
 				return
 			}
-			//if the events actually has saved sassions add it to the tree
+			// if the events actually has saved sassions add it to the tree
 			if len(event.SessionoccurrenceUrls) > 0 {
 				eventNode := tview.NewTreeNode(strings.Replace(event.OfficialName, "™", "", -1)).SetSelectable(true)
 				eventNode.SetReference(event)
@@ -138,12 +138,12 @@ func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 	return events, nil
 }
 
-//returns node for every session (FP1, FP2, etc.)
+// returns node for every session (FP1, FP2, etc.)
 func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
 	errChan := make(chan error)
 	sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
 	bonusIDs := make([][]string, len(event.SessionoccurrenceUrls))
-	//iterate through sessions
+	// iterate through sessions
 	for n, sessionID := range event.SessionoccurrenceUrls {
 		go func(sessionID string, n int) {
 			session, err := getSession(sessionID)
@@ -200,10 +200,10 @@ func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
 	return sessions, nil
 }
 
-//returns nodes for every perspective (main feed, data feed, drivers, etc.)
+// returns nodes for every perspective (main feed, data feed, drivers, etc.)
 func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 	channels := make([]*tview.TreeNode, len(perspectives))
-	//iterate through all available streams for the session
+	// iterate through all available streams for the session
 	for i := range perspectives {
 		streamPerspective := perspectives[i]
 		name := streamPerspective.Name
@@ -233,7 +233,7 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 	return channels
 }
 
-//returns nodes for every season of "Full Race Weekends"
+// returns nodes for every season of "Full Race Weekends"
 func getSeasonNodes() ([]*tview.TreeNode, error) {
 	seasons, err := getSeasons()
 	if err != nil {
@@ -250,7 +250,7 @@ func getSeasonNodes() ([]*tview.TreeNode, error) {
 	return nodes, nil
 }
 
-//add episodes to VOD type
+// add episodes to VOD type
 func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 	var skippedEpisodes []*tview.TreeNode
 	var yearNodes []*tview.TreeNode
@@ -260,7 +260,7 @@ func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 		return nil, err
 	}
 	episodes := sortEpisodes(eps)
-	//add loaded and sorted episodes to tree
+	// add loaded and sorted episodes to tree
 	for _, ep := range episodes {
 		if len(ep.Items) < 1 {
 			continue
@@ -268,9 +268,9 @@ func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 		node := tview.NewTreeNode(ep.Title).SetSelectable(true).
 			SetReference(ep).
 			SetColor(tcell.ColorGreen)
-		//check for year/ race code
+		// check for year/ race code
 		if year, _, err := getYearAndRace(ep.DataSourceID); err == nil {
-			//check if there is a node for the specified year, if not create one
+			// check if there is a node for the specified year, if not create one
 			fatherFound := false
 			var fatherNode *tview.TreeNode
 			for _, subNode := range yearNodes {
@@ -289,7 +289,7 @@ func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 			}
 			fatherNode.AddChild(node)
 		} else {
-			//save episodes with no year/race ID to be added at the end
+			// save episodes with no year/race ID to be added at the end
 			skippedEpisodes = append(skippedEpisodes, node)
 		}
 	}
@@ -318,7 +318,7 @@ func getVodTypeNodes() ([]*tview.TreeNode, error) {
 	return nodes, nil
 }
 
-//appends children to parent
+// appends children to parent
 func appendNodes(parent *tview.TreeNode, children ...*tview.TreeNode) {
 	if children != nil {
 		for _, node := range children {
@@ -329,7 +329,7 @@ func appendNodes(parent *tview.TreeNode, children ...*tview.TreeNode) {
 	}
 }
 
-//probably needs mutex
+// probably needs mutex
 func insertNodeAtTop(parentNode *tview.TreeNode, childNode *tview.TreeNode) {
 	children := parentNode.GetChildren()
 	children = append([]*tview.TreeNode{childNode}, children...)
@@ -353,9 +353,8 @@ func removeChild(node, childNode *tview.TreeNode) error {
 	return errors.New("child not found")
 }
 
-//adds and removes live session nodes to root
+// adds and removes live session nodes to root
 func liveHandler(root *tview.TreeNode) {
-	var savedNode *tview.TreeNode
 	for {
 		debugPrint("checking for live session")
 		isLive, liveNode, err := getLiveNode()
@@ -364,40 +363,13 @@ func liveHandler(root *tview.TreeNode) {
 			debugPrint(err.Error())
 			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 		} else if isLive {
-			if savedNode != nil {
-				if savedNode.GetText() != liveNode.GetText() {
-					debugPrint("new live session found")
-					err := removeChild(root, savedNode)
-					if err != nil {
-						debugPrint(err.Error())
-					}
-					insertNodeAtTop(root, liveNode)
-					savedNode = liveNode
-				} else {
-					debugPrint("no new live session foud")
-				}
-			} else {
-				debugPrint("live session found")
-				insertNodeAtTop(root, savedNode)
-				savedNode = liveNode
-			}
-			app.Draw()
-			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
+			insertNodeAtTop(root, liveNode)
+			return
 		} else if con.LiveRetryTimeout < 0 {
 			debugPrint("no live session found")
-			break
+			return
 		} else {
-			if savedNode != nil {
-				//maybe don't remove live session until a new one starts
-				debugPrint("live session has ended")
-				err := removeChild(root, savedNode)
-				if err != nil {
-					debugPrint(err.Error())
-				}
-				savedNode = nil
-			} else {
-				debugPrint("no live session found")
-			}
+			debugPrint("no live session found")
 			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 		}
 	}
