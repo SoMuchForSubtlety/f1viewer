@@ -60,7 +60,7 @@ var tree *tview.TreeView
 func setWorkingDirectory() {
 	//  Get the absolute path this executable is located in.
 	executablePath, err := os.Executable()
-	if err != nil {
+	if err != nil {			
 		debugPrint("Error: Couldn't determine working directory:")
 		debugPrint(err.Error())
 	}
@@ -100,7 +100,28 @@ func main() {
 		SetCurrentNode(root)
 	var allSeasons allSeasonStruct
 	// check for live session
-	go liveHandler(root)
+	go func() {
+		for {
+			debugPrint("checking for live session")
+			isLive, liveNode, err := getLiveNode()
+			if err != nil {
+				debugPrint("error looking for live session:")
+				debugPrint(err.Error())
+			} else if isLive {
+				insertNodeAtTop(root, liveNode)
+				if app != nil {
+					app.Draw()
+				}
+				return
+			} else if con.LiveRetryTimeout < 0 {
+				debugPrint("no live session found")
+				return
+			} else {
+				debugPrint("no live session found")
+			}
+			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
+		}
+	}()
 	// check if an update is available
 	if con.CheckUpdate {
 		go func() {

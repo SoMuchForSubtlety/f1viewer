@@ -352,25 +352,3 @@ func removeChild(node, childNode *tview.TreeNode) error {
 	}
 	return errors.New("child not found")
 }
-
-// adds and removes live session nodes to root
-func liveHandler(root *tview.TreeNode) {
-	for {
-		debugPrint("checking for live session")
-		isLive, liveNode, err := getLiveNode()
-		if err != nil {
-			debugPrint("error looking for live session:")
-			debugPrint(err.Error())
-			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
-		} else if isLive {
-			insertNodeAtTop(root, liveNode)
-			return
-		} else if con.LiveRetryTimeout < 0 {
-			debugPrint("no live session found")
-			return
-		} else {
-			debugPrint("no live session found")
-			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
-		}
-	}
-}
