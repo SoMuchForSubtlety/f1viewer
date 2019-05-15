@@ -21,7 +21,6 @@ Now also supports live streams.
 	
 	    $ git clone https://github.com/SoMuchForSubtlety/F1viewer/
 	    $ cd F1Viewer
-	    $ go get github.com/rivo/tview
 	    $ go build
 	    
  2. **Download MPV**
