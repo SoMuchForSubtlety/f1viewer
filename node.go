@@ -35,6 +35,10 @@ func getPlaybackNodes(title string, epID string) []*tview.TreeNode {
 	playNode.SetReference(epID)
 	nodes = append(nodes, playNode)
 
+	playVlcNode := tview.NewTreeNode("Play with VLC")
+	playVlcNode.SetReference(epID)
+	nodes = append(nodes, playVlcNode)
+
 	downloadNode := tview.NewTreeNode("Download .m3u8")
 	downloadNode.SetReference([]string{epID, title})
 	nodes = append(nodes, downloadNode)

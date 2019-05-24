@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-
+	"runtime"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
@@ -369,6 +369,35 @@ func nodeSelected(node *tview.TreeNode) {
 				return
 			}
 			cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
+			stdoutIn, _ := cmd.StdoutPipe()
+			err = cmd.Start()
+			if err != nil {
+				debugPrint(err.Error())
+				return
+			}
+			go monitorCommand(node, "Video", stdoutIn)
+		}()
+	} else if node.GetText() == "Play with VLC" {
+		go func() {
+			url, err := getPlayableURL(reference.(string))
+			if err != nil {
+				debugPrint(err.Error())
+				return
+			}
+
+			var vlc_exec = "vlc"
+
+			switch runtime.GOOS {
+				case "darwin":
+					vlc_exec = "/Applications/VLC.app/Contents/MacOS/VLC"
+				case "windows":
+					vlc_exec = "%PROGRAMFILES%\\VideoLAN\\VLC\\vlc.exe"
+			}
+
+			debugPrint("Opening VLC from:" + vlc_exec)
+			debugPrint("Media URL:" + url)
+
+			cmd := exec.Command(vlc_exec, url)
 			stdoutIn, _ := cmd.StdoutPipe()
 			err = cmd.Start()
 			if err != nil {
