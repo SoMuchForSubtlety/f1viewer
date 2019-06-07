@@ -125,8 +125,8 @@ func fixData(lines []string, url string) []string {
 			tempString := re.FindString(line)
 			line = re.ReplaceAllString(line, url+tempString)
 		}
-		var re2 = regexp.MustCompile(`https:\/\/f1tv-cdn[^\.]*\.formula1\.com`)
-		line = re2.ReplaceAllString(line, "https://f1tv.secure.footprint.net")
+		// var re2 = regexp.MustCompile(`https:\/\/f1tv-cdn[^\.]*\.formula1\.com`)
+		// line = re2.ReplaceAllString(line, "https://f1tv.secure.footprint.net")
 		newLines = append(newLines, line)
 	}
 	return newLines
