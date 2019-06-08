@@ -13,24 +13,24 @@ import (
 )
 
 // takes asset ID and downloads corresponding .m3u8
-func downloadAsset(url string, title string) (string, error) {
+func downloadAsset(url string, title string) (filepath string, cookie string, err error) {
 	// sanitize title
 	title = strings.Replace(title, ":", "", -1)
 	// abort if the URL is not valid
 	if len(url) < 10 {
-		return "", errors.New("invalid url")
+		return "", "", errors.New("invalid url")
 	}
 	// download and patch .m3u8 file
-	data, err := downloadData(url)
+	data, cookie, err := downloadData(url)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	fixedLineArray := fixData(data, url)
 	path, err := writeToFile(fixedLineArray, title+".m3u8")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return strings.Replace(path, " ", "\x20", -1), nil
+	return strings.Replace(path, " ", "\x20", -1), cookie, nil
 }
 
 // returns valid m3u8 URL as string
@@ -93,19 +93,23 @@ func getPlayableURL(assetID string) (string, error) {
 }
 
 // downloads m3u8 data and returns it as slice
-func downloadData(url string) ([]string, error) {
+func downloadData(url string) (lines []string, cookie string, err error) {
 	//  Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer resp.Body.Close()
+
+	for _, c := range resp.Cookies() {
+		cookie += fmt.Sprint(c)
+	}
 
 	//  convert body to string array
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	lineArray := strings.Split(buf.String(), "\n")
-	return lineArray, nil
+	return lineArray, cookie, nil
 }
 
 // chage URIs in m3u8 data to full URLs

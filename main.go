@@ -206,11 +206,7 @@ func getYearAndRace(input string) (string, string, error) {
 
 // prints to debug window
 func debugPrint(i interface{}) {
-	var output string
-	switch v := i.(type) {
-	default:
-		output = fmt.Sprintf("%v", v)
-	}
+	output := fmt.Sprintf("%v", i)
 	if debugText != nil {
 		fmt.Fprintf(debugText, output+"\n")
 		debugText.ScrollToEnd()
@@ -386,7 +382,7 @@ func nodeSelected(node *tview.TreeNode) {
 				debugPrint(err.Error())
 				return
 			}
-			_, err = downloadAsset(url, urlAndTitle[1])
+			_, _, err = downloadAsset(url, urlAndTitle[1])
 			if err != nil {
 				debugPrint(err.Error())
 			}
@@ -429,6 +425,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		return err
 	}
 	var filepath string
+	var cookie string
 	// run every command
 	for j := range com.Commands {
 		if len(com.Commands[j]) == 0 {
@@ -436,16 +433,17 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		}
 		tmpCommand := make([]string, len(com.Commands[j]))
 		copy(tmpCommand, com.Commands[j])
-		// replace $url and $file
+		// replace $url, $file and $cookie
 		for x, s := range tmpCommand {
 			tmpCommand[x] = s
 			if strings.Contains(s, "$file") && filepath == "" {
-				filepath, err = downloadAsset(url, cc.Title)
+				filepath, cookie, err = downloadAsset(url, cc.Title)
 				if err != nil {
 					return err
 				}
 			}
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
+			tmpCommand[x] = strings.Replace(tmpCommand[x], "$cookie", cookie, -1)
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 		}
 		// run command
