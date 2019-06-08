@@ -436,7 +436,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		// replace $url, $file and $cookie
 		for x, s := range tmpCommand {
 			tmpCommand[x] = s
-			if strings.Contains(s, "$file") && filepath == "" {
+			if (strings.Contains(s, "$file") || strings.Contains(s, "$cookie")) && filepath == "" {
 				filepath, cookie, err = downloadAsset(url, cc.Title)
 				if err != nil {
 					return err
