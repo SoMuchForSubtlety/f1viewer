@@ -64,7 +64,8 @@ You can execute custom commands, for example to launch a different player. These
 `commands` is where your custom command goes. There can be one or more. 
 Commands are saved as a list of args, like `["mpv", "$url", "--alang=de"]`.  
 `$url` will be replaced with the playback URL.  
-`$file` will be replaced with the path to a local copy of the .m3u8 file.
+`$file` will be replaced with the path to a local copy of the .m3u8 file.  
+`$cookie` will be replaced with the cookie you get by downloading a .m3u8 file with `$file`, this needs to be set or you will  get 403 errors when you try and play the file.
 
 With `concurrent` you can set whether one command should finish before the next one is executed, or they all launch simultaneously. It defaults to false and is only needed if there is more than one command. (see `sample-config.json` for example)
 
