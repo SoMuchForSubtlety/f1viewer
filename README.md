@@ -11,7 +11,7 @@ Now also supports live streams.
 
 ### USAGE
 
- 1. **install F1Viewer** 
+ 1. **get F1Viewer** 
 
 	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
 
