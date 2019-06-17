@@ -1,17 +1,19 @@
+# F1Viewer
 
-
-
-## F1Viewer
-
-Stream any F1TV VOD with MPV or download the corresponding .m3u8 file. 
-
-Now also supports live streams.
+Watch any F1TV VOD or live stream with MPV. 
 
 ![preview image](https://i.imgur.com/DwHnnK9.png)
 
-### USAGE
+## Table of Contents   
+* [Usage](#usage)
+* [Flags](#flags)
+* [FAQ](#faq)
+* [Config](#config)
+* [Custom Commands](#custom-commands)
 
- 1. **install F1Viewer** 
+## Usage
+
+ 1. **get F1Viewer** 
 
 	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
 
@@ -27,15 +29,22 @@ Now also supports live streams.
 
 	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
 
-
-    
-
-### FLAGS
+## Flags
 
     -d
 shows debug information
 
-### CONFIG
+## FAQ
+#### F1Viewer is not showing a live session / loading very slowly
+This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
+Start your stream as soon as possible at the start of the session and you can usually avoid this. 
+#### I downloaded a .m3u8 file but can't play it
+F1TV now requires a cookie to be set to open the links in a .m3u8 file. You can get the cookie with `$cookie` though a custom command or  completely circumvent this issue by using the url to the .m3u8 instead (custom command `$url`).
+If you need a local file put the link in a .strm file.
+#### MPV is opening but I'm not getting audio
+Please make sure you are using the latest version of MPV. If you use  Windows  please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
+
+## Config
 The config is is optional. It is used to set a preferred audio language and custom commands. It can also be used to stop checking for updates. 
 It should look like this.
 
@@ -56,7 +65,7 @@ It should look like this.
 
 Save `sample-config.json` as `config.json` in the same Folder as the F1Viewer binary and edit it so it fits your needs.
 
-### CUSTOM COMMANDS
+## Custom Commands
 You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options`. You can add as many as you want. 
 
 `title` is the title. It will appear next to the standard `Play with MPV` and `Download .m3u8`.
@@ -64,7 +73,8 @@ You can execute custom commands, for example to launch a different player. These
 `commands` is where your custom command goes. There can be one or more. 
 Commands are saved as a list of args, like `["mpv", "$url", "--alang=de"]`.  
 `$url` will be replaced with the playback URL.  
-`$file` will be replaced with the path to a local copy of the .m3u8 file.
+`$file` will be replaced with the path to a local copy of the .m3u8 file.  
+`$cookie` will be replaced with the cookie you get by downloading a .m3u8 file with `$file`, this needs to be set or you will  get 403 errors when you try and play the file.
 
 With `concurrent` you can set whether one command should finish before the next one is executed, or they all launch simultaneously. It defaults to false and is only needed if there is more than one command. (see `sample-config.json` for example)
 
