@@ -39,11 +39,9 @@ func getPlaybackNodes(title string, epID string) []*tview.TreeNode {
 	downloadNode.SetReference([]string{epID, title})
 	nodes = append(nodes, downloadNode)
 
-	if checkArgs("-d") {
-		streamNode := tview.NewTreeNode("GET URL")
-		streamNode.SetReference(epID)
-		nodes = append(nodes, streamNode)
-	}
+	streamNode := tview.NewTreeNode("GET URL")
+	streamNode.SetReference(epID)
+	nodes = append(nodes, streamNode)
 	return nodes
 }
 

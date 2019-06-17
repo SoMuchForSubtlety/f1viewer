@@ -19,6 +19,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
+	"github.com/atotto/clipboard"
 )
 
 type config struct {
@@ -401,14 +402,21 @@ func nodeSelected(node *tview.TreeNode) {
 				log.Println(err.Error())
 			}
 		}()
-	} else if node.GetText() == "GET URL" {
+	} else if node.GetText() == "GET URL" || node.GetText() == "URL copied to clipboard" {
 		go func() {
 			url, err := getPlayableURL(reference.(string))
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
-			log.Println(url)
+			err = clipboard.WriteAll(url)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			node.SetText("URL copied to clipboard")
+			node.SetColor(tcell.ColorBlue)
+			app.Draw()
 		}()
 	} else if node.GetText() == "download update" {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
