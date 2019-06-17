@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"log"
 
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
@@ -61,14 +62,18 @@ func setWorkingDirectory() {
 	//  Get the absolute path this executable is located in.
 	executablePath, err := os.Executable()
 	if err != nil {			
-		debugPrint("Error: Couldn't determine working directory:")
-		debugPrint(err.Error())
+		log.Printf("Error: Couldn't determine working directory: %v", err)
 	}
 	//  Set the working directory to the path the executable is located in.
 	os.Chdir(filepath.Dir(executablePath))
 }
 
 func main() {
+	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer logFile.Close()
 	// start UI
 	app = tview.NewApplication()
 	setWorkingDirectory()
@@ -78,12 +83,11 @@ func main() {
 	con.Lang = "en"
 	con.LiveRetryTimeout = 60
 	if err != nil {
-		debugPrint(err.Error())
+		log.Println(err.Error())
 	} else {
 		err = json.Unmarshal(file, &con)
 		if err != nil {
-			debugPrint("malformed configuration file:")
-			debugPrint(err.Error())
+			log.Printf("malformed configuration file: %v", err)
 		}
 	}
 	abortWritingInfo = make(chan bool)
@@ -102,11 +106,10 @@ func main() {
 	// check for live session
 	go func() {
 		for {
-			debugPrint("checking for live session")
+			log.Println("checking for live session")
 			isLive, liveNode, err := getLiveNode()
 			if err != nil {
-				debugPrint("error looking for live session:")
-				debugPrint(err.Error())
+				log.Println("error looking for live session: %v", err)
 			} else if isLive {
 				insertNodeAtTop(root, liveNode)
 				if app != nil {
@@ -114,10 +117,10 @@ func main() {
 				}
 				return
 			} else if con.LiveRetryTimeout < 0 {
-				debugPrint("no live session found")
+				log.Println("no live session found")
 				return
 			} else {
-				debugPrint("no live session found")
+				log.Println("no live session found")
 			}
 			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
 		}
@@ -127,7 +130,7 @@ func main() {
 		go func() {
 			node, err := getUpdateNode()
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 			} else {
 				insertNodeAtTop(root, node)
 				app.Draw()
@@ -138,7 +141,7 @@ func main() {
 	go func() {
 		nodes, err := getVodTypeNodes()
 		if err != nil {
-			debugPrint(err.Error())
+			log.Println(err.Error())
 		} else {
 			appendNodes(root, nodes...)
 			app.Draw()
@@ -166,6 +169,8 @@ func main() {
 	debugText.SetChangedFunc(func() {
 		app.Draw()
 	})
+	mw := io.MultiWriter(debugText, logFile)
+	log.SetOutput(mw)
 
 	flex.AddItem(tree, 0, 2, true)
 	flex.AddItem(rowFlex, 0, 2, false)
@@ -204,15 +209,6 @@ func getYearAndRace(input string) (string, string, error) {
 	return fullYear, raceNumber, nil
 }
 
-// prints to debug window
-func debugPrint(i interface{}) {
-	output := fmt.Sprintf("%v", i)
-	if debugText != nil {
-		fmt.Fprintf(debugText, output+"\n")
-		debugText.ScrollToEnd()
-	}
-}
-
 func checkArgs(searchArg string) bool {
 	for _, arg := range os.Args {
 		if arg == searchArg {
@@ -228,7 +224,7 @@ func monitorCommand(node *tview.TreeNode, watchphrase string, output io.ReadClos
 	go func() {
 		for scanner.Scan() {
 			sText := scanner.Text()
-			debugPrint(sText)
+			log.Println(sText)
 			if strings.Contains(sText, watchphrase) {
 				break
 			}
@@ -279,7 +275,7 @@ func nodeSelected(node *tview.TreeNode) {
 		go func() {
 			sessions, err := getSessionNodes(event)
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 				hasSessions = true
 			} else {
 				for _, session := range sessions {
@@ -306,7 +302,7 @@ func nodeSelected(node *tview.TreeNode) {
 		go func() {
 			events, err := getEventNodes(season)
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 			} else {
 				for _, event := range events {
 					if event != nil {
@@ -326,7 +322,7 @@ func nodeSelected(node *tview.TreeNode) {
 		go func() {
 			err := runCustomCommand(context, node)
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 			}
 		}()
 	} else if i, ok := reference.(int); ok {
@@ -336,7 +332,7 @@ func nodeSelected(node *tview.TreeNode) {
 			go func() {
 				episodes, err := getEpisodeNodes(vodTypes.Objects[i].ContentUrls)
 				if err != nil {
-					debugPrint(err.Error())
+					log.Println(err.Error())
 				} else {
 					appendNodes(node, episodes...)
 				}
@@ -349,7 +345,7 @@ func nodeSelected(node *tview.TreeNode) {
 		go func() {
 			seasons, err := getSeasonNodes()
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 			} else {
 				appendNodes(node, seasons...)
 				node.SetReference(seasons)
@@ -361,14 +357,14 @@ func nodeSelected(node *tview.TreeNode) {
 		go func() {
 			url, err := getPlayableURL(reference.(string))
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 				return
 			}
 			cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
 			stdoutIn, _ := cmd.StdoutPipe()
 			err = cmd.Start()
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 				return
 			}
 			go monitorCommand(node, "Video", stdoutIn)
@@ -379,33 +375,33 @@ func nodeSelected(node *tview.TreeNode) {
 			urlAndTitle := reference.([]string)
 			url, err := getPlayableURL(urlAndTitle[0])
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 				return
 			}
 			_, _, err = downloadAsset(url, urlAndTitle[1])
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 			}
 		}()
 	} else if node.GetText() == "GET URL" {
 		go func() {
 			url, err := getPlayableURL(reference.(string))
 			if err != nil {
-				debugPrint(err.Error())
+				log.Println(err.Error())
 				return
 			}
-			debugPrint(url)
+			log.Println(url)
 		}()
 	} else if node.GetText() == "download update" {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 		if err != nil {
-			debugPrint(err.Error())
+			log.Println(err.Error())
 		}
 	} else if node.GetText() == "don't tell me about updates" {
 		con.CheckUpdate = false
 		err := con.save()
 		if err != nil {
-			debugPrint(err.Error())
+			log.Println(err.Error())
 		}
 		node.SetColor(tcell.ColorBlue)
 		node.SetText("update notifications turned off")
@@ -447,7 +443,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 		}
 		// run command
-		debugPrint(append([]string{"starting: "}, tmpCommand...))
+		log.Println(append([]string{"starting: "}, tmpCommand...))
 		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
 		stdoutIn, _ = cmd.StdoutPipe()
 		err := cmd.Start()
