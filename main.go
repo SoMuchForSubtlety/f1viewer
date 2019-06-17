@@ -109,7 +109,7 @@ func main() {
 			log.Println("checking for live session")
 			isLive, liveNode, err := getLiveNode()
 			if err != nil {
-				log.Println("error looking for live session: %v", err)
+				log.Printf("error looking for live session: %v", err)
 			} else if isLive {
 				insertNodeAtTop(root, liveNode)
 				if app != nil {
@@ -218,18 +218,27 @@ func checkArgs(searchArg string) bool {
 	return false
 }
 
-func monitorCommand(node *tview.TreeNode, watchphrase string, output io.ReadCloser) {
-	scanner := bufio.NewScanner(output)
+func monitorCommand(node *tview.TreeNode, watchphrase string, stdout io.Reader, stderr io.Reader) {
 	done := false
+	outScanner := bufio.NewScanner(stdout)
+	errScanner := bufio.NewScanner(stderr)
 	go func() {
-		for scanner.Scan() {
-			sText := scanner.Text()
-			log.Println(sText)
+		for outScanner.Scan() {
+			sText := outScanner.Text()
+			fmt.Fprintln(debugText, sText)
 			if strings.Contains(sText, watchphrase) {
-				break
+				done = true
 			}
 		}
-		done = true
+	}()
+	go func() {
+		for errScanner.Scan() {
+			sText := errScanner.Text()
+			fmt.Fprintln(debugText, sText)
+			if strings.Contains(sText, watchphrase) {
+				done = true
+			}
+		}
 	}()
 	blinkNode(node, &done, tcell.ColorWhite)
 	app.Draw()
@@ -361,14 +370,22 @@ func nodeSelected(node *tview.TreeNode) {
 				return
 			}
 			cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
-			cmd.Stdout = debugText
-			stdoutIn, _ := cmd.StdoutPipe()
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			stderr, err := cmd.StderrPipe()
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			err = cmd.Start()
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
-			go monitorCommand(node, "Video", stdoutIn)
+			go monitorCommand(node, "Video", stdout, stderr)
 		}()
 	} else if node.GetText() == "Download .m3u8" {
 		go func() {
@@ -416,7 +433,6 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 	if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
 		monitor = true
 	}
-	var stdoutIn io.ReadCloser
 	url, err := getPlayableURL(cc.EpID)
 	if err != nil {
 		return err
@@ -446,13 +462,20 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 		// run command
 		log.Println(append([]string{"starting: "}, tmpCommand...))
 		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
-		stdoutIn, _ = cmd.StdoutPipe()
-		err := cmd.Start()
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+		err = cmd.Start()
 		if err != nil {
 			return err
 		}
 		if monitor && com.CommandToWatch == j {
-			go monitorCommand(node, com.Watchphrase, stdoutIn)
+			go monitorCommand(node, com.Watchphrase, stdout, stderr)
 		}
 		// wait for exit code if commands should not be executed concurrently
 		if !com.Concurrent {
