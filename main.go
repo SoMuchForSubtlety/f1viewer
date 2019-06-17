@@ -361,6 +361,7 @@ func nodeSelected(node *tview.TreeNode) {
 				return
 			}
 			cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
+			cmd.Stdout = debugText
 			stdoutIn, _ := cmd.StdoutPipe()
 			err = cmd.Start()
 			if err != nil {
