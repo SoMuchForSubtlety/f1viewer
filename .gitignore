@@ -10,3 +10,4 @@ dist/
 .vscode/
 downloads/
 *.txt
+streambest-config.json

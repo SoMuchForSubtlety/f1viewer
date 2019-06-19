@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 	"log"
+	"flag"
 
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
@@ -43,6 +44,8 @@ type commandContext struct {
 	Title         string
 }
 
+
+var debugEnabled = flag.Bool("d", false, "enable debug mode")
 var vodTypes vodTypesStruct
 var con config
 var abortWritingInfo chan bool
@@ -70,10 +73,13 @@ func setWorkingDirectory() {
 }
 
 func main() {
+	flag.Parse()
 	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
+	mw := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(mw)
 	defer logFile.Close()
 	// start UI
 	app = tview.NewApplication()
@@ -88,7 +94,7 @@ func main() {
 	} else {
 		err = json.Unmarshal(file, &con)
 		if err != nil {
-			log.Printf("malformed configuration file: %v", err)
+			log.Fatalf("malformed configuration file: %v", err)
 		}
 	}
 	abortWritingInfo = make(chan bool)
@@ -170,14 +176,14 @@ func main() {
 	debugText.SetChangedFunc(func() {
 		app.Draw()
 	})
-	mw := io.MultiWriter(debugText, logFile)
+	mw = io.MultiWriter(debugText, logFile)
 	log.SetOutput(mw)
 
 	flex.AddItem(tree, 0, 2, true)
 	flex.AddItem(rowFlex, 0, 2, false)
 	rowFlex.AddItem(infoTable, 0, 2, false)
 	// flag -d enables debug window
-	if checkArgs("-d") {
+	if *debugEnabled {
 		rowFlex.AddItem(debugText, 0, 1, false)
 	}
 	app.SetRoot(flex, true).Run()
@@ -208,15 +214,6 @@ func getYearAndRace(input string) (string, string, error) {
 	}
 	raceNumber = input[2:4]
 	return fullYear, raceNumber, nil
-}
-
-func checkArgs(searchArg string) bool {
-	for _, arg := range os.Args {
-		if arg == searchArg {
-			return true
-		}
-	}
-	return false
 }
 
 func monitorCommand(node *tview.TreeNode, watchphrase string, stdout io.Reader, stderr io.Reader) {
