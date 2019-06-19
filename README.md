@@ -1,6 +1,6 @@
 # F1Viewer
 
-Watch any F1TV VOD or live stream with MPV. 
+Watch any F1TV VOD or live stream. 
 
 ![preview image](https://i.imgur.com/DwHnnK9.png)
 
@@ -28,6 +28,8 @@ Watch any F1TV VOD or live stream with MPV.
  2. **Download MPV**
 
 	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
+	
+	(You can also use other players, see [Custom Commands](#custom-commands)) 
 
 ## Flags
 
