@@ -466,7 +466,7 @@ func getSessionStreams(sessionSlug string) (sessionStreamsStruct, error) {
 	return sessionStreams, nil
 }
 
-func loadEpisodes(IDs []string) ([]episodeStruct, error) {
+func (s *viewerSession) loadEpisodes(IDs []string) ([]episodeStruct, error) {
 	var episodes []episodeStruct
 	errChan := make(chan error)
 	// TODO: tweak number of threads
@@ -478,9 +478,9 @@ func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 		go func(i int) {
 			epID := IDs[i]
 			// check if episode metadata is already cached
-			episodeMapMutex.RLock()
-			ep, ok := episodeMap[epID]
-			episodeMapMutex.RUnlock()
+			s.episodeMapMutex.RLock()
+			ep, ok := s.episodeMap[epID]
+			s.episodeMapMutex.RUnlock()
 			if !ok {
 				// load episode metadata and add to cache
 				var err error
@@ -489,9 +489,9 @@ func loadEpisodes(IDs []string) ([]episodeStruct, error) {
 					errChan <- err
 					return
 				}
-				episodeMapMutex.Lock()
-				episodeMap[epID] = ep
-				episodeMapMutex.Unlock()
+				s.episodeMapMutex.Lock()
+				s.episodeMap[epID] = ep
+				s.episodeMapMutex.Unlock()
 			}
 			// maybe not thread safe
 			episodes = append(episodes, ep)

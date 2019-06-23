@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,12 +18,10 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"log"
-	"flag"
 
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
-	"github.com/atotto/clipboard"
 )
 
 type config struct {
@@ -44,28 +45,32 @@ type commandContext struct {
 	Title         string
 }
 
+type viewerSession struct {
+	con config
 
-var debugEnabled = flag.Bool("d", false, "enable debug mode")
-var vodTypes vodTypesStruct
-var con config
-var abortWritingInfo chan bool
-var episodeMap map[string]episodeStruct
-var driverMap map[string]driverStruct
-var teamMap map[string]teamStruct
+	vodTypes vodTypesStruct
 
-var episodeMapMutex = sync.RWMutex{}
-var driverMapMutex = sync.RWMutex{}
-var teamMapMutex = sync.RWMutex{}
+	abortWritingInfo chan bool
 
-var app *tview.Application
-var infoTable *tview.Table
-var debugText *tview.TextView
-var tree *tview.TreeView
+	// cache
+	episodeMap      map[string]episodeStruct
+	driverMap       map[string]driverStruct
+	teamMap         map[string]teamStruct
+	episodeMapMutex sync.RWMutex
+	teamMapMutex    sync.RWMutex
+	driverMapMutex  sync.RWMutex
+
+	// tview
+	app       *tview.Application
+	infoTable *tview.Table
+	debugText *tview.TextView
+	tree      *tview.TreeView
+}
 
 func setWorkingDirectory() {
 	//  Get the absolute path this executable is located in.
 	executablePath, err := os.Executable()
-	if err != nil {			
+	if err != nil {
 		log.Printf("Error: Couldn't determine working directory: %v", err)
 	}
 	//  Set the working directory to the path the executable is located in.
@@ -73,7 +78,10 @@ func setWorkingDirectory() {
 }
 
 func main() {
+	debugEnabled := flag.Bool("d", false, "enable debug mode")
 	flag.Parse()
+
+	session := viewerSession{}
 	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
@@ -82,31 +90,32 @@ func main() {
 	log.SetOutput(mw)
 	defer logFile.Close()
 	// start UI
-	app = tview.NewApplication()
+	session.app = tview.NewApplication()
 	setWorkingDirectory()
-	file, err := ioutil.ReadFile("config.json")
 	// set defaults
-	con.CheckUpdate = true
-	con.Lang = "en"
-	con.LiveRetryTimeout = 60
+	session.con.CheckUpdate = true
+	session.con.Lang = "en"
+	session.con.LiveRetryTimeout = 60
+	file, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		log.Println(err.Error())
 	} else {
-		err = json.Unmarshal(file, &con)
+		err = json.Unmarshal(file, &session.con)
 		if err != nil {
 			log.Fatalf("malformed configuration file: %v", err)
 		}
+		log.Printf("Found %v custom commands", len(session.con.CustomPlaybackOptions))
 	}
-	abortWritingInfo = make(chan bool)
+	session.abortWritingInfo = make(chan bool)
 	// cache
-	episodeMap = make(map[string]episodeStruct)
-	driverMap = make(map[string]driverStruct)
-	teamMap = make(map[string]teamStruct)
+	session.episodeMap = make(map[string]episodeStruct)
+	session.driverMap = make(map[string]driverStruct)
+	session.teamMap = make(map[string]teamStruct)
 	// build base tree
 	root := tview.NewTreeNode("VOD-Types").
 		SetColor(tcell.ColorBlue).
 		SetSelectable(false)
-	tree = tview.NewTreeView().
+	session.tree = tview.NewTreeView().
 		SetRoot(root).
 		SetCurrentNode(root)
 	var allSeasons allSeasonStruct
@@ -119,39 +128,39 @@ func main() {
 				log.Printf("error looking for live session: %v", err)
 			} else if isLive {
 				insertNodeAtTop(root, liveNode)
-				if app != nil {
-					app.Draw()
+				if session.app != nil {
+					session.app.Draw()
 				}
 				return
-			} else if con.LiveRetryTimeout < 0 {
+			} else if session.con.LiveRetryTimeout < 0 {
 				log.Println("no live session found")
 				return
 			} else {
 				log.Println("no live session found")
 			}
-			time.Sleep(time.Second * time.Duration(con.LiveRetryTimeout))
+			time.Sleep(time.Second * time.Duration(session.con.LiveRetryTimeout))
 		}
 	}()
 	// check if an update is available
-	if con.CheckUpdate {
+	if session.con.CheckUpdate {
 		go func() {
 			node, err := getUpdateNode()
 			if err != nil {
 				log.Println(err.Error())
 			} else {
 				insertNodeAtTop(root, node)
-				app.Draw()
+				session.app.Draw()
 			}
 		}()
 	}
 	// set vod types nodes
 	go func() {
-		nodes, err := getVodTypeNodes()
+		nodes, err := session.getVodTypeNodes()
 		if err != nil {
 			log.Println(err.Error())
 		} else {
 			appendNodes(root, nodes...)
-			app.Draw()
+			session.app.Draw()
 		}
 	}()
 	// set full race weekends node
@@ -160,33 +169,33 @@ func main() {
 		SetReference(allSeasons).
 		SetColor(tcell.ColorYellow)
 	root.AddChild(fullSessions)
-	tree.SetChangedFunc(nodeSwitched)
-	tree.SetSelectedFunc(nodeSelected)
+	session.tree.SetChangedFunc(session.nodeSwitched)
+	session.tree.SetSelectedFunc(session.nodeSelected)
 	// flex containing everything
 	flex := tview.NewFlex()
 	// flex containing metadata and debug
 	rowFlex := tview.NewFlex()
 	rowFlex.SetDirection(tview.FlexRow)
 	// metadata window
-	infoTable = tview.NewTable()
-	infoTable.SetBorder(true).SetTitle(" Info ")
+	session.infoTable = tview.NewTable()
+	session.infoTable.SetBorder(true).SetTitle(" Info ")
 	// debug window
-	debugText = tview.NewTextView()
-	debugText.SetBorder(true).SetTitle("Debug")
-	debugText.SetChangedFunc(func() {
-		app.Draw()
+	session.debugText = tview.NewTextView()
+	session.debugText.SetBorder(true).SetTitle("Debug")
+	session.debugText.SetChangedFunc(func() {
+		session.app.Draw()
 	})
-	mw = io.MultiWriter(debugText, logFile)
+	mw = io.MultiWriter(session.debugText, logFile)
 	log.SetOutput(mw)
 
-	flex.AddItem(tree, 0, 2, true)
+	flex.AddItem(session.tree, 0, 2, true)
 	flex.AddItem(rowFlex, 0, 2, false)
-	rowFlex.AddItem(infoTable, 0, 2, false)
+	rowFlex.AddItem(session.infoTable, 0, 2, false)
 	// flag -d enables debug window
 	if *debugEnabled {
-		rowFlex.AddItem(debugText, 0, 1, false)
+		rowFlex.AddItem(session.debugText, 0, 1, false)
 	}
-	app.SetRoot(flex, true).Run()
+	session.app.SetRoot(flex, true).Run()
 }
 
 // takes year/race ID and returns full year and race nuber as strings
@@ -216,15 +225,17 @@ func getYearAndRace(input string) (string, string, error) {
 	return fullYear, raceNumber, nil
 }
 
-func monitorCommand(node *tview.TreeNode, watchphrase string, stdout io.Reader, stderr io.Reader) {
+func (session *viewerSession) monitorCommand(node *tview.TreeNode, watchphrase string, stdout io.Reader, stderr io.Reader) {
 	done := false
 	outScanner := bufio.NewScanner(stdout)
+	outScanner.Split(scanLinesCustom)
 	errScanner := bufio.NewScanner(stderr)
+	errScanner.Split(scanLinesCustom)
 	go func() {
 		for outScanner.Scan() {
 			sText := outScanner.Text()
-			fmt.Fprintln(debugText, sText)
-			if strings.Contains(sText, watchphrase) {
+			fmt.Fprintln(session.debugText, sText)
+			if strings.Contains(strings.ToLower(sText), strings.ToLower(watchphrase)) {
 				done = true
 			}
 		}
@@ -232,32 +243,52 @@ func monitorCommand(node *tview.TreeNode, watchphrase string, stdout io.Reader, 
 	go func() {
 		for errScanner.Scan() {
 			sText := errScanner.Text()
-			fmt.Fprintln(debugText, sText)
+			fmt.Fprintln(session.debugText, sText)
 			if strings.Contains(sText, watchphrase) {
 				done = true
 			}
 		}
 	}()
-	blinkNode(node, &done, tcell.ColorWhite)
-	app.Draw()
+	session.blinkNode(node, &done, tcell.ColorWhite)
+	session.app.Draw()
 }
 
-func nodeSwitched(node *tview.TreeNode) {
+// stolen from https://golang.org/src/bufio/scan.go?s=11799:11877#L335
+func scanLinesCustom(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i], nil
+	} else if i := bytes.IndexByte(data, '\r'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+	// Request more data.
+	return 0, nil, nil
+}
+
+func (session *viewerSession) nodeSwitched(node *tview.TreeNode) {
 	reference := node.GetReference()
-	if index, ok := reference.(int); ok && index < len(vodTypes.Objects) {
-		v, t := getTableValuesFromInterface(vodTypes.Objects[index])
-		go fillTableFromSlices(v, t, abortWritingInfo)
+	if index, ok := reference.(int); ok && index < len(session.vodTypes.Objects) {
+		v, t := getTableValuesFromInterface(session.vodTypes.Objects[index])
+		go session.fillTableFromSlices(v, t, session.abortWritingInfo)
 	} else if x := reflect.ValueOf(reference); x.Kind() == reflect.Struct {
 		v, t := getTableValuesFromInterface(reference)
-		go fillTableFromSlices(v, t, abortWritingInfo)
+		go session.fillTableFromSlices(v, t, session.abortWritingInfo)
 	} else if len(node.GetChildren()) != 0 {
-		infoTable.Clear()
+		session.infoTable.Clear()
 	}
-	infoTable.ScrollToBeginning()
-	app.Draw()
+	session.infoTable.ScrollToBeginning()
+	session.app.Draw()
 }
 
-func nodeSelected(node *tview.TreeNode) {
+func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 	reference := node.GetReference()
 	children := node.GetChildren()
 	if reference == nil || node.GetText() == "loading..." {
@@ -268,19 +299,19 @@ func nodeSelected(node *tview.TreeNode) {
 		node.SetExpanded(!node.IsExpanded())
 	} else if ep, ok := reference.(episodeStruct); ok {
 		// if regular episode is selected for the first time
-		nodes := getPlaybackNodes(ep.Title, ep.Items[0])
+		nodes := session.getPlaybackNodes(ep.Title, ep.Items[0])
 		appendNodes(node, nodes...)
 	} else if ep, ok := reference.(channelUrlsStruct); ok {
 		// if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
 		// TODO: better name
-		nodes := getPlaybackNodes(node.GetText(), ep.Self)
+		nodes := session.getPlaybackNodes(node.GetText(), ep.Self)
 		appendNodes(node, nodes...)
 	} else if event, ok := reference.(eventStruct); ok {
 		// if event (eg. Australian GP 2018) is selected from full race weekends
 		done := false
 		hasSessions := false
 		go func() {
-			sessions, err := getSessionNodes(event)
+			sessions, err := session.getSessionNodes(event)
 			if err != nil {
 				log.Println(err.Error())
 				hasSessions = true
@@ -295,13 +326,13 @@ func nodeSelected(node *tview.TreeNode) {
 			done = true
 		}()
 		go func() {
-			blinkNode(node, &done, tcell.ColorWhite)
+			session.blinkNode(node, &done, tcell.ColorWhite)
 			if !hasSessions {
 				node.SetColor(tcell.ColorRed)
 				node.SetText(node.GetText() + " - NO CONTENT AVAILABLE")
 				node.SetSelectable(false)
 			}
-			app.Draw()
+			session.app.Draw()
 		}()
 	} else if season, ok := reference.(seasonStruct); ok {
 		// if full season is selected from full race weekends
@@ -324,20 +355,20 @@ func nodeSelected(node *tview.TreeNode) {
 			}
 			done = true
 		}()
-		go blinkNode(node, &done, tcell.ColorWheat)
+		go session.blinkNode(node, &done, tcell.ColorWheat)
 	} else if context, ok := reference.(commandContext); ok {
 		go func() {
-			err := runCustomCommand(context, node)
+			err := session.runCustomCommand(context, node)
 			if err != nil {
 				log.Println(err.Error())
 			}
 		}()
 	} else if i, ok := reference.(int); ok {
 		// if episodes for category are not loaded yet
-		if i < len(vodTypes.Objects) {
+		if i < len(session.vodTypes.Objects) {
 			done := false
 			go func() {
-				episodes, err := getEpisodeNodes(vodTypes.Objects[i].ContentUrls)
+				episodes, err := session.getEpisodeNodes(session.vodTypes.Objects[i].ContentUrls)
 				if err != nil {
 					log.Println(err.Error())
 				} else {
@@ -345,7 +376,7 @@ func nodeSelected(node *tview.TreeNode) {
 				}
 				done = true
 			}()
-			go blinkNode(node, &done, tcell.ColorYellow)
+			go session.blinkNode(node, &done, tcell.ColorYellow)
 		}
 	} else if _, ok := reference.(allSeasonStruct); ok {
 		done := false
@@ -359,7 +390,7 @@ func nodeSelected(node *tview.TreeNode) {
 			}
 			done = true
 		}()
-		go blinkNode(node, &done, tcell.ColorYellow)
+		go session.blinkNode(node, &done, tcell.ColorYellow)
 	} else if node.GetText() == "Play with MPV" {
 		go func() {
 			url, err := getPlayableURL(reference.(string))
@@ -367,7 +398,7 @@ func nodeSelected(node *tview.TreeNode) {
 				log.Println(err.Error())
 				return
 			}
-			cmd := exec.Command("mpv", url, "--alang="+con.Lang, "--start=0")
+			cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0")
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				log.Println(err)
@@ -383,7 +414,7 @@ func nodeSelected(node *tview.TreeNode) {
 				log.Println(err.Error())
 				return
 			}
-			go monitorCommand(node, "Video", stdout, stderr)
+			go session.monitorCommand(node, "Video", stdout, stderr)
 		}()
 	} else if node.GetText() == "Download .m3u8" {
 		go func() {
@@ -413,7 +444,7 @@ func nodeSelected(node *tview.TreeNode) {
 			}
 			node.SetText("URL copied to clipboard")
 			node.SetColor(tcell.ColorBlue)
-			app.Draw()
+			session.app.Draw()
 		}()
 	} else if node.GetText() == "download update" {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
@@ -421,8 +452,8 @@ func nodeSelected(node *tview.TreeNode) {
 			log.Println(err.Error())
 		}
 	} else if node.GetText() == "don't tell me about updates" {
-		con.CheckUpdate = false
-		err := con.save()
+		session.con.CheckUpdate = false
+		err := session.con.save()
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -431,7 +462,7 @@ func nodeSelected(node *tview.TreeNode) {
 	}
 }
 
-func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
+func (session *viewerSession) runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 	// custom command
 	monitor := false
 	com := cc.CustomOptions
@@ -480,7 +511,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 			return err
 		}
 		if monitor && com.CommandToWatch == j {
-			go monitorCommand(node, com.Watchphrase, stdout, stderr)
+			go session.monitorCommand(node, com.Watchphrase, stdout, stderr)
 		}
 		// wait for exit code if commands should not be executed concurrently
 		if !com.Concurrent {
@@ -492,7 +523,7 @@ func runCustomCommand(cc commandContext, node *tview.TreeNode) error {
 	}
 	if !monitor {
 		node.SetColor(tcell.ColorBlue)
-		app.Draw()
+		session.app.Draw()
 	}
 	return nil
 }

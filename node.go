@@ -12,13 +12,13 @@ import (
 	"github.com/rivo/tview"
 )
 
-func getPlaybackNodes(title string, epID string) []*tview.TreeNode {
+func (session *viewerSession) getPlaybackNodes(title string, epID string) []*tview.TreeNode {
 	nodes := make([]*tview.TreeNode, 0)
 
 	// add custom options
-	if con.CustomPlaybackOptions != nil {
-		for i := range con.CustomPlaybackOptions {
-			com := con.CustomPlaybackOptions[i]
+	if session.con.CustomPlaybackOptions != nil {
+		for i := range session.con.CustomPlaybackOptions {
+			com := session.con.CustomPlaybackOptions[i]
 			if len(com.Commands) > 0 {
 				var context commandContext
 				context.EpID = epID
@@ -85,7 +85,7 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 
 // blinks node until bool is changed
 // TODO replace done bool with channel?
-func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
+func (session *viewerSession) blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 	colors := []tcell.Color{tcell.ColorRed, tcell.ColorOrange, tcell.ColorYellow, tcell.ColorGreen, tcell.ColorBlue, tcell.ColorIndigo, tcell.ColorViolet}
 	originalText := node.GetText()
 	node.SetText("loading...")
@@ -95,13 +95,13 @@ func blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
 				break
 			}
 			node.SetColor(color)
-			app.Draw()
+			session.app.Draw()
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
 	node.SetColor(originalColor)
 	node.SetText(originalText)
-	app.Draw()
+	session.app.Draw()
 }
 
 // returns node for every event (Australian GP, Bahrain GP, etc.)
@@ -137,7 +137,7 @@ func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 }
 
 // returns node for every session (FP1, FP2, etc.)
-func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
+func (session *viewerSession) getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
 	errChan := make(chan error)
 	sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
 	bonusIDs := make([][]string, len(event.SessionoccurrenceUrls))
@@ -188,7 +188,7 @@ func getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
 	}
 	if len(allIDs) > 0 {
 		bonusNode := tview.NewTreeNode("Bonus Content").SetSelectable(true).SetExpanded(false).SetReference("bonus")
-		episodes, err := getEpisodeNodes(allIDs)
+		episodes, err := session.getEpisodeNodes(allIDs)
 		if err != nil {
 			return nil, err
 		}
@@ -249,11 +249,11 @@ func getSeasonNodes() ([]*tview.TreeNode, error) {
 }
 
 // add episodes to VOD type
-func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
+func (session *viewerSession) getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 	var skippedEpisodes []*tview.TreeNode
 	var yearNodes []*tview.TreeNode
 
-	eps, err := loadEpisodes(IDs)
+	eps, err := session.loadEpisodes(IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -297,14 +297,14 @@ func getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
 	return append(yearNodes, skippedEpisodes...), nil
 }
 
-func getVodTypeNodes() ([]*tview.TreeNode, error) {
+func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 	var nodes []*tview.TreeNode
 	var err error
-	vodTypes, err = getVodTypes()
+	session.vodTypes, err = getVodTypes()
 	if err != nil {
 		return nil, err
 	}
-	for i, vType := range vodTypes.Objects {
+	for i, vType := range session.vodTypes.Objects {
 		if len(vType.ContentUrls) > 0 {
 			node := tview.NewTreeNode(vType.Name).
 				SetSelectable(true).

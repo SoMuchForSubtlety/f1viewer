@@ -65,7 +65,7 @@ func getTableValuesFromInterface(stru interface{}) ([]string, [][]string) {
 
 // TODO add channel to abort
 // takes title and values slices and draws them as table
-func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
+func (session *viewerSession) fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
 	select {
 	case <-abort:
 		// aborts previous call
@@ -78,46 +78,46 @@ func fillTableFromSlices(titles []string, values [][]string, abort chan bool) {
 		abort <- true
 		aborted <- true
 	}()
-	infoTable.Clear()
+	session.infoTable.Clear()
 	rowIndex := 0
 	for index, title := range titles {
 		// convert supported API IDs to reasonable strings
-		lines := convertIDs(values[index])
+		lines := session.convertIDs(values[index])
 		select {
 		case <-aborted:
 			return
 		default:
 			if len(values[index]) > 0 && len(values[index][0]) > 1 {
 				// print title
-				infoTable.SetCell(rowIndex, 1, tview.NewTableCell(title).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
+				session.infoTable.SetCell(rowIndex, 1, tview.NewTableCell(title).SetAlign(tview.AlignRight).SetTextColor(tcell.ColorBlue))
 				// print values
 				for _, line := range lines {
-					infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
+					session.infoTable.SetCell(rowIndex, 2, tview.NewTableCell(line))
 					rowIndex++
 				}
 				rowIndex++
 			}
 		}
 	}
-	infoTable.ScrollToBeginning()
-	app.Draw()
+	session.infoTable.ScrollToBeginning()
+	session.app.Draw()
 }
 
 // checks for driver or team IDs for the info table
-func convertIDs(lines []string) []string {
+func (session *viewerSession) convertIDs(lines []string) []string {
 	if len(lines) < 1 {
 		return lines
 	}
 	if len(lines[0]) > 12 && lines[0][:12] == "/api/driver/" {
-		lines = substituteDriverNames(lines)
+		lines = session.substituteDriverNames(lines)
 	} else if len(lines[0]) > 12 && lines[0][:10] == "/api/team/" {
-		lines = substituteTeamNames(lines)
+		lines = session.substituteTeamNames(lines)
 	}
 	return lines
 }
 
 // turns slice of driver IDs to their names
-func substituteDriverNames(lines []string) []string {
+func (session *viewerSession) substituteDriverNames(lines []string) []string {
 	var wg sync.WaitGroup
 	wg.Add(len(lines))
 	// iterate over all lines
@@ -125,9 +125,9 @@ func substituteDriverNames(lines []string) []string {
 		go func(j int) {
 			defer wg.Done()
 			// check if driver metadata is already cached
-			driverMapMutex.RLock()
-			driver, ok := driverMap[lines[j]]
-			driverMapMutex.RUnlock()
+			session.driverMapMutex.RLock()
+			driver, ok := session.driverMap[lines[j]]
+			session.driverMapMutex.RUnlock()
 			if !ok {
 				var err error
 				// load driver metadata if not already cached
@@ -136,9 +136,9 @@ func substituteDriverNames(lines []string) []string {
 					return
 				}
 				// add metadata to cache
-				driverMapMutex.Lock()
-				driverMap[lines[j]] = driver
-				driverMapMutex.Unlock()
+				session.driverMapMutex.Lock()
+				session.driverMap[lines[j]] = driver
+				session.driverMapMutex.Unlock()
 			}
 			// change string to driver name + number from metadata
 			name := fmt.Sprintf("%4v "+driver.FirstName+" "+driver.LastName, "("+strconv.Itoa(driver.DriverRacingnumber)+")")
@@ -151,7 +151,7 @@ func substituteDriverNames(lines []string) []string {
 }
 
 // turns array of team IDs to their names
-func substituteTeamNames(lines []string) []string {
+func (session *viewerSession) substituteTeamNames(lines []string) []string {
 	var wg sync.WaitGroup
 	wg.Add(len(lines))
 	// iterate over all lines
@@ -159,9 +159,9 @@ func substituteTeamNames(lines []string) []string {
 		go func(j int) {
 			defer wg.Done()
 			// check if team metadata is already cached
-			teamMapMutex.RLock()
-			team, ok := teamMap[lines[j]]
-			teamMapMutex.RUnlock()
+			session.teamMapMutex.RLock()
+			team, ok := session.teamMap[lines[j]]
+			session.teamMapMutex.RUnlock()
 			if !ok {
 				// load team metadata if not already cached
 				var err error
@@ -170,9 +170,9 @@ func substituteTeamNames(lines []string) []string {
 					return
 				}
 				// add metadata to cache
-				teamMapMutex.Lock()
-				teamMap[lines[j]] = team
-				teamMapMutex.Unlock()
+				session.teamMapMutex.Lock()
+				session.teamMap[lines[j]] = team
+				session.teamMapMutex.Unlock()
 			}
 			lines[j] = team.Name
 		}(j)
