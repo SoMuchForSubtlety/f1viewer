@@ -49,22 +49,22 @@ Please make sure you are using the latest version of MPV. If you use  Windows  p
 ## Config
 The config is is optional. It is used to set a preferred audio language and custom commands. It can also be used to stop checking for updates. 
 It should look like this.
-
-    {
-        "preferred_language": "en",
-        "check_updates": true,
-        "custom_playback_options": [
-            {
-                "title": "Play with MPV custom",
-                "commands": [
-                    ["mpv", "$url", "--alang=de"]
-                ],
-                "watchphrase": "Video",
-                "command_to_watch": 0
-            }
-        ]
-    }
-
+```json
+{
+    "preferred_language": "en",
+    "check_updates": true,
+    "custom_playback_options": [
+        {
+            "title": "Play with MPV custom",
+            "commands": [
+                ["mpv", "$url", "--alang=de"]
+            ],
+            "watchphrase": "Video",
+            "command_to_watch": 0
+        }
+    ]
+}
+```
 Save `sample-config.json` as `config.json` in the same Folder as the F1Viewer binary and edit it so it fits your needs.
 
 ## Custom Commands
