@@ -189,11 +189,12 @@ func main() {
 	log.SetOutput(mw)
 
 	flex.AddItem(session.tree, 0, 2, true)
-	flex.AddItem(rowFlex, 0, 2, false)
-	rowFlex.AddItem(session.infoTable, 0, 2, false)
 	// flag -d enables debug window
 	if *debugEnabled {
+		flex.AddItem(rowFlex, 0, 2, false)
+		rowFlex.AddItem(session.infoTable, 0, 2, false)
 		rowFlex.AddItem(session.debugText, 0, 1, false)
+
 	}
 	session.app.SetRoot(flex, true).Run()
 }
