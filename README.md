@@ -41,8 +41,8 @@ shows debug information
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
 Start your stream as soon as possible at the start of the session and you can usually avoid this. 
 #### I downloaded a .m3u8 file but can't play it
-F1TV now requires a cookie to be set to open the links in a .m3u8 file. You can get the cookie with `$cookie` though a custom command or  completely circumvent this issue by using the url to the .m3u8 instead (custom command `$url`).
-If you need a local file put the link in a .strm file.
+F1TV now requires a cookie to be set to open the links in a .m3u8 file. You can get the cookie with `$cookie` through a custom command or completely circumvent this issue by using the url to the .m3u8 instead (custom command `$url`).
+If you need a local file put the url in a .strm file.
 #### MPV is opening but I'm not getting audio
 Please make sure you are using the latest version of MPV. If you use  Windows  please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
 
