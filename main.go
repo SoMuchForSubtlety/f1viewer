@@ -81,6 +81,8 @@ func main() {
 	debugEnabled := flag.Bool("d", false, "enable debug mode")
 	flag.Parse()
 
+	setWorkingDirectory()
+
 	session := viewerSession{}
 	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
@@ -91,7 +93,7 @@ func main() {
 	defer logFile.Close()
 	// start UI
 	session.app = tview.NewApplication()
-	setWorkingDirectory()
+
 	// set defaults
 	session.con.CheckUpdate = true
 	session.con.Lang = "en"
