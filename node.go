@@ -51,8 +51,16 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 	if err != nil {
 		return false, sessionNode, err
 	}
-	firstContent := home.Objects[0].Items[0].ContentURL.Items[0].ContentURL.Self
-	if strings.Contains(firstContent, "/api/event-occurrence/") {
+	firstContent := ""
+	found := false
+	for _, item := range home.Objects[0].Items {
+		firstContent = item.ContentURL.Items[0].ContentURL.Self
+		if strings.Contains(firstContent, "/api/event-occurrence/") {
+			found = true
+			break
+		}
+	}
+	if found {
 		event, err := getEvent(firstContent)
 		if err != nil {
 			return false, sessionNode, err
