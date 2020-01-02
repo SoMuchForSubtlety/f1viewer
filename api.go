@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"sort"
 	"time"
@@ -10,46 +10,55 @@ import (
 
 const urlStart = "https://f1tv.formula1.com"
 const sessionURLstart = "https://f1tv.formula1.com/api/session-occurrence/?fields=uid,nbc_status,status,editorial_start_time,live_sources_path,data_source_id,available_for_user,global_channel_urls,global_channel_urls__uid,global_channel_urls__slug,global_channel_urls__self,channel_urls,channel_urls__ovps,channel_urls__slug,channel_urls__name,channel_urls__uid,channel_urls__self,channel_urls__driver_urls,channel_urls__driver_urls__driver_tla,channel_urls__driver_urls__driver_racingnumber,channel_urls__driver_urls__first_name,channel_urls__driver_urls__last_name,channel_urls__driver_urls__image_urls,channel_urls__driver_urls__image_urls__image_type,channel_urls__driver_urls__image_urls__url,channel_urls__driver_urls__team_url,channel_urls__driver_urls__team_url__name,channel_urls__driver_urls__team_url__colour,eventoccurrence_url,eventoccurrence_url__slug,eventoccurrence_url__circuit_url,eventoccurrence_url__circuit_url__short_name,session_type_url,session_type_url__name&fields_to_expand=global_channel_urls,channel_urls,channel_urls__driver_urls,channel_urls__driver_urls__image_urls,channel_urls__driver_urls__team_url,eventoccurrence_url,eventoccurrence_url__circuit_url,session_type_url&slug="
+const homepageContentURL = "https://f1tv.formula1.com/api/sets/?slug=home&fields=items"
+const seasonsSince2017URL = "https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year"
+const f2chasingCollID = "/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7/"
 
 const tagsURL = "https://f1tv.formula1.com/api/tags/"
 const vodTypesURL = "http://f1tv.formula1.com/api/vod-type-tag/"
 const seriesListURL = "https://f1tv.formula1.com/api/series/"
 const seriesF1URL = "https://f1tv.formula1.com/api/series/seri_436bb431c3a24d7d8e200a74e1d11de4/"
 const teamsURL = "https://f1tv.formula1.com/api/episodes/"
+const collListURL = "https://f1tv.formula1.com/api/sets/?fields=title,self&set_type_slug=video"
 
 type episodeStruct struct {
-	Subtitle               string    `json:"subtitle"`
-	UID                    string    `json:"uid"`
-	ScheduleUrls           []string  `json:"schedule_urls"`
-	SessionoccurrenceUrls  []string  `json:"sessionoccurrence_urls"`
-	Stats                  string    `json:"stats"`
-	Title                  string    `json:"title"`
-	Self                   string    `json:"self"`
-	DriverUrls             []string  `json:"driver_urls"`
-	CircuitUrls            []string  `json:"circuit_urls"`
-	VodTypeTagUrls         []string  `json:"vod_type_tag_urls"`
-	DataSourceFields       []string  `json:"data_source_fields"`
-	ParentURL              string    `json:"parent_url"`
-	DataSourceID           string    `json:"data_source_id"`
-	Tags                   []string  `json:"tags"`
-	ImageUrls              []string  `json:"image_urls"`
-	SeriesUrls             []string  `json:"series_urls"`
-	TeamUrls               []string  `json:"team_urls"`
-	HierarchyURL           string    `json:"hierarchy_url"`
-	SponsorUrls            []string  `json:"sponsor_urls"`
-	PlanUrls               []string  `json:"plan_urls"`
-	EpisodeNumber          string    `json:"episode_number"`
-	Slug                   string    `json:"slug"`
-	LastDataIngest         time.Time `json:"last_data_ingest"`
-	Talent                 []string  `json:"talent"`
-	Language               string    `json:"language"`
-	Created                time.Time `json:"created"`
-	Items                  []string  `json:"items"`
-	RatingUrls             []string  `json:"rating_urls"`
-	Modified               time.Time `json:"modified"`
-	RecommendedContentUrls []string  `json:"recommended_content_urls"`
-	Synopsis               string    `json:"synopsis"`
-	Editability            string    `json:"editability"`
+	Subtitle              string        `json:"subtitle"`
+	UID                   string        `json:"uid"`
+	ScheduleUrls          []string      `json:"schedule_urls"`
+	SessionoccurrenceUrls []string      `json:"sessionoccurrence_urls"`
+	Stats                 interface{}   `json:"stats"`
+	Title                 string        `json:"title"`
+	TierUrls              []string      `json:"tier_urls"`
+	Self                  string        `json:"self"`
+	DriverUrls            []string      `json:"driver_urls"`
+	CircuitUrls           []interface{} `json:"circuit_urls"`
+	ProgramEntryMd5       string        `json:"program_entry_md5"`
+	DataSourceFields      []string      `json:"data_source_fields"`
+	ParentURL             interface{}   `json:"parent_url"`
+	DataSourceID          string        `json:"data_source_id"`
+	VodTypeTagUrls        []string      `json:"vod_type_tag_urls"`
+	Tags                  []struct {
+		ScheduleUrls []string `json:"schedule_urls"`
+		TagURL       string   `json:"tag_url"`
+	} `json:"tags"`
+	ImageUrls              []string      `json:"image_urls"`
+	SeriesUrls             []string      `json:"series_urls"`
+	TeamUrls               []string      `json:"team_urls"`
+	HierarchyURL           string        `json:"hierarchy_url"`
+	SponsorUrls            []interface{} `json:"sponsor_urls"`
+	PlanUrls               []interface{} `json:"plan_urls"`
+	EpisodeNumber          interface{}   `json:"episode_number"`
+	Slug                   string        `json:"slug"`
+	LastDataIngest         time.Time     `json:"last_data_ingest"`
+	Talent                 []interface{} `json:"talent"`
+	Language               string        `json:"language"`
+	Created                time.Time     `json:"created"`
+	Items                  []string      `json:"items"`
+	RatingUrls             []interface{} `json:"rating_urls"`
+	Modified               time.Time     `json:"modified"`
+	RecommendedContentUrls []interface{} `json:"recommended_content_urls"`
+	Synopsis               string        `json:"synopsis"`
+	Editability            string        `json:"editability"`
 }
 
 type assetStruct struct {
@@ -328,142 +337,153 @@ type driverUrlsStruct struct {
 	} `json:"team_url"`
 	DriverRacingnumber int `json:"driver_racingnumber"`
 }
-type homepageContentStruct struct {
+type homepageContent struct {
 	Objects []struct {
 		Items []struct {
-			Position   int `json:"position"`
-			ContentURL struct {
-				Items []struct {
-					Position    int    `json:"position"`
-					ContentType string `json:"content_type"`
-					ContentURL  struct {
-						Self string `json:"self"`
-						UID  string `json:"uid"`
-					} `json:"content_url"`
-				} `json:"items"`
-				Self        string `json:"self"`
-				UID         string `json:"uid"`
-				SetTypeSlug string `json:"set_type_slug"`
-				Title       string `json:"title"`
-			} `json:"content_url"`
-			ContentType string `json:"content_type"`
-			DisplayType string `json:"display_type,omitempty"`
+			Archived              bool          `json:"archived"`
+			UID                   string        `json:"uid"`
+			Language              string        `json:"language"`
+			Created               time.Time     `json:"created"`
+			ScheduleUrls          []string      `json:"schedule_urls"`
+			Self                  string        `json:"self"`
+			Modified              time.Time     `json:"modified"`
+			ImageUrls             []interface{} `json:"image_urls"`
+			ContentType           string        `json:"content_type"`
+			ContentURL            string        `json:"content_url"`
+			DisplayType           string        `json:"display_type,omitempty"`
+			DataSourceFields      []interface{} `json:"data_source_fields"`
+			DataSourceID          interface{}   `json:"data_source_id"`
+			Position              int           `json:"position"`
+			ScheduledItemModified time.Time     `json:"scheduled_item_modified"`
+			SetURL                string        `json:"set_url"`
+			Editability           string        `json:"editability"`
+			LastDataIngest        interface{}   `json:"last_data_ingest"`
+			TextReview            string        `json:"text_review,omitempty"`
+			SubCollection         bool          `json:"sub_collection,omitempty"`
 		} `json:"items"`
-		Slug        string `json:"slug"`
-		SetTypeSlug string `json:"set_type_slug"`
 	} `json:"objects"`
 }
 
-// downloads json from URL and returns the json as string and whether it's valid as bool
-func getJSON(url string) (string, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	response := buf.String()
-	return response, nil
+type collection struct {
+	UID              string        `json:"uid"`
+	ScheduleUrls     []string      `json:"schedule_urls"`
+	Stats            interface{}   `json:"stats"`
+	Title            string        `json:"title"`
+	UniqueItems      bool          `json:"unique_items"`
+	Self             string        `json:"self"`
+	DataSourceFields []interface{} `json:"data_source_fields"`
+	HasPrice         bool          `json:"has_price"`
+	SetTypeURL       string        `json:"set_type_url"`
+	DataSourceID     interface{}   `json:"data_source_id"`
+	Body             string        `json:"body"`
+	Plans            []interface{} `json:"plans"`
+	Tags             []interface{} `json:"tags"`
+	ImageUrls        []interface{} `json:"image_urls"`
+	HierarchyURL     interface{}   `json:"hierarchy_url"`
+	SponsorUrls      []interface{} `json:"sponsor_urls"`
+	Slug             string        `json:"slug"`
+	LastDataIngest   interface{}   `json:"last_data_ingest"`
+	Language         string        `json:"language"`
+	Created          time.Time     `json:"created"`
+	Items            []struct {
+		Archived              bool          `json:"archived"`
+		UID                   string        `json:"uid"`
+		Language              string        `json:"language"`
+		Created               time.Time     `json:"created"`
+		ScheduleUrls          []string      `json:"schedule_urls"`
+		Self                  string        `json:"self"`
+		Modified              time.Time     `json:"modified"`
+		ImageUrls             []interface{} `json:"image_urls"`
+		ContentType           string        `json:"content_type"`
+		ContentURL            string        `json:"content_url"`
+		DisplayType           interface{}   `json:"display_type"`
+		DataSourceFields      []interface{} `json:"data_source_fields"`
+		DataSourceID          interface{}   `json:"data_source_id"`
+		Position              int           `json:"position"`
+		ScheduledItemModified time.Time     `json:"scheduled_item_modified"`
+		SetURL                string        `json:"set_url"`
+		Editability           string        `json:"editability"`
+		LastDataIngest        interface{}   `json:"last_data_ingest"`
+		TextReview            string        `json:"text_review"`
+	} `json:"items"`
+	Modified    time.Time `json:"modified"`
+	Summary     string    `json:"summary"`
+	SetTypeSlug string    `json:"set_type_slug"`
+	Editability string    `json:"editability"`
 }
 
-func isJSON(s string) bool {
-	var js map[string]interface{}
-	return json.Unmarshal([]byte(s), &js) == nil
+type collectionList struct {
+	Objects []collection `json:"objects"`
+}
+
+func getCollectionList() (collectionList, error) {
+	var collList collectionList
+	err := doGet(collListURL, &collList)
+	return collList, err
+}
+
+func getCollection(collID string) (collection, error) {
+	var coll collection
+	err := doGet(urlStart+collID, &coll)
+	return coll, err
 }
 
 func getDriver(driverID string) (driverStruct, error) {
 	var driver driverStruct
-	jsonString, err := getJSON(urlStart + driverID)
-	if err != nil {
-		return driver, err
-	}
-	json.Unmarshal([]byte(jsonString), &driver)
-	return driver, nil
+	err := doGet(urlStart+driverID, &driver)
+	return driver, err
 }
 
 func getTeam(teamID string) (teamStruct, error) {
 	var team teamStruct
-	jsonString, err := getJSON(urlStart + teamID)
-	if err != nil {
-		return team, err
-	}
-	json.Unmarshal([]byte(jsonString), &team)
-	return team, nil
+	err := doGet(urlStart+teamID, &team)
+	return team, err
 }
 
 func getEpisode(episodeID string) (episodeStruct, error) {
 	var ep episodeStruct
-	jsonString, err := getJSON(urlStart + episodeID)
-	if err != nil {
-		return ep, err
-	}
-	json.Unmarshal([]byte(jsonString), &ep)
-	return ep, nil
+	err := doGet(urlStart+episodeID, &ep)
+	return ep, err
 }
 
-func getHomepageContent() (homepageContentStruct, error) {
-	var home homepageContentStruct
-	jsonString, err := getJSON("https://f1tv.formula1.com/api/sets/?slug=home&fields=slug,set_type_slug,items,items__position,items__content_type,items__display_type,items__content_url,items__content_url__uid,items__content_url__self,items__content_url__set_type_slug,items__content_url__display_type_slug,items__content_url__title,items__content_url__items,items__content_url__items__set_type_slug,items__content_url__items__position,items__content_url__items__content_type,items__content_url__items__content_url,items__content_url__items__content_url__self,items__content_url__items__content_url__uid&fields_to_expand=items__content_url,items__content_url__items__content_url")
-	if err != nil {
-		return home, err
-	}
-	json.Unmarshal([]byte(jsonString), &home)
-	return home, nil
+func getHomepageContent() (homepageContent, error) {
+	var home homepageContent
+	err := doGet(homepageContentURL, &home)
+	return home, err
 }
 
 func getVodTypes() (vodTypesStruct, error) {
 	var types vodTypesStruct
-	jsonString, err := getJSON(vodTypesURL)
-	if err != nil {
-		return types, err
-	}
-	json.Unmarshal([]byte(jsonString), &types)
-	return types, nil
+	err := doGet(vodTypesURL, &types)
+	return types, err
 }
 
 var listOfSeasons allSeasonStruct
 
 func getSeasons() (allSeasonStruct, error) {
+	var err error
 	if len(listOfSeasons.Seasons) < 1 {
-		jsonString, err := getJSON("https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year")
-		if err != nil {
-			return listOfSeasons, err
-		}
-		json.Unmarshal([]byte(jsonString), &listOfSeasons)
+		err = doGet(seasonsSince2017URL, &listOfSeasons)
 	}
-	return listOfSeasons, nil
+	return listOfSeasons, err
 }
 
 func getEvent(eventID string) (eventStruct, error) {
 	var event eventStruct
-	jsonString, err := getJSON(urlStart + eventID)
-	if err != nil {
-		return event, err
-	}
-	json.Unmarshal([]byte(jsonString), &event)
-	return event, nil
+	err := doGet(urlStart+eventID, &event)
+	return event, err
 }
 
 func getSession(sessionID string) (sessionStruct, error) {
 	var session sessionStruct
-	jsonString, err := getJSON(urlStart + sessionID)
-	if err != nil {
-		return session, err
-	}
-	json.Unmarshal([]byte(jsonString), &session)
-	return session, nil
+	err := doGet(urlStart+sessionID, &session)
+	return session, err
 }
 
 func getSessionStreams(sessionSlug string) (sessionStreamsStruct, error) {
 	var sessionStreams sessionStreamsStruct
-	jsonString, err := getJSON(sessionURLstart + sessionSlug)
-	if err != nil {
-		return sessionStreams, err
-	}
-	json.Unmarshal([]byte(jsonString), &sessionStreams)
-	return sessionStreams, nil
+	err := doGet(sessionURLstart+sessionSlug, &sessionStreams)
+	return sessionStreams, err
 }
 
 func (s *viewerSession) loadEpisodes(IDs []string) ([]episodeStruct, error) {
@@ -528,4 +548,18 @@ func sortEpisodes(episodes []episodeStruct) []episodeStruct {
 		return episodes[i].Title < episodes[j].Title
 	})
 	return episodes
+}
+
+func doGet(url string, v interface{}) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bodyBytes, v)
 }

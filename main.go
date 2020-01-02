@@ -5,15 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,57 +61,35 @@ type viewerSession struct {
 
 	// tview
 	app       *tview.Application
-	infoTable *tview.Table
 	debugText *tview.TextView
 	tree      *tview.TreeView
 }
 
-func setWorkingDirectory() {
-	//  Get the absolute path this executable is located in.
-	executablePath, err := os.Executable()
-	if err != nil {
-		log.Printf("Error: Couldn't determine working directory: %v", err)
-	}
-	//  Set the working directory to the path the executable is located in.
-	os.Chdir(filepath.Dir(executablePath))
-}
-
-func main() {
-	debugEnabled := flag.Bool("d", false, "enable debug mode")
-	flag.Parse()
-
-	setWorkingDirectory()
-
-	session := viewerSession{}
-	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
-	defer logFile.Close()
-	// start UI
-	session.app = tview.NewApplication()
-
+func newSession() (session *viewerSession) {
 	// set defaults
+	session = &viewerSession{}
 	session.con.CheckUpdate = true
 	session.con.Lang = "en"
 	session.con.LiveRetryTimeout = 60
+
+	// read config
 	file, err := ioutil.ReadFile("config.json")
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 	} else {
 		err = json.Unmarshal(file, &session.con)
 		if err != nil {
 			log.Fatalf("malformed configuration file: %v", err)
 		}
-		log.Printf("Found %v custom commands", len(session.con.CustomPlaybackOptions))
 	}
-	session.abortWritingInfo = make(chan bool)
+
 	// cache
 	session.episodeMap = make(map[string]episodeStruct)
 	session.driverMap = make(map[string]driverStruct)
 	session.teamMap = make(map[string]teamStruct)
+
+	session.app = tview.NewApplication()
+
 	// build base tree
 	root := tview.NewTreeNode("VOD-Types").
 		SetColor(tcell.ColorBlue).
@@ -120,85 +97,116 @@ func main() {
 	session.tree = tview.NewTreeView().
 		SetRoot(root).
 		SetCurrentNode(root)
+
 	var allSeasons allSeasonStruct
-	// check for live session
-	go func() {
-		for {
-			log.Println("checking for live session")
-			isLive, liveNode, err := getLiveNode()
-			if err != nil {
-				log.Printf("error looking for live session: %v", err)
-			} else if isLive {
-				insertNodeAtTop(root, liveNode)
-				if session.app != nil {
-					session.app.Draw()
-				}
-				return
-			} else if session.con.LiveRetryTimeout < 0 {
-				log.Println("no live session found")
-				return
-			} else {
-				log.Println("no live session found")
-			}
-			time.Sleep(time.Second * time.Duration(session.con.LiveRetryTimeout))
-		}
-	}()
-	// check if an update is available
-	if session.con.CheckUpdate {
-		go func() {
-			node, err := getUpdateNode()
-			if err != nil {
-				log.Println(err.Error())
-			} else {
-				insertNodeAtTop(root, node)
-				session.app.Draw()
-			}
-		}()
-	}
-	// set vod types nodes
-	go func() {
-		nodes, err := session.getVodTypeNodes()
-		if err != nil {
-			log.Println(err.Error())
-		} else {
-			appendNodes(root, nodes...)
-			session.app.Draw()
-		}
-	}()
 	// set full race weekends node
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
 		SetSelectable(true).
 		SetReference(allSeasons).
 		SetColor(tcell.ColorYellow)
-	root.AddChild(fullSessions)
-	session.tree.SetChangedFunc(session.nodeSwitched)
+	session.tree.GetRoot().AddChild(fullSessions)
 	session.tree.SetSelectedFunc(session.nodeSelected)
 	// flex containing everything
 	flex := tview.NewFlex()
-	// flex containing metadata and debug
-	rowFlex := tview.NewFlex()
-	rowFlex.SetDirection(tview.FlexRow)
-	// metadata window
-	session.infoTable = tview.NewTable()
-	session.infoTable.SetBorder(true).SetTitle(" Info ")
 	// debug window
 	session.debugText = tview.NewTextView()
-	session.debugText.SetBorder(true).SetTitle("Debug")
+	session.debugText.SetDynamicColors(true)
+	session.debugText.SetBorder(true).SetTitle("Info")
 	session.debugText.SetChangedFunc(func() {
 		session.app.Draw()
 	})
-	mw = io.MultiWriter(session.debugText, logFile)
-	log.SetOutput(mw)
+	flex.AddItem(session.tree, 0, 1, true)
+	flex.AddItem(session.debugText, 0, 1, false)
+	go func() {
+		session.app.SetRoot(flex, true).Run()
+		os.Exit(0)
+	}()
+	return
+}
 
-	flex.AddItem(session.tree, 0, 2, true)
-	// flag -d enables debug window
-	if *debugEnabled {
-		flex.AddItem(rowFlex, 0, 2, false)
-		rowFlex.AddItem(session.infoTable, 0, 2, false)
-		rowFlex.AddItem(session.debugText, 0, 1, false)
-
+func (session *viewerSession) checkLive() {
+	for {
+		session.logInfo("checking for live session")
+		isLive, liveNode, err := getLiveNode()
+		if err != nil {
+			session.logError("error looking for live session: ", err)
+		} else if isLive {
+			insertNodeAtTop(session.tree.GetRoot(), liveNode)
+			if session.app != nil {
+				session.app.Draw()
+			}
+			return
+		} else if session.con.LiveRetryTimeout < 0 {
+			session.logInfo("no live session found")
+			return
+		} else {
+			session.logInfo("no live session found")
+		}
+		time.Sleep(time.Second * time.Duration(session.con.LiveRetryTimeout))
 	}
-	session.app.SetRoot(flex, true).Run()
+}
+
+func (session *viewerSession) CheckUpdate() {
+	node, err := getUpdateNode()
+	if err != nil {
+		session.logInfo(err)
+	} else {
+		session.logInfo("Newer version found!")
+		if re, ok := node.GetReference().(release); ok {
+			fmt.Fprintln(session.debugText, "\n[blue::bu]"+re.Name+"[-::-]\n")
+			fmt.Fprintln(session.debugText, re.Body)
+		}
+		insertNodeAtTop(session.tree.GetRoot(), node)
+		session.app.Draw()
+	}
+}
+
+func setWorkingDirectory() {
+	//  Get the absolute path this executable is located in.
+	executablePath, err := os.Executable()
+	if err != nil {
+		log.Println("[ERROR] Couldn't determine working directory: ", err)
+	}
+	//  Set the working directory to the path the executable is located in.
+	os.Chdir(filepath.Dir(executablePath))
+}
+
+func main() {
+	setWorkingDirectory()
+
+	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	log.SetOutput(logFile)
+	defer logFile.Close()
+
+	session := newSession()
+
+	// check for live session
+	go session.checkLive()
+	// check if an update is available
+	if session.con.CheckUpdate {
+		go session.CheckUpdate()
+	}
+
+	// set vod types nodes
+	go func() {
+		nodes, err := session.getVodTypeNodes()
+		if err != nil {
+			session.logError(err)
+		} else {
+			appendNodes(session.tree.GetRoot(), nodes...)
+			session.app.Draw()
+		}
+	}()
+
+	session.loadCollections()
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	<-c
 }
 
 // takes year/race ID and returns full year and race nuber as strings
@@ -276,25 +284,10 @@ func scanLinesCustom(data []byte, atEOF bool) (advance int, token []byte, err er
 	return 0, nil, nil
 }
 
-func (session *viewerSession) nodeSwitched(node *tview.TreeNode) {
-	reference := node.GetReference()
-	if index, ok := reference.(int); ok && index < len(session.vodTypes.Objects) {
-		v, t := getTableValuesFromInterface(session.vodTypes.Objects[index])
-		go session.fillTableFromSlices(v, t, session.abortWritingInfo)
-	} else if x := reflect.ValueOf(reference); x.Kind() == reflect.Struct {
-		v, t := getTableValuesFromInterface(reference)
-		go session.fillTableFromSlices(v, t, session.abortWritingInfo)
-	} else if len(node.GetChildren()) != 0 {
-		session.infoTable.Clear()
-	}
-	session.infoTable.ScrollToBeginning()
-	session.app.Draw()
-}
-
 func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 	reference := node.GetReference()
 	children := node.GetChildren()
-	if reference == nil || node.GetText() == "loading..." {
+	if node.GetText() == "loading..." {
 		// Selecting the root node or a loading node does nothing
 		return
 	} else if len(children) > 0 {
@@ -309,6 +302,8 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 		// TODO: better name
 		nodes := session.getPlaybackNodes(node.GetText(), ep.Self)
 		appendNodes(node, nodes...)
+	} else if coll, ok := reference.(collection); ok {
+		session.loadCollectionContent(coll.Self, node)
 	} else if event, ok := reference.(eventStruct); ok {
 		// if event (eg. Australian GP 2018) is selected from full race weekends
 		done := false
@@ -316,7 +311,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 		go func() {
 			sessions, err := session.getSessionNodes(event)
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 				hasSessions = true
 			} else {
 				for _, session := range sessions {
@@ -343,7 +338,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 		go func() {
 			events, err := getEventNodes(season)
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 			} else {
 				for _, event := range events {
 					if event != nil {
@@ -363,7 +358,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 		go func() {
 			err := session.runCustomCommand(context, node)
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 			}
 		}()
 	} else if i, ok := reference.(int); ok {
@@ -373,7 +368,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 			go func() {
 				episodes, err := session.getEpisodeNodes(session.vodTypes.Objects[i].ContentUrls)
 				if err != nil {
-					log.Println(err.Error())
+					session.logError(err)
 				} else {
 					appendNodes(node, episodes...)
 				}
@@ -386,7 +381,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 		go func() {
 			seasons, err := getSeasonNodes()
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 			} else {
 				appendNodes(node, seasons...)
 				node.SetReference(seasons)
@@ -398,23 +393,23 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 		go func() {
 			url, err := getPlayableURL(reference.(string))
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 				return
 			}
-			cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0")
+			cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0", "--quiet")
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
-				log.Println(err)
+				session.logError(err)
 				return
 			}
 			stderr, err := cmd.StderrPipe()
 			if err != nil {
-				log.Println(err)
+				session.logError(err)
 				return
 			}
 			err = cmd.Start()
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 				return
 			}
 			go session.monitorCommand(node, "Video", stdout, stderr)
@@ -425,24 +420,24 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 			urlAndTitle := reference.([]string)
 			url, err := getPlayableURL(urlAndTitle[0])
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 				return
 			}
 			_, _, err = downloadAsset(url, urlAndTitle[1])
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 			}
 		}()
-	} else if node.GetText() == "GET URL" || node.GetText() == "URL copied to clipboard" {
+	} else if node.GetText() == "Copy URL to clipboard" || node.GetText() == "URL copied to clipboard" {
 		go func() {
 			url, err := getPlayableURL(reference.(string))
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 				return
 			}
 			err = clipboard.WriteAll(url)
 			if err != nil {
-				log.Println(err.Error())
+				session.logError(err)
 				return
 			}
 			node.SetText("URL copied to clipboard")
@@ -452,13 +447,13 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 	} else if node.GetText() == "download update" {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 		if err != nil {
-			log.Println(err.Error())
+			session.logError(err)
 		}
 	} else if node.GetText() == "don't tell me about updates" {
 		session.con.CheckUpdate = false
 		err := session.con.save()
 		if err != nil {
-			log.Println(err.Error())
+			session.logError(err)
 		}
 		node.SetColor(tcell.ColorBlue)
 		node.SetText("update notifications turned off")
@@ -499,7 +494,7 @@ func (session *viewerSession) runCustomCommand(cc commandContext, node *tview.Tr
 			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
 		}
 		// run command
-		log.Println(append([]string{"starting: "}, tmpCommand...))
+		session.logInfo(append([]string{"starting: "}, tmpCommand...))
 		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
@@ -537,9 +532,42 @@ func (cfg *config) save() error {
 		return fmt.Errorf("error marshaling config: %v", err)
 	}
 
-	err = ioutil.WriteFile("config.json", d, 0600)
+	err = ioutil.WriteFile("config.json", d, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("error saving config: %v", err)
 	}
 	return nil
+}
+
+func (session *viewerSession) loadCollections() error {
+	node := tview.NewTreeNode("Collections").SetSelectable(true).SetColor(tcell.ColorYellow).SetExpanded(false)
+	list, err := getCollectionList()
+	if err != nil {
+		return err
+	}
+	for _, coll := range list.Objects {
+		child := tview.NewTreeNode(coll.Title).SetExpanded(false).SetReference(coll)
+		node.AddChild(child)
+	}
+	session.tree.GetRoot().AddChild(node)
+	return nil
+}
+
+func (session *viewerSession) loadCollectionContent(collID string, parent *tview.TreeNode) error {
+	nodes, err := session.getCollectionContent(collID)
+	if err == nil {
+		appendNodes(parent, nodes...)
+	}
+	parent.Expand()
+	return err
+}
+
+func (session *viewerSession) logError(v ...interface{}) {
+	fmt.Fprintln(session.debugText, "[red::b]ERROR:[-::-]", fmt.Sprint(v...))
+	log.Println("[ERROR]", fmt.Sprint(v...))
+}
+
+func (session *viewerSession) logInfo(v ...interface{}) {
+	fmt.Fprintln(session.debugText, "[green::b]INFO:[-::-]", fmt.Sprint(v...))
+	log.Println("[INFO]", fmt.Sprint(v...))
 }

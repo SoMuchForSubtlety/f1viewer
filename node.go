@@ -39,7 +39,7 @@ func (session *viewerSession) getPlaybackNodes(title string, epID string) []*tvi
 	downloadNode.SetReference([]string{epID, title})
 	nodes = append(nodes, downloadNode)
 
-	streamNode := tview.NewTreeNode("GET URL")
+	streamNode := tview.NewTreeNode("Copy URL to clipboard")
 	streamNode.SetReference(epID)
 	nodes = append(nodes, streamNode)
 	return nodes
@@ -51,19 +51,17 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 	if err != nil {
 		return false, sessionNode, err
 	}
-	firstContent := ""
+	var contentURL string
 	found := false
 	for _, item := range home.Objects[0].Items {
-		if len(item.ContentURL.Items) > 0 {
-			firstContent = item.ContentURL.Items[0].ContentURL.Self
-			if strings.Contains(firstContent, "/api/event-occurrence/") {
-				found = true
-				break
-			}
+		contentURL = item.ContentURL
+		if strings.Contains(contentURL, "/api/event-occurrence/") {
+			found = true
+			break
 		}
 	}
 	if found {
-		event, err := getEvent(firstContent)
+		event, err := getEvent(contentURL)
 		if err != nil {
 			return false, sessionNode, err
 		}
@@ -324,6 +322,18 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 		}
 	}
 	return nodes, nil
+}
+
+func (session *viewerSession) getCollectionContent(id string) ([]*tview.TreeNode, error) {
+	coll, err := getCollection(id)
+	if err != nil {
+		return nil, err
+	}
+	epIDs := make([]string, 0)
+	for _, ep := range coll.Items {
+		epIDs = append(epIDs, ep.ContentURL)
+	}
+	return session.getEpisodeNodes(epIDs)
 }
 
 // appends children to parent
