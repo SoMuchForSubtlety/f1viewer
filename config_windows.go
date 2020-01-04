@@ -13,6 +13,14 @@ func getConfigPath() (string, error) {
 	return filepath.Dir(ex), nil
 }
 
-func getLogPath() (string, error) {
+func getLogPath(cfg config) (string, error) {
+	if cfg.LogLocation != "" {
+		path = filepath.Dir(cfg.LogLocation)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			if err = os.MkdirAll(path, os.ModePerm); err != nil {
+				return path, err
+			}
+		}
+	}
 	return getConfigPath()
 }

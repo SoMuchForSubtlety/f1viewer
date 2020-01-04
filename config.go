@@ -12,6 +12,8 @@ type config struct {
 	Lang                  string    `json:"preferred_language"`
 	CheckUpdate           bool      `json:"check_updates"`
 	SaveLogs              bool      `json:"save_logs"`
+	LogLocation           string    `json:"log_location"`
+	DownloadLocation      string    `json:"download_location"`
 	CustomPlaybackOptions []command `json:"custom_playback_options"`
 }
 

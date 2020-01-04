@@ -8,11 +8,20 @@ import (
 	"os/user"
 	"regexp"
 	"strings"
-
-	"github.com/rivo/tview"
 )
 
-func (session *viewerSession) runCustomCommand(cc commandContext, node *tview.TreeNode) error {
+type command struct {
+	Title   string `json:"title"`
+	Command string `json:"command"`
+}
+
+type commandContext struct {
+	EpID          string
+	CustomOptions command
+	Title         string
+}
+
+func (session *viewerSession) runCustomCommand(cc commandContext) error {
 	// custom command
 	com := cc.CustomOptions
 	url, err := getPlayableURL(cc.EpID)
@@ -23,7 +32,7 @@ func (session *viewerSession) runCustomCommand(cc commandContext, node *tview.Tr
 	// replace $url, $file and $cookie
 	var filepath string
 	if strings.Contains(tmpCommand, "$file") && filepath == "" {
-		filepath, _, err = downloadAsset(url, cc.Title)
+		filepath, _, err = session.con.downloadAsset(url, cc.Title)
 		if err != nil {
 			return err
 		}
@@ -44,7 +53,7 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 		re := regexp.MustCompile("[^\\/]+$")
 		wdir = re.FindString(wdir)
 	}
-	fmt.Fprintln(session.debugText, fmt.Sprintf("\n[green::b][%s@%s [white]%s[green]]$[-::-] %s", user.Username, hostname, wdir, strings.Join(cmd.Args, " ")))
+	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[green::b][%s@%s [white]%s[green]]$[-::-] %s", user.Username, hostname, wdir, strings.Join(cmd.Args, " ")))
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -54,7 +63,11 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 	if err != nil {
 		return err
 	}
-	go io.Copy(session.debugText, stdout)
-	go io.Copy(session.debugText, stderr)
-	return cmd.Start()
+	go io.Copy(session.textWindow, stdout)
+	go io.Copy(session.textWindow, stderr)
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+	return cmd.Process.Release()
 }

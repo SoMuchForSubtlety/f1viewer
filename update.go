@@ -82,18 +82,34 @@ func calculateHash() (string, error) {
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func getUpdateNode() (*tview.TreeNode, error) {
+func (session *viewerSession) getUpdateNode() (*tview.TreeNode, error) {
 	hasUpdate, err := updateAvailable()
 	if !hasUpdate {
 		err = errors.New("no update available")
 	}
-	re, err := getRelease()
+	_, err = getRelease()
 	if err != nil {
 		return nil, err
 	}
-	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(tcell.ColorRed).SetExpanded(false).SetReference(re)
-	getUpdateNode := tview.NewTreeNode("download update").SetColor(tcell.ColorRed).SetReference("update")
-	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(tcell.ColorRed).SetReference("don't check")
+	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(tcell.ColorRed).SetExpanded(false)
+	getUpdateNode := tview.NewTreeNode("download update").SetColor(tcell.ColorRed)
+	getUpdateNode.SetSelectedFunc(func() {
+		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
+		if err != nil {
+			session.logError(err)
+		}
+	})
+	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(tcell.ColorRed)
+	stopCheckingNode.SetSelectedFunc(func() {
+		session.con.CheckUpdate = false
+		err := session.con.save()
+		if err != nil {
+			session.logError(err)
+		}
+		stopCheckingNode.SetColor(tcell.ColorBlue)
+		stopCheckingNode.SetText("update notifications turned off")
+		stopCheckingNode.SetSelectedFunc(nil)
+	})
 	updateNode.AddChild(getUpdateNode)
 	updateNode.AddChild(stopCheckingNode)
 	return updateNode, err

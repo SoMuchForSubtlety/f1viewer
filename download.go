@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -13,7 +14,7 @@ import (
 )
 
 // takes asset ID and downloads corresponding .m3u8
-func downloadAsset(url string, title string) (filepath string, cookie string, err error) {
+func (cfg config) downloadAsset(url string, title string) (filepath string, cookie string, err error) {
 	// sanitize title
 	title = strings.Replace(title, ":", "", -1)
 	// abort if the URL is not valid
@@ -26,7 +27,7 @@ func downloadAsset(url string, title string) (filepath string, cookie string, er
 		return "", "", err
 	}
 	fixedLineArray := fixData(data, url)
-	path, err := writeToFile(fixedLineArray, title+".m3u8")
+	path, err := cfg.writeToFile(fixedLineArray, title+".m3u8")
 	if err != nil {
 		return "", "", err
 	}
@@ -129,24 +130,24 @@ func fixData(lines []string, url string) []string {
 			tempString := re.FindString(line)
 			line = re.ReplaceAllString(line, url+tempString)
 		}
-		// var re2 = regexp.MustCompile(`https:\/\/f1tv-cdn[^\.]*\.formula1\.com`)
-		// line = re2.ReplaceAllString(line, "https://f1tv.secure.footprint.net")
 		newLines = append(newLines, line)
 	}
 	return newLines
 }
 
 // write slice of lines to file and return the full file path
-func writeToFile(lines []string, path string) (string, error) {
-	// create downloads folder if it doesnt exist
-	if _, err := os.Stat(`/downloads/`); os.IsNotExist(err) {
-		err := os.MkdirAll(`./downloads/`, os.ModePerm)
-		if err != nil {
-			return "", err
+func (cfg config) writeToFile(lines []string, filename string) (string, error) {
+	log.Println(cfg.DownloadLocation)
+	if cfg.DownloadLocation != "" {
+		if _, err := os.Stat(cfg.DownloadLocation); os.IsNotExist(err) {
+			err = os.MkdirAll(cfg.DownloadLocation, os.ModePerm)
+			if err != nil {
+				return "", err
+			}
 		}
+		filename = cfg.DownloadLocation + filename
 	}
-	path = `./downloads/` + path
-	file, err := os.Create(path)
+	file, err := os.Create(filename)
 	if err != nil {
 		return "", err
 	}
@@ -160,5 +161,5 @@ func writeToFile(lines []string, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path, nil
+	return filename, nil
 }
