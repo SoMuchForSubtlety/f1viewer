@@ -19,7 +19,7 @@ func (session *viewerSession) getPlaybackNodes(title string, epID string) []*tvi
 	if session.con.CustomPlaybackOptions != nil {
 		for i := range session.con.CustomPlaybackOptions {
 			com := session.con.CustomPlaybackOptions[i]
-			if len(com.Commands) > 0 {
+			if len(com.Command) > 0 {
 				var context commandContext
 				context.EpID = epID
 				context.CustomOptions = com
@@ -45,7 +45,7 @@ func (session *viewerSession) getPlaybackNodes(title string, epID string) []*tvi
 	return nodes
 }
 
-func getLiveNode() (bool, *tview.TreeNode, error) {
+func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 	var sessionNode *tview.TreeNode
 	home, err := getHomepageContent()
 	if err != nil {
@@ -66,21 +66,21 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 			return false, sessionNode, err
 		}
 		for _, sessionID := range event.SessionoccurrenceUrls {
-			session, err := getSession(sessionID)
+			s, err := getSession(sessionID)
 			if err != nil {
 				return false, sessionNode, err
 			}
-			if session.Status == "live" {
-				streams, err := getSessionStreams(session.Slug)
+			if s.Status == "live" {
+				streams, err := getSessionStreams(s.Slug)
 				if err != nil {
 					return false, sessionNode, err
 				}
-				sessionNode = tview.NewTreeNode(session.Name + " - LIVE").
+				sessionNode = tview.NewTreeNode(s.Name + " - LIVE").
 					SetSelectable(true).
 					SetColor(tcell.ColorRed).
 					SetReference(streams).
 					SetExpanded(false)
-				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
+				channels := session.getPerspectiveNodes(streams.Objects[0].ChannelUrls)
 				for _, stream := range channels {
 					sessionNode.AddChild(stream)
 				}
@@ -94,20 +94,17 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 // blinks node until bool is changed
 // TODO replace done bool with channel?
 func (session *viewerSession) blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
-	colors := []tcell.Color{tcell.ColorRed, tcell.ColorOrange, tcell.ColorYellow, tcell.ColorGreen, tcell.ColorBlue, tcell.ColorIndigo, tcell.ColorViolet}
 	originalText := node.GetText()
 	node.SetText("loading...")
 	for !*done {
-		for _, color := range colors {
-			if *done {
-				break
-			}
-			node.SetColor(color)
-			session.app.Draw()
-			time.Sleep(100 * time.Millisecond)
-		}
+		node.SetColor(tcell.ColorRed)
+		session.app.Draw()
+		time.Sleep(100 * time.Millisecond)
+		node.SetColor(originalColor)
+		session.app.Draw()
+		time.Sleep(100 * time.Millisecond)
+
 	}
-	node.SetColor(originalColor)
 	node.SetText(originalText)
 	session.app.Draw()
 }
@@ -152,29 +149,29 @@ func (session *viewerSession) getSessionNodes(event eventStruct) ([]*tview.TreeN
 	// iterate through sessions
 	for n, sessionID := range event.SessionoccurrenceUrls {
 		go func(sessionID string, n int) {
-			session, err := getSession(sessionID)
+			s, err := getSession(sessionID)
 			if err != nil {
 				errChan <- err
 				return
 			}
-			bonusIDs[n] = session.ContentUrls
-			if session.Status != "upcoming" && session.Status != "expired" {
-				streams, err := getSessionStreams(session.Slug)
+			bonusIDs[n] = s.ContentUrls
+			if s.Status != "upcoming" && s.Status != "expired" {
+				streams, err := getSessionStreams(s.Slug)
 				if err != nil {
 					errChan <- err
 					return
 				}
-				sessionNode := tview.NewTreeNode(session.Name).
+				sessionNode := tview.NewTreeNode(s.Name).
 					SetSelectable(true).
 					SetReference(streams).
 					SetExpanded(false)
-				if session.Status == "live" {
-					sessionNode.SetText(session.Name + " - LIVE").
+				if s.Status == "live" {
+					sessionNode.SetText(s.Name + " - LIVE").
 						SetColor(tcell.ColorRed)
 				}
 				sessions[n] = sessionNode
 
-				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
+				channels := session.getPerspectiveNodes(streams.Objects[0].ChannelUrls)
 				for _, stream := range channels {
 					sessionNode.AddChild(stream)
 				}
@@ -207,7 +204,7 @@ func (session *viewerSession) getSessionNodes(event eventStruct) ([]*tview.TreeN
 }
 
 // returns nodes for every perspective (main feed, data feed, drivers, etc.)
-func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
+func (session *viewerSession) getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 	channels := make([]*tview.TreeNode, len(perspectives))
 	// iterate through all available streams for the session
 	for i := range perspectives {
@@ -231,6 +228,11 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 			SetSelectable(true).
 			SetReference(streamPerspective).
 			SetColor(tcell.ColorGreen)
+		streamNode.SetSelectedFunc(func() {
+			nodes := session.getPlaybackNodes(streamNode.GetText(), streamPerspective.Self)
+			appendNodes(streamNode, nodes...)
+			streamNode.SetSelectedFunc(nil)
+		})
 		channels[i] = streamNode
 	}
 	sort.Slice(channels, func(i, j int) bool {
@@ -274,6 +276,11 @@ func (session *viewerSession) getEpisodeNodes(IDs []string) ([]*tview.TreeNode, 
 		node := tview.NewTreeNode(ep.Title).SetSelectable(true).
 			SetReference(ep).
 			SetColor(tcell.ColorGreen)
+		node.SetSelectedFunc(func() {
+			nodes := session.getPlaybackNodes(ep.Title, ep.Items[0])
+			appendNodes(node, nodes...)
+			node.SetSelectedFunc(nil)
+		})
 		// check for year/ race code
 		if year, _, err := getYearAndRace(ep.DataSourceID); err == nil {
 			// check if there is a node for the specified year, if not create one

@@ -1,20 +1,11 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -23,19 +14,9 @@ import (
 	"github.com/rivo/tview"
 )
 
-type config struct {
-	LiveRetryTimeout      int       `json:"live_retry_timeout"`
-	Lang                  string    `json:"preferred_language"`
-	CheckUpdate           bool      `json:"check_updates"`
-	CustomPlaybackOptions []command `json:"custom_playback_options"`
-}
-
 type command struct {
-	Title          string     `json:"title"`
-	Concurrent     bool       `json:"concurrent"`
-	Commands       [][]string `json:"commands"`
-	Watchphrase    string     `json:"watchphrase"`
-	CommandToWatch int        `json:"command_to_watch"`
+	Title   string `json:"title"`
+	Command string `json:"command"`
 }
 
 type commandContext struct {
@@ -65,23 +46,10 @@ type viewerSession struct {
 	tree      *tview.TreeView
 }
 
-func newSession() (session *viewerSession) {
+func newSession(cfg config) (session *viewerSession) {
 	// set defaults
 	session = &viewerSession{}
-	session.con.CheckUpdate = true
-	session.con.Lang = "en"
-	session.con.LiveRetryTimeout = 60
-
-	// read config
-	file, err := ioutil.ReadFile("config.json")
-	if err != nil {
-		log.Println(err)
-	} else {
-		err = json.Unmarshal(file, &session.con)
-		if err != nil {
-			log.Fatalf("malformed configuration file: %v", err)
-		}
-	}
+	session.con = cfg
 
 	// cache
 	session.episodeMap = make(map[string]episodeStruct)
@@ -109,7 +77,7 @@ func newSession() (session *viewerSession) {
 	// flex containing everything
 	flex := tview.NewFlex()
 	// debug window
-	session.debugText = tview.NewTextView()
+	session.debugText = tview.NewTextView().SetWordWrap(false).SetWrap(false)
 	session.debugText.SetDynamicColors(true)
 	session.debugText.SetBorder(true).SetTitle("Info")
 	session.debugText.SetChangedFunc(func() {
@@ -127,7 +95,7 @@ func newSession() (session *viewerSession) {
 func (session *viewerSession) checkLive() {
 	for {
 		session.logInfo("checking for live session")
-		isLive, liveNode, err := getLiveNode()
+		isLive, liveNode, err := session.getLiveNode()
 		if err != nil {
 			session.logError("error looking for live session: ", err)
 		} else if isLive {
@@ -147,6 +115,9 @@ func (session *viewerSession) checkLive() {
 }
 
 func (session *viewerSession) CheckUpdate() {
+	if !session.con.CheckUpdate {
+		return
+	}
 	node, err := getUpdateNode()
 	if err != nil {
 		session.logInfo(err)
@@ -161,34 +132,22 @@ func (session *viewerSession) CheckUpdate() {
 	}
 }
 
-func setWorkingDirectory() {
-	//  Get the absolute path this executable is located in.
-	executablePath, err := os.Executable()
-	if err != nil {
-		log.Println("[ERROR] Couldn't determine working directory: ", err)
-	}
-	//  Set the working directory to the path the executable is located in.
-	os.Chdir(filepath.Dir(executablePath))
-}
-
 func main() {
-	setWorkingDirectory()
-
-	logFile, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		log.Fatal("Could not open config: ", err)
 	}
-	log.SetOutput(logFile)
+
+	logFile, err := configureLogging(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer logFile.Close()
 
-	session := newSession()
+	session := newSession(cfg)
 
-	// check for live session
 	go session.checkLive()
-	// check if an update is available
-	if session.con.CheckUpdate {
-		go session.CheckUpdate()
-	}
+	go session.CheckUpdate()
 
 	// set vod types nodes
 	go func() {
@@ -201,87 +160,15 @@ func main() {
 		}
 	}()
 
-	session.loadCollections()
+	err = session.loadCollections()
+	if err != nil {
+		session.logError(err)
+	}
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
 
 	<-c
-}
-
-// takes year/race ID and returns full year and race nuber as strings
-func getYearAndRace(input string) (string, string, error) {
-	var fullYear string
-	var raceNumber string
-	if len(input) < 4 {
-		return fullYear, raceNumber, errors.New("not long enough")
-	}
-	_, err := strconv.Atoi(input[:4])
-	if err != nil {
-		return fullYear, raceNumber, errors.New("not a valid RearRaceID")
-	}
-	// TODO fix before 2020
-	if input[:4] == "2018" || input[:4] == "2019" {
-		return input[:4], "0", nil
-	}
-	year := input[:2]
-	intYear, _ := strconv.Atoi(year)
-	// TODO: change before 2030
-	if intYear < 30 {
-		fullYear = "20" + year
-	} else {
-		fullYear = "19" + year
-	}
-	raceNumber = input[2:4]
-	return fullYear, raceNumber, nil
-}
-
-func (session *viewerSession) monitorCommand(node *tview.TreeNode, watchphrase string, stdout io.Reader, stderr io.Reader) {
-	done := false
-	outScanner := bufio.NewScanner(stdout)
-	outScanner.Split(scanLinesCustom)
-	errScanner := bufio.NewScanner(stderr)
-	errScanner.Split(scanLinesCustom)
-	go func() {
-		for outScanner.Scan() {
-			sText := outScanner.Text()
-			fmt.Fprintln(session.debugText, sText)
-			if strings.Contains(strings.ToLower(sText), strings.ToLower(watchphrase)) {
-				done = true
-			}
-		}
-	}()
-	go func() {
-		for errScanner.Scan() {
-			sText := errScanner.Text()
-			fmt.Fprintln(session.debugText, sText)
-			if strings.Contains(sText, watchphrase) {
-				done = true
-			}
-		}
-	}()
-	session.blinkNode(node, &done, tcell.ColorWhite)
-	session.app.Draw()
-}
-
-// stolen from https://golang.org/src/bufio/scan.go?s=11799:11877#L335
-func scanLinesCustom(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, '\n'); i >= 0 {
-		// We have a full newline-terminated line.
-		return i + 1, data[0:i], nil
-	} else if i := bytes.IndexByte(data, '\r'); i >= 0 {
-		// We have a full newline-terminated line.
-		return i + 1, data[0:i], nil
-	}
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, nil
-	}
-	// Request more data.
-	return 0, nil, nil
 }
 
 func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
@@ -293,15 +180,6 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 	} else if len(children) > 0 {
 		// Collapse if visible, expand if collapsed.
 		node.SetExpanded(!node.IsExpanded())
-	} else if ep, ok := reference.(episodeStruct); ok {
-		// if regular episode is selected for the first time
-		nodes := session.getPlaybackNodes(ep.Title, ep.Items[0])
-		appendNodes(node, nodes...)
-	} else if ep, ok := reference.(channelUrlsStruct); ok {
-		// if single perspective is selected (main feed, driver onboards, etc.) from full race weekends
-		// TODO: better name
-		nodes := session.getPlaybackNodes(node.GetText(), ep.Self)
-		appendNodes(node, nodes...)
 	} else if coll, ok := reference.(collection); ok {
 		session.loadCollectionContent(coll.Self, node)
 	} else if event, ok := reference.(eventStruct); ok {
@@ -397,22 +275,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 				return
 			}
 			cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0", "--quiet")
-			stdout, err := cmd.StdoutPipe()
-			if err != nil {
-				session.logError(err)
-				return
-			}
-			stderr, err := cmd.StderrPipe()
-			if err != nil {
-				session.logError(err)
-				return
-			}
-			err = cmd.Start()
-			if err != nil {
-				session.logError(err)
-				return
-			}
-			go session.monitorCommand(node, "Video", stdout, stderr)
+			session.runCmd(cmd)
 		}()
 	} else if node.GetText() == "Download .m3u8" {
 		go func() {
@@ -460,85 +323,6 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 	}
 }
 
-func (session *viewerSession) runCustomCommand(cc commandContext, node *tview.TreeNode) error {
-	// custom command
-	monitor := false
-	com := cc.CustomOptions
-	if com.Watchphrase != "" && com.CommandToWatch >= 0 && com.CommandToWatch < len(com.Commands) {
-		monitor = true
-	}
-	url, err := getPlayableURL(cc.EpID)
-	if err != nil {
-		return err
-	}
-	var filepath string
-	var cookie string
-	// run every command
-	for j := range com.Commands {
-		if len(com.Commands[j]) == 0 {
-			continue
-		}
-		tmpCommand := make([]string, len(com.Commands[j]))
-		copy(tmpCommand, com.Commands[j])
-		// replace $url, $file and $cookie
-		for x, s := range tmpCommand {
-			tmpCommand[x] = s
-			if (strings.Contains(s, "$file") || strings.Contains(s, "$cookie")) && filepath == "" {
-				filepath, cookie, err = downloadAsset(url, cc.Title)
-				if err != nil {
-					return err
-				}
-			}
-			tmpCommand[x] = strings.Replace(tmpCommand[x], "$file", filepath, -1)
-			tmpCommand[x] = strings.Replace(tmpCommand[x], "$cookie", cookie, -1)
-			tmpCommand[x] = strings.Replace(tmpCommand[x], "$url", url, -1)
-		}
-		// run command
-		session.logInfo(append([]string{"starting: "}, tmpCommand...))
-		cmd := exec.Command(tmpCommand[0], tmpCommand[1:]...)
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-		err = cmd.Start()
-		if err != nil {
-			return err
-		}
-		if monitor && com.CommandToWatch == j {
-			go session.monitorCommand(node, com.Watchphrase, stdout, stderr)
-		}
-		// wait for exit code if commands should not be executed concurrently
-		if !com.Concurrent {
-			err := cmd.Wait()
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if !monitor {
-		node.SetColor(tcell.ColorBlue)
-		session.app.Draw()
-	}
-	return nil
-}
-
-func (cfg *config) save() error {
-	d, err := json.MarshalIndent(&cfg, "", "\t")
-	if err != nil {
-		return fmt.Errorf("error marshaling config: %v", err)
-	}
-
-	err = ioutil.WriteFile("config.json", d, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error saving config: %v", err)
-	}
-	return nil
-}
-
 func (session *viewerSession) loadCollections() error {
 	node := tview.NewTreeNode("Collections").SetSelectable(true).SetColor(tcell.ColorYellow).SetExpanded(false)
 	list, err := getCollectionList()
@@ -560,14 +344,4 @@ func (session *viewerSession) loadCollectionContent(collID string, parent *tview
 	}
 	parent.Expand()
 	return err
-}
-
-func (session *viewerSession) logError(v ...interface{}) {
-	fmt.Fprintln(session.debugText, "[red::b]ERROR:[-::-]", fmt.Sprint(v...))
-	log.Println("[ERROR]", fmt.Sprint(v...))
-}
-
-func (session *viewerSession) logInfo(v ...interface{}) {
-	fmt.Fprintln(session.debugText, "[green::b]INFO:[-::-]", fmt.Sprint(v...))
-	log.Println("[INFO]", fmt.Sprint(v...))
 }
