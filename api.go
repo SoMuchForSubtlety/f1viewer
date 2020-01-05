@@ -13,13 +13,7 @@ const urlStart = "https://f1tv.formula1.com"
 const sessionURLstart = "https://f1tv.formula1.com/api/session-occurrence?fields=channel_urls,channel_urls__self,channel_urls__name,channel_urls__driver_urls,channel_urls__driver_urls__driver_racingnumber,channel_urls__driver_urls__team_url,channel_urls__driver_urls__team_url__name,channel_urls__driver_urls__team_url__colour&fields_to_expand=channel_urls,channel_urls__driver_urls,channel_urls__driver_urls__team_url&slug="
 const homepageContentURL = "https://f1tv.formula1.com/api/sets/?slug=home&fields=items"
 const seasonsSince2017URL = "https://f1tv.formula1.com/api/race-season/?fields=year,name,self,has_content,eventoccurrence_urls&year__gt=2017&order=year"
-const f2chasingCollID = "/api/sets/coll_4440e712d31d42fb95c9a2145ab4dac7/"
-
-const tagsURL = "https://f1tv.formula1.com/api/tags/"
 const vodTypesURL = "http://f1tv.formula1.com/api/vod-type-tag/"
-const seriesListURL = "https://f1tv.formula1.com/api/series/"
-const seriesF1URL = "https://f1tv.formula1.com/api/series/seri_436bb431c3a24d7d8e200a74e1d11de4/"
-const teamsURL = "https://f1tv.formula1.com/api/episodes/"
 const collListURL = "https://f1tv.formula1.com/api/sets/?fields=title,self&set_type_slug=video"
 
 type episode struct {

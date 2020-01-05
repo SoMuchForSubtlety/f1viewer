@@ -6,11 +6,26 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
+
+type theme struct {
+	PrimitiveBackgroundColor    string `json:"primitive_background_color"`     // Main background color for primitives.
+	ContrastBackgroundColor     string `json:"contrast_background_color"`      // Background color for contrasting elements.
+	MoreContrastBackgroundColor string `json:"more_contrast_background_color"` // Background color for even more contrasting elements.
+	BorderColor                 string `json:"border_color"`                   // Box borders.
+	TitleColor                  string `json:"title_color"`                    // Box titles.
+	GraphicsColor               string `json:"graphics_color"`                 // Graphics.
+	PrimaryTextColor            string `json:"primary_text_color"`             // Primary text.
+	SecondaryTextColor          string `json:"secondary_text_color"`           // Secondary text (e.g. labels).
+	TertiaryTextColor           string `json:"tertiary_text_color"`            // Tertiary text (e.g. subtitles, notes).
+	InverseTextColor            string `json:"inverse_text_color"`             // Text on primary-colored backgrounds.
+	ContrastSecondaryTextColor  string `json:"contrast_secondary_text_color"`  // Secondary text on ContrastBackgroundColor-colored backgrounds.
+}
 
 // takes year/race ID and returns full year and race nuber as strings
 func getYearAndRace(input string) (string, string, error) {
@@ -92,4 +107,46 @@ func (session *viewerSession) blinkNode(node *tview.TreeNode, done *bool) {
 	}
 	node.SetText(originalText)
 	session.app.Draw()
+}
+
+func hexStringToColor(hex string) tcell.Color {
+	hex = strings.ReplaceAll(hex, "#", "")
+	color, _ := strconv.ParseInt(hex, 16, 32)
+	return tcell.NewHexColor(int32(color))
+}
+
+func (t theme) apply() {
+	if t.PrimitiveBackgroundColor != "" {
+		tview.Styles.PrimitiveBackgroundColor = hexStringToColor(t.PrimitiveBackgroundColor)
+	}
+	if t.ContrastBackgroundColor != "" {
+		tview.Styles.ContrastBackgroundColor = hexStringToColor(t.ContrastBackgroundColor)
+	}
+	if t.MoreContrastBackgroundColor != "" {
+		tview.Styles.MoreContrastBackgroundColor = hexStringToColor(t.MoreContrastBackgroundColor)
+	}
+	if t.BorderColor != "" {
+		tview.Styles.BorderColor = hexStringToColor(t.BorderColor)
+	}
+	if t.TitleColor != "" {
+		tview.Styles.TitleColor = hexStringToColor(t.TitleColor)
+	}
+	if t.GraphicsColor != "" {
+		tview.Styles.GraphicsColor = hexStringToColor(t.GraphicsColor)
+	}
+	if t.PrimaryTextColor != "" {
+		tview.Styles.PrimaryTextColor = hexStringToColor(t.PrimaryTextColor)
+	}
+	if t.SecondaryTextColor != "" {
+		tview.Styles.SecondaryTextColor = hexStringToColor(t.SecondaryTextColor)
+	}
+	if t.TertiaryTextColor != "" {
+		tview.Styles.TertiaryTextColor = hexStringToColor(t.TertiaryTextColor)
+	}
+	if t.InverseTextColor != "" {
+		tview.Styles.InverseTextColor = hexStringToColor(t.InverseTextColor)
+	}
+	if t.ContrastSecondaryTextColor != "" {
+		tview.Styles.ContrastSecondaryTextColor = hexStringToColor(t.ContrastSecondaryTextColor)
+	}
 }

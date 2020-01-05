@@ -19,8 +19,6 @@ type viewerSession struct {
 
 	// cache
 	episodeMap      map[string]episode
-	driverMap       map[string]driverStruct
-	teamMap         map[string]teamStruct
 	episodeMapMutex sync.RWMutex
 	teamMapMutex    sync.RWMutex
 	driverMapMutex  sync.RWMutex
@@ -74,17 +72,15 @@ func newSession(cfg config) (session *viewerSession) {
 	// set defaults
 	session = &viewerSession{}
 	session.con = cfg
+	cfg.Theme.apply()
 
 	// cache
 	session.episodeMap = make(map[string]episode)
-	session.driverMap = make(map[string]driverStruct)
-	session.teamMap = make(map[string]teamStruct)
 
 	session.app = tview.NewApplication()
 
 	// build base tree
 	root := tview.NewTreeNode("Categories").
-		SetColor(tcell.ColorBlue).
 		SetSelectable(false)
 	session.tree = tview.NewTreeView().
 		SetRoot(root).
@@ -92,7 +88,7 @@ func newSession(cfg config) (session *viewerSession) {
 
 	// set full race weekends node
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
-		SetColor(tcell.ColorYellow)
+		SetColor(tview.Styles.SecondaryTextColor)
 	fullSessions.SetSelectedFunc(session.withBlink(fullSessions, func() {
 		fullSessions.SetSelectedFunc(nil)
 		seasons, err := session.getSeasonNodes()
@@ -106,10 +102,11 @@ func newSession(cfg config) (session *viewerSession) {
 	session.tree.SetSelectedFunc(session.nodeSelected)
 	// flex containing everything
 	flex := tview.NewFlex()
+	flex.SetDirection(tview.FlexRow)
 	// debug window
 	session.textWindow = tview.NewTextView().SetWordWrap(false).SetWrap(false)
 	session.textWindow.SetDynamicColors(true)
-	session.textWindow.SetBorder(true).SetTitle("Info")
+	session.textWindow.SetBorder(true)
 	session.textWindow.SetChangedFunc(func() {
 		session.app.Draw()
 	})
@@ -171,7 +168,7 @@ func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
 }
 
 func (session *viewerSession) loadCollections() error {
-	node := tview.NewTreeNode("Collections").SetColor(tcell.ColorYellow).SetExpanded(false)
+	node := tview.NewTreeNode("Collections").SetColor(tview.Styles.SecondaryTextColor).SetExpanded(false)
 	list, err := getCollectionList()
 	if err != nil {
 		return err

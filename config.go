@@ -15,6 +15,7 @@ type config struct {
 	LogLocation           string    `json:"log_location"`
 	DownloadLocation      string    `json:"download_location"`
 	CustomPlaybackOptions []command `json:"custom_playback_options"`
+	Theme                 theme     `json:"theme"`
 }
 
 func loadConfig() (cfg config, err error) {
@@ -24,6 +25,7 @@ func loadConfig() (cfg config, err error) {
 	}
 
 	if _, err = os.Stat(path + "config.json"); os.IsNotExist(err) {
+		err = nil
 		cfg.LiveRetryTimeout = 60
 		cfg.Lang = "en"
 		cfg.CheckUpdate = true

@@ -235,7 +235,7 @@ func (session *viewerSession) getPerspectiveNodes(perspectives []channel) []*tvi
 			name = "Data Channel"
 		}
 		streamNode := tview.NewTreeNode(name).
-			SetColor(tcell.ColorGreen)
+			SetColor(tview.Styles.TertiaryTextColor)
 		streamNode.SetSelectedFunc(func() {
 			streamNode.SetSelectedFunc(nil)
 			nodes := session.getPlaybackNodes(streamNode.GetText(), streamPerspective.Self)
@@ -307,7 +307,7 @@ func (session *viewerSession) getEpisodeNodes(IDs []string) ([]*tview.TreeNode, 
 		epID := ep.Items[0]
 		epTitle := ep.Title
 		node := tview.NewTreeNode(epTitle).
-			SetColor(tcell.ColorGreen)
+			SetColor(tview.Styles.TertiaryTextColor)
 		node.SetSelectedFunc(func() {
 			node.SetSelectedFunc(nil)
 			nodes := session.getPlaybackNodes(epTitle, epID)
@@ -339,7 +339,7 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 		t := i
 		if len(vType.ContentUrls) > 0 {
 			node := tview.NewTreeNode(vType.Name).
-				SetColor(tcell.ColorYellow)
+				SetColor(tview.Styles.SecondaryTextColor)
 			node.SetSelectedFunc(session.withBlink(node, func() {
 				node.SetSelectedFunc(nil)
 				episodes, err := session.getEpisodeNodes(vodTypes.Objects[t].ContentUrls)
