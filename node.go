@@ -23,7 +23,8 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 				context.Titles = sessionTitles
 				context.EpID = epID
 				context.CustomOptions = com
-				customNode := tview.NewTreeNode(com.Title)
+				customNode := tview.NewTreeNode(com.Title).
+					SetColor(activeTheme.ActionNodeColor)
 				customNode.SetSelectedFunc(func() {
 					go func() {
 						err := session.runCustomCommand(context)
@@ -37,7 +38,8 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 		}
 	}
 
-	playNode := tview.NewTreeNode("Play with MPV")
+	playNode := tview.NewTreeNode("Play with MPV").
+		SetColor(activeTheme.ActionNodeColor)
 	playNode.SetSelectedFunc(func() {
 		url, err := getPlayableURL(epID)
 		if err != nil {
@@ -49,9 +51,10 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	})
 	nodes = append(nodes, playNode)
 
-	downloadNode := tview.NewTreeNode("Download .m3u8")
+	downloadNode := tview.NewTreeNode("Download .m3u8").
+		SetColor(activeTheme.ActionNodeColor)
 	downloadNode.SetSelectedFunc(func() {
-		downloadNode.SetColor(tcell.ColorBlue)
+		downloadNode.SetColor(activeTheme.ActionNodeColor)
 		url, err := getPlayableURL(epID)
 		if err != nil {
 			session.logError(err)
@@ -65,7 +68,8 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	})
 	nodes = append(nodes, downloadNode)
 
-	streamNode := tview.NewTreeNode("Copy URL to clipboard")
+	streamNode := tview.NewTreeNode("Copy URL to clipboard").
+		SetColor(activeTheme.ActionNodeColor)
 	streamNode.SetSelectedFunc(func() {
 		url, err := getPlayableURL(epID)
 		if err != nil {
@@ -78,7 +82,6 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 			return
 		}
 		session.logInfo("URL copied to clipboard")
-		session.app.Draw()
 	})
 	nodes = append(nodes, streamNode)
 	return nodes
@@ -119,7 +122,7 @@ func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 					return false, sessionNode, err
 				}
 				sessionNode = tview.NewTreeNode(s.Name + " - LIVE").
-					SetColor(tcell.ColorRed).
+					SetColor(activeTheme.LiveColor).
 					SetExpanded(false)
 				channels := session.getPerspectiveNodes(st, streams)
 				for _, stream := range channels {
@@ -155,7 +158,7 @@ func (session *viewerSession) getEventNodes(season seasonStruct) ([]*tview.TreeN
 						appendNodes(eventNode, sessions...)
 					}
 					if len(eventNode.GetChildren()) == 0 {
-						eventNode.AddChild(tview.NewTreeNode("no content").SetColor(tcell.ColorRed))
+						eventNode.AddChild(tview.NewTreeNode("no content").SetColor(activeTheme.NoContentColor))
 					}
 				}))
 				events[m] = eventNode
@@ -202,7 +205,7 @@ func (session *viewerSession) getSessionNodes(t titles, event eventStruct) ([]*t
 			}))
 			if s.Status == "live" {
 				sessionNode.SetText(s.Name + " - LIVE").
-					SetColor(tcell.ColorRed)
+					SetColor(activeTheme.LiveColor)
 			}
 			sessions = append(sessions, sessionNode)
 		}
@@ -243,10 +246,12 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 		}
 
 		streamNode := tview.NewTreeNode(name).
-			SetColor(tview.Styles.TertiaryTextColor)
+			SetColor(activeTheme.ItemNodeColor)
+
+		perspectiveID := streamPerspective.Self
 		streamNode.SetSelectedFunc(func() {
 			streamNode.SetSelectedFunc(nil)
-			nodes := session.getPlaybackNodes(newTitle, streamPerspective.Self)
+			nodes := session.getPlaybackNodes(newTitle, perspectiveID)
 			appendNodes(streamNode, nodes...)
 		})
 		if len(streamPerspective.DriverUrls) > 0 {
@@ -314,7 +319,7 @@ func (session *viewerSession) getEpisodeNodes(title titles, IDs []string) ([]*tv
 		}
 		epID := ep.Items[0]
 		node := tview.NewTreeNode(ep.Title).
-			SetColor(tview.Styles.TertiaryTextColor)
+			SetColor(activeTheme.ItemNodeColor)
 		tempTitle := title
 		tempTitle.EpisodeTitle = ep.Title
 		node.SetSelectedFunc(func() {
@@ -349,7 +354,7 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 		catTitle := vType.Name
 		if len(vType.ContentUrls) > 0 {
 			node := tview.NewTreeNode(vType.Name).
-				SetColor(tview.Styles.SecondaryTextColor)
+				SetColor(activeTheme.CategoryNodeColor)
 			node.SetSelectedFunc(session.withBlink(node, func() {
 				node.SetSelectedFunc(nil)
 				episodes, err := session.getEpisodeNodes(titles{CategoryTitle: catTitle}, vodTypes.Objects[t].ContentUrls)

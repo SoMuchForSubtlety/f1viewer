@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
 
@@ -93,24 +92,22 @@ func (session *viewerSession) getUpdateNode() (*tview.TreeNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(tcell.ColorRed).SetExpanded(false)
-	getUpdateNode := tview.NewTreeNode("download update").SetColor(tcell.ColorRed)
+	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(activeTheme.UpdateColor).SetExpanded(false)
+	getUpdateNode := tview.NewTreeNode("download update").SetColor(activeTheme.ActionNodeColor)
 	getUpdateNode.SetSelectedFunc(func() {
 		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 		if err != nil {
 			session.logError(err)
 		}
 	})
-	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(tcell.ColorRed)
+	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(activeTheme.ActionNodeColor)
 	stopCheckingNode.SetSelectedFunc(func() {
 		session.con.CheckUpdate = false
 		err := session.con.save()
 		if err != nil {
 			session.logError(err)
 		}
-		stopCheckingNode.SetColor(tcell.ColorBlue)
-		stopCheckingNode.SetText("update notifications turned off")
-		stopCheckingNode.SetSelectedFunc(nil)
+		session.logInfo("Checking for updates turned off.")
 	})
 	updateNode.AddChild(getUpdateNode)
 	updateNode.AddChild(stopCheckingNode)

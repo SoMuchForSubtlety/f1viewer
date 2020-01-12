@@ -5,7 +5,7 @@
 
 Watch any F1TV VOD or live stream
 
-![preview image](https://i.imgur.com/W6qxsBy.png)
+![preview image](https://i.imgur.com/aleqsXf.png)
 
 ## Table of Contents
 
@@ -62,17 +62,20 @@ The default config looks like this
 	"custom_playback_options": null,
 	"horizontal_layout": false,
 	"theme": {
-		"primitive_background_color": "",
-		"contrast_background_color": "",
-		"more_contrast_background_color": "",
+		"background_color": "",
 		"border_color": "",
-		"title_color": "",
-		"graphics_color": "",
-		"primary_text_color": "",
-		"secondary_text_color": "",
-		"tertiary_text_color": "",
-		"inverse_text_color": "",
-		"contrast_secondary_text_color": ""
+		"category_node_color": "",
+		"folder_node_color": "",
+		"item_node_color": "",
+		"action_node_color": "",
+		"loading_color": "",
+		"live_color": "",
+		"update_color": "",
+		"no_content_color": "",
+		"info_color": "",
+		"error_color": "",
+		"terminal_accent_color": "",
+		"terminal_text_color": ""
 	}
 }
 ```

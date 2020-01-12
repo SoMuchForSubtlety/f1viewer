@@ -13,20 +13,6 @@ import (
 	"github.com/rivo/tview"
 )
 
-type theme struct {
-	PrimitiveBackgroundColor    string `json:"primitive_background_color"`     // Main background color for primitives.
-	ContrastBackgroundColor     string `json:"contrast_background_color"`      // Background color for contrasting elements.
-	MoreContrastBackgroundColor string `json:"more_contrast_background_color"` // Background color for even more contrasting elements.
-	BorderColor                 string `json:"border_color"`                   // Box borders.
-	TitleColor                  string `json:"title_color"`                    // Box titles.
-	GraphicsColor               string `json:"graphics_color"`                 // Graphics.
-	PrimaryTextColor            string `json:"primary_text_color"`             // Primary text.
-	SecondaryTextColor          string `json:"secondary_text_color"`           // Secondary text (e.g. labels).
-	TertiaryTextColor           string `json:"tertiary_text_color"`            // Tertiary text (e.g. subtitles, notes).
-	InverseTextColor            string `json:"inverse_text_color"`             // Text on primary-colored backgrounds.
-	ContrastSecondaryTextColor  string `json:"contrast_secondary_text_color"`  // Secondary text on ContrastBackgroundColor-colored backgrounds.
-}
-
 // takes year/race ID and returns full year and race nuber as strings
 func getYearAndRace(input string) (string, string, error) {
 	var fullYear string
@@ -55,12 +41,12 @@ func getYearAndRace(input string) (string, string, error) {
 }
 
 func (session *viewerSession) logError(v ...interface{}) {
-	fmt.Fprintln(session.textWindow, "[red::b]ERROR:[-::-]", fmt.Sprint(v...))
+	fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]ERROR:[-::-]", colortoHexString(activeTheme.ErrorColor)), fmt.Sprint(v...))
 	log.Println("[ERROR]", fmt.Sprint(v...))
 }
 
 func (session *viewerSession) logInfo(v ...interface{}) {
-	fmt.Fprintln(session.textWindow, "[green::b]INFO:[-::-]", fmt.Sprint(v...))
+	fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]INFO:[-::-]", colortoHexString(activeTheme.InfoColor)), fmt.Sprint(v...))
 	log.Println("[INFO]", fmt.Sprint(v...))
 }
 
@@ -97,7 +83,7 @@ func (session *viewerSession) blinkNode(node *tview.TreeNode, done *bool) {
 	originalColor := node.GetColor()
 	node.SetText("loading...")
 	for !*done {
-		node.SetColor(tcell.ColorBlue)
+		node.SetColor(activeTheme.LoadingColor)
 		session.app.Draw()
 		time.Sleep(200 * time.Millisecond)
 		node.SetColor(originalColor)
@@ -115,38 +101,80 @@ func hexStringToColor(hex string) tcell.Color {
 	return tcell.NewHexColor(int32(color))
 }
 
+func colortoHexString(color tcell.Color) string {
+	return fmt.Sprintf("#%06x", color.Hex())
+}
+
 func (t theme) apply() {
-	if t.PrimitiveBackgroundColor != "" {
-		tview.Styles.PrimitiveBackgroundColor = hexStringToColor(t.PrimitiveBackgroundColor)
+	// apply terminal text color
+	if t.TerminalTextColor != "" {
+		tview.Styles.PrimaryTextColor = hexStringToColor(t.TerminalTextColor)
 	}
-	if t.ContrastBackgroundColor != "" {
-		tview.Styles.ContrastBackgroundColor = hexStringToColor(t.ContrastBackgroundColor)
+
+	if t.CategoryNodeColor != "" {
+		activeTheme.CategoryNodeColor = hexStringToColor(t.CategoryNodeColor)
+	} else {
+		activeTheme.CategoryNodeColor = tcell.ColorOrange
 	}
-	if t.MoreContrastBackgroundColor != "" {
-		tview.Styles.MoreContrastBackgroundColor = hexStringToColor(t.MoreContrastBackgroundColor)
+	if t.FolderNodeColor != "" {
+		activeTheme.FolderNodeColor = hexStringToColor(t.FolderNodeColor)
+	} else {
+		activeTheme.FolderNodeColor = tcell.ColorWhite
+	}
+	if t.ItemNodeColor != "" {
+		activeTheme.ItemNodeColor = hexStringToColor(t.ItemNodeColor)
+	} else {
+		activeTheme.ItemNodeColor = tcell.ColorLightGreen
+	}
+	if t.ActionNodeColor != "" {
+		activeTheme.ActionNodeColor = hexStringToColor(t.ActionNodeColor)
+	} else {
+		activeTheme.ActionNodeColor = tcell.ColorDarkCyan
+	}
+	if t.BackgroundColor != "" {
+		tview.Styles.PrimitiveBackgroundColor = hexStringToColor(t.BackgroundColor)
 	}
 	if t.BorderColor != "" {
 		tview.Styles.BorderColor = hexStringToColor(t.BorderColor)
 	}
-	if t.TitleColor != "" {
-		tview.Styles.TitleColor = hexStringToColor(t.TitleColor)
+	if t.NoContentColor != "" {
+		activeTheme.NoContentColor = hexStringToColor(t.NoContentColor)
+	} else {
+		activeTheme.NoContentColor = tcell.ColorOrangeRed
 	}
-	if t.GraphicsColor != "" {
-		tview.Styles.GraphicsColor = hexStringToColor(t.GraphicsColor)
+	if t.LoadingColor != "" {
+		activeTheme.LoadingColor = hexStringToColor(t.LoadingColor)
+	} else {
+		activeTheme.LoadingColor = tcell.ColorDarkCyan
 	}
-	if t.PrimaryTextColor != "" {
-		tview.Styles.PrimaryTextColor = hexStringToColor(t.PrimaryTextColor)
+	if t.LiveColor != "" {
+		activeTheme.LiveColor = hexStringToColor(t.LiveColor)
+	} else {
+		activeTheme.LiveColor = tcell.ColorRed
 	}
-	if t.SecondaryTextColor != "" {
-		tview.Styles.SecondaryTextColor = hexStringToColor(t.SecondaryTextColor)
+	if t.UpdateColor != "" {
+		activeTheme.UpdateColor = hexStringToColor(t.UpdateColor)
+	} else {
+		activeTheme.UpdateColor = tcell.ColorDarkRed
 	}
-	if t.TertiaryTextColor != "" {
-		tview.Styles.TertiaryTextColor = hexStringToColor(t.TertiaryTextColor)
+	if t.TerminalAccentColor != "" {
+		activeTheme.TerminalAccentColor = hexStringToColor(t.TerminalAccentColor)
+	} else {
+		activeTheme.TerminalAccentColor = tcell.ColorGreen
 	}
-	if t.InverseTextColor != "" {
-		tview.Styles.InverseTextColor = hexStringToColor(t.InverseTextColor)
+	if t.TerminalTextColor != "" {
+		activeTheme.TerminalTextColor = hexStringToColor(t.TerminalTextColor)
+	} else {
+		activeTheme.TerminalTextColor = tview.Styles.PrimaryTextColor
 	}
-	if t.ContrastSecondaryTextColor != "" {
-		tview.Styles.ContrastSecondaryTextColor = hexStringToColor(t.ContrastSecondaryTextColor)
+	if t.InfoColor != "" {
+		activeTheme.InfoColor = hexStringToColor(t.InfoColor)
+	} else {
+		activeTheme.InfoColor = tcell.ColorGreen
+	}
+	if t.ErrorColor != "" {
+		activeTheme.ErrorColor = hexStringToColor(t.ErrorColor)
+	} else {
+		activeTheme.ErrorColor = tcell.ColorRed
 	}
 }

@@ -11,6 +11,23 @@ import (
 	"github.com/rivo/tview"
 )
 
+type appTheme struct {
+	BackgroundColor     tcell.Color
+	BorderColor         tcell.Color
+	CategoryNodeColor   tcell.Color
+	FolderNodeColor     tcell.Color
+	ItemNodeColor       tcell.Color
+	ActionNodeColor     tcell.Color
+	LoadingColor        tcell.Color
+	LiveColor           tcell.Color
+	UpdateColor         tcell.Color
+	NoContentColor      tcell.Color
+	InfoColor           tcell.Color
+	ErrorColor          tcell.Color
+	TerminalAccentColor tcell.Color
+	TerminalTextColor   tcell.Color
+}
+
 type viewerSession struct {
 	con config
 
@@ -19,6 +36,8 @@ type viewerSession struct {
 	textWindow *tview.TextView
 	tree       *tview.TreeView
 }
+
+var activeTheme appTheme
 
 func main() {
 	cfg, err := loadConfig()
@@ -69,11 +88,12 @@ func newSession(cfg config) (session *viewerSession) {
 		SetSelectable(false)
 	session.tree = tview.NewTreeView().
 		SetRoot(root).
-		SetCurrentNode(root)
+		SetCurrentNode(root).
+		SetTopLevel(1)
 
 	// set full race weekends node
 	fullSessions := tview.NewTreeNode("Full Race Weekends").
-		SetColor(tview.Styles.SecondaryTextColor)
+		SetColor(activeTheme.CategoryNodeColor)
 	fullSessions.SetSelectedFunc(session.withBlink(fullSessions, func() {
 		fullSessions.SetSelectedFunc(nil)
 		seasons, err := session.getSeasonNodes()
@@ -153,8 +173,9 @@ func (session *viewerSession) toggleVisibility(node *tview.TreeNode) {
 }
 
 func (session *viewerSession) addCollections() {
-	node := tview.NewTreeNode("Collections").SetColor(tview.Styles.SecondaryTextColor)
+	node := tview.NewTreeNode("Collections").SetColor(activeTheme.CategoryNodeColor)
 	node.SetSelectedFunc(session.withBlink(node, func() {
+		node.SetSelectedFunc(nil)
 		list, err := getCollectionList()
 		if err != nil {
 			session.logError("could not load collections: ", err)
@@ -171,7 +192,7 @@ func (session *viewerSession) addCollections() {
 				} else if len(nodes) > 0 {
 					appendNodes(child, nodes...)
 				} else {
-					child.AddChild(tview.NewTreeNode("no content").SetColor(tcell.ColorRed))
+					child.AddChild(tview.NewTreeNode("no content").SetColor(activeTheme.NoContentColor))
 				}
 			}))
 			node.AddChild(child)

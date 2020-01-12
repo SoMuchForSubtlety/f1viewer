@@ -77,7 +77,8 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 			wdir = filepath.Base(wdir)
 		}
 	}
-	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[green::b][[white]%s[green]]$[-::-] %s", wdir, strings.Join(cmd.Args, " ")))
+	accentColorString := colortoHexString(activeTheme.TerminalAccentColor)
+	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[%s::b][[-]%s[%s]]$[-::-] %s", accentColorString, wdir, accentColorString, strings.Join(cmd.Args, " ")))
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
