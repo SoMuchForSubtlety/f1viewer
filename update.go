@@ -3,9 +3,11 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -131,4 +133,14 @@ func openbrowser(url string) error {
 		return err
 	}
 	return nil
+}
+
+func doGet(url string, v interface{}) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return json.NewDecoder(resp.Body).Decode(v)
 }

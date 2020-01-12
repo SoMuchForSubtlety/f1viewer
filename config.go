@@ -15,6 +15,7 @@ type config struct {
 	LogLocation           string    `json:"log_location"`
 	DownloadLocation      string    `json:"download_location"`
 	CustomPlaybackOptions []command `json:"custom_playback_options"`
+	HorizontalLayout      bool      `json:"horizontal_layout"`
 	Theme                 theme     `json:"theme"`
 }
 

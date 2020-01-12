@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -56,10 +58,13 @@ func getPlayableURL(assetID string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	// converts response body to string
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	repsAsString := buf.String()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		message, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("Unable to read error message from server: %w", err)
+		}
+		return "", errors.New(string(message))
+	}
 
 	// extract url form json
 	type urlStruct struct {
@@ -77,20 +82,24 @@ func getPlayableURL(assetID string) (string, error) {
 	var urlString string
 	if isChannel {
 		var finalURL channelURLstruct
-		err = json.Unmarshal([]byte(repsAsString), &finalURL)
+		err = json.NewDecoder(resp.Body).Decode(&finalURL)
 		if err != nil {
 			return "", err
 		}
 		urlString = finalURL.TokenisedURL
 	} else {
 		var finalURL urlStruct
-		err = json.Unmarshal([]byte(repsAsString), &finalURL)
+		err = json.NewDecoder(resp.Body).Decode(&finalURL)
 		if err != nil {
 			return "", err
 		}
+		if len(finalURL.Objects) == 0 {
+			return "", errors.New("no data received")
+		}
 		urlString = finalURL.Objects[0].Tata.TokenisedURL
 	}
-	return strings.Replace(urlString, "&", "\x26", -1), nil
+	parsed, err := url.Parse(urlString)
+	return parsed.String(), err
 }
 
 // downloads m3u8 data and returns it as slice

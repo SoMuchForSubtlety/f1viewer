@@ -1,24 +1,34 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"os/user"
-	"regexp"
+	"path/filepath"
 	"strings"
 )
 
 type command struct {
-	Title   string `json:"title"`
-	Command string `json:"command"`
+	Title   string   `json:"title"`
+	Command []string `json:"command"`
 }
 
 type commandContext struct {
 	EpID          string
 	CustomOptions command
-	Title         string
+	Titles        titles
+}
+
+type titles struct {
+	PerspectiveTitle string
+	SessionTitle     string
+	EventTitle       string
+	CategoryTitle    string
+	EpisodeTitle     string
+	SeasonTitle      string
 }
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {
@@ -29,31 +39,45 @@ func (session *viewerSession) runCustomCommand(cc commandContext) error {
 		return err
 	}
 	tmpCommand := com.Command
-	// replace $url, $file and $cookie
+	// replace variables
 	var filepath string
-	if strings.Contains(tmpCommand, "$file") && filepath == "" {
-		filepath, _, err = session.con.downloadAsset(url, cc.Title)
-		if err != nil {
-			return err
+	tmpCommand = make([]string, len(cc.CustomOptions.Command))
+	copy(tmpCommand, cc.CustomOptions.Command)
+	for i := range tmpCommand {
+		if strings.Contains(tmpCommand[i], "$file") && filepath == "" {
+			filepath, _, err = session.con.downloadAsset(url, cc.Titles.String())
+			if err != nil {
+				return err
+			}
 		}
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$file", filepath)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$url", url)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.Titles.SessionTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$event", cc.Titles.EventTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$perspective", cc.Titles.PerspectiveTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$category", cc.Titles.CategoryTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$episode", cc.Titles.EpisodeTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$season", cc.Titles.SeasonTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$title", cc.Titles.String())
 	}
-	tmpCommand = strings.Replace(tmpCommand, "$file", filepath, -1)
-	tmpCommand = strings.Replace(tmpCommand, "$url", url, -1)
-	splitCommand := strings.Split(tmpCommand, " ")
-	return session.runCmd(exec.Command(splitCommand[0], splitCommand[1:]...))
+	return session.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...))
 }
 
 func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
-	wdir, _ := os.Getwd()
-	user, _ := user.Current()
-	hostname, _ := os.Hostname()
-	if wdir == user.HomeDir {
-		wdir = "~"
-	} else {
-		re := regexp.MustCompile("[^\\/]+$")
-		wdir = re.FindString(wdir)
+	wdir, err := os.Getwd()
+	if err != nil {
+		session.logError("unable to get working directory: ", err)
+		wdir = "?"
 	}
-	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[green::b][%s@%s [white]%s[green]]$[-::-] %s", user.Username, hostname, wdir, strings.Join(cmd.Args, " ")))
+	user, err := user.Current()
+	if err == nil {
+		if wdir == user.HomeDir {
+			wdir = "~"
+		} else {
+			wdir = filepath.Base(wdir)
+		}
+	}
+	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[green::b][[white]%s[green]]$[-::-] %s", wdir, strings.Join(cmd.Args, " ")))
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -70,4 +94,30 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 		return err
 	}
 	return cmd.Process.Release()
+}
+
+func splitCommand(input string) ([]string, error) {
+	r := csv.NewReader(strings.NewReader(input))
+	r.Comma = ' '
+	return r.Read()
+}
+
+func (t titles) String() string {
+	var s []string
+	if t.SeasonTitle != "" {
+		s = append(s, t.SeasonTitle)
+	}
+	if t.EventTitle != "" {
+		s = append(s, t.EventTitle)
+	}
+	if t.SessionTitle != "" {
+		s = append(s, t.SessionTitle)
+	}
+	if t.PerspectiveTitle != "" {
+		s = append(s, t.PerspectiveTitle)
+	}
+	if t.EpisodeTitle != "" {
+		s = append(s, t.EpisodeTitle)
+	}
+	return strings.Join(s, " - ")
 }

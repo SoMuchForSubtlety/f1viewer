@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 
 	"github.com/gdamore/tcell"
@@ -14,14 +13,6 @@ import (
 
 type viewerSession struct {
 	con config
-
-	abortWritingInfo chan bool
-
-	// cache
-	episodeMap      map[string]episode
-	episodeMapMutex sync.RWMutex
-	teamMapMutex    sync.RWMutex
-	driverMapMutex  sync.RWMutex
 
 	// tview
 	app        *tview.Application
@@ -57,10 +48,7 @@ func main() {
 		}
 	}()
 
-	err = session.loadCollections()
-	if err != nil {
-		session.logError(err)
-	}
+	session.addCollections()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, os.Kill)
@@ -73,9 +61,6 @@ func newSession(cfg config) (session *viewerSession) {
 	session = &viewerSession{}
 	session.con = cfg
 	cfg.Theme.apply()
-
-	// cache
-	session.episodeMap = make(map[string]episode)
 
 	session.app = tview.NewApplication()
 
@@ -99,10 +84,12 @@ func newSession(cfg config) (session *viewerSession) {
 		}
 	}))
 	session.tree.GetRoot().AddChild(fullSessions)
-	session.tree.SetSelectedFunc(session.nodeSelected)
+	session.tree.SetSelectedFunc(session.toggleVisibility)
 	// flex containing everything
 	flex := tview.NewFlex()
-	flex.SetDirection(tview.FlexRow)
+	if session.con.HorizontalLayout {
+		flex.SetDirection(tview.FlexRow)
+	}
 	// debug window
 	session.textWindow = tview.NewTextView().SetWordWrap(false).SetWrap(false)
 	session.textWindow.SetDynamicColors(true)
@@ -159,37 +146,36 @@ func (session *viewerSession) CheckUpdate() {
 	}
 }
 
-func (session *viewerSession) nodeSelected(node *tview.TreeNode) {
-	children := node.GetChildren()
-	if len(children) > 0 {
-		// Collapse if visible, expand if collapsed.
+func (session *viewerSession) toggleVisibility(node *tview.TreeNode) {
+	if len(node.GetChildren()) > 0 {
 		node.SetExpanded(!node.IsExpanded())
 	}
 }
 
-func (session *viewerSession) loadCollections() error {
-	node := tview.NewTreeNode("Collections").SetColor(tview.Styles.SecondaryTextColor).SetExpanded(false)
-	list, err := getCollectionList()
-	if err != nil {
-		return err
-	}
-	for _, coll := range list.Objects {
-		child := tview.NewTreeNode(coll.Title)
-		collID := coll.Self
-		child.SetSelectedFunc(session.withBlink(child, func() {
-			child.SetSelectedFunc(nil)
-			var nodes []*tview.TreeNode
-			nodes, err = session.getCollectionContent(collID)
-			if err != nil {
-				session.logError(err)
-			} else if len(nodes) > 0 {
-				appendNodes(child, nodes...)
-			} else {
-				child.AddChild(tview.NewTreeNode("no content").SetColor(tcell.ColorRed))
-			}
-		}))
-		node.AddChild(child)
-	}
+func (session *viewerSession) addCollections() {
+	node := tview.NewTreeNode("Collections").SetColor(tview.Styles.SecondaryTextColor)
+	node.SetSelectedFunc(session.withBlink(node, func() {
+		list, err := getCollectionList()
+		if err != nil {
+			session.logError("could not load collections: ", err)
+		}
+		for _, coll := range list.Objects {
+			child := tview.NewTreeNode(coll.Title)
+			collID := coll.UID
+			child.SetSelectedFunc(session.withBlink(child, func() {
+				child.SetSelectedFunc(nil)
+				var nodes []*tview.TreeNode
+				nodes, err = session.getCollectionContent(collID)
+				if err != nil {
+					session.logError(err)
+				} else if len(nodes) > 0 {
+					appendNodes(child, nodes...)
+				} else {
+					child.AddChild(tview.NewTreeNode("no content").SetColor(tcell.ColorRed))
+				}
+			}))
+			node.AddChild(child)
+		}
+	}))
 	session.tree.GetRoot().AddChild(node)
-	return nil
 }
