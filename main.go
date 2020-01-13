@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gdamore/tcell"
@@ -69,8 +70,8 @@ func main() {
 
 	session.addCollections()
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, os.Kill)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	<-c
 }
@@ -120,7 +121,10 @@ func newSession(cfg config) (session *viewerSession) {
 	flex.AddItem(session.tree, 0, 1, true)
 	flex.AddItem(session.textWindow, 0, 1, false)
 	go func() {
-		session.app.SetRoot(flex, true).Run()
+		err := session.app.SetRoot(flex, true).Run()
+		if err != nil {
+			log.Fatal(err)
+		}
 		os.Exit(0)
 	}()
 	return

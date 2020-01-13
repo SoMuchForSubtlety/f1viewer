@@ -47,7 +47,10 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 			return
 		}
 		cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0", "--quiet")
-		session.runCmd(cmd)
+		err = session.runCmd(cmd)
+		if err != nil {
+			session.logError(err)
+		}
 	})
 	nodes = append(nodes, playNode)
 

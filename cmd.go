@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -33,15 +32,13 @@ type titles struct {
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {
 	// custom command
-	com := cc.CustomOptions
 	url, err := getPlayableURL(cc.EpID)
 	if err != nil {
 		return err
 	}
-	tmpCommand := com.Command
 	// replace variables
 	var filepath string
-	tmpCommand = make([]string, len(cc.CustomOptions.Command))
+	tmpCommand := make([]string, len(cc.CustomOptions.Command))
 	copy(tmpCommand, cc.CustomOptions.Command)
 	for i := range tmpCommand {
 		if strings.Contains(tmpCommand[i], "$file") && filepath == "" {
@@ -95,12 +92,6 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 		return err
 	}
 	return cmd.Process.Release()
-}
-
-func splitCommand(input string) ([]string, error) {
-	r := csv.NewReader(strings.NewReader(input))
-	r.Comma = ' '
-	return r.Read()
 }
 
 func (t titles) String() string {

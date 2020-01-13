@@ -43,12 +43,11 @@ func loadConfig() (cfg config, err error) {
 	}
 
 	if _, err = os.Stat(path + "config.json"); os.IsNotExist(err) {
-		err = nil
 		cfg.LiveRetryTimeout = 60
 		cfg.Lang = "en"
 		cfg.CheckUpdate = true
 		cfg.SaveLogs = true
-		cfg.save()
+		err = cfg.save()
 		return
 	}
 

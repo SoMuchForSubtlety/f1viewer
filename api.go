@@ -119,17 +119,6 @@ func getCollection(collID string) (coll collection, err error) {
 	return
 }
 
-func getEpisode(episodeID string) (ep episode, err error) {
-	err = golark.NewRequest(endpoint, "episodes", pathToUID(episodeID)).
-		AddField(golark.NewField("title")).
-		AddField(golark.NewField("subtitle")).
-		AddField(golark.NewField("uid")).
-		AddField(golark.NewField("data_source_id")).
-		AddField(golark.NewField("items")).
-		Execute(&ep)
-	return
-}
-
 func getHomepageContent() (collection, error) {
 	type container struct {
 		Objects []collection `json:"objects"`
