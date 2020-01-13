@@ -61,6 +61,8 @@ The default config looks like this
 	"download_location": "",
 	"custom_playback_options": null,
 	"horizontal_layout": false,
+	"tree_ratio": 1,
+	"output_ratio": 1,
 	"theme": {
 		"background_color": "",
 		"border_color": "",
@@ -89,6 +91,7 @@ The default config looks like this
  - `custom_playback_options` can be used to set custom commands, see  [Custom Commands](#custom-commands)  for more info
  - `horizontal_layout` can be used to switch the orientation from vertical to horizontal
  - `theme` can be used to set custom colors for various UI elements. Please use standard hex RGB values in the format `#FFFFFF` or `FFFFFF`.
+ - `tree_ratio` and `output_ratio` can adjust the UI ratio. The values need to be intergers >= 1.
 
 ## Custom Commands
 You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options`. You can add as many as you want. 

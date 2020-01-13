@@ -17,6 +17,8 @@ type config struct {
 	CustomPlaybackOptions []command `json:"custom_playback_options"`
 	HorizontalLayout      bool      `json:"horizontal_layout"`
 	Theme                 theme     `json:"theme"`
+	TreeRatio             int       `json:"tree_ratio"`
+	OutputRatio           int       `json:"output_ratio"`
 }
 
 type theme struct {
@@ -47,6 +49,8 @@ func loadConfig() (cfg config, err error) {
 		cfg.Lang = "en"
 		cfg.CheckUpdate = true
 		cfg.SaveLogs = true
+		cfg.TreeRatio = 1
+		cfg.OutputRatio = 1
 		err = cfg.save()
 		return
 	}
@@ -57,6 +61,12 @@ func loadConfig() (cfg config, err error) {
 		return
 	}
 	err = json.Unmarshal(data, &cfg)
+	if cfg.TreeRatio < 1 {
+		cfg.TreeRatio = 1
+	}
+	if cfg.OutputRatio < 1 {
+		cfg.OutputRatio = 1
+	}
 	return
 }
 

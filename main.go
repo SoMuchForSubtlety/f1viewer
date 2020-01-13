@@ -118,8 +118,8 @@ func newSession(cfg config) (session *viewerSession) {
 	session.textWindow.SetChangedFunc(func() {
 		session.app.Draw()
 	})
-	flex.AddItem(session.tree, 0, 1, true)
-	flex.AddItem(session.textWindow, 0, 1, false)
+	flex.AddItem(session.tree, 0, cfg.TreeRatio, true)
+	flex.AddItem(session.textWindow, 0, cfg.OutputRatio, false)
 	go func() {
 		err := session.app.SetRoot(flex, true).Run()
 		if err != nil {
