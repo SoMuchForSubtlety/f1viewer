@@ -57,7 +57,7 @@ func loadConfig() (cfg config, err error) {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &cfg)
+	err = json.Unmarshal(data, &cfg)
 	return
 }
 
