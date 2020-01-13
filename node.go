@@ -1,88 +1,133 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"sort"
+	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
 
-func (session *viewerSession) getPlaybackNodes(title string, epID string) []*tview.TreeNode {
+func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string) []*tview.TreeNode {
 	nodes := make([]*tview.TreeNode, 0)
 
 	// add custom options
 	if session.con.CustomPlaybackOptions != nil {
 		for i := range session.con.CustomPlaybackOptions {
 			com := session.con.CustomPlaybackOptions[i]
-			if len(com.Commands) > 0 {
+			if len(com.Command) > 0 {
 				var context commandContext
+				context.Titles = sessionTitles
 				context.EpID = epID
 				context.CustomOptions = com
-				context.Title = title
-				customNode := tview.NewTreeNode(com.Title)
-				customNode.SetReference(context)
+				customNode := tview.NewTreeNode(com.Title).
+					SetColor(activeTheme.ActionNodeColor)
+				customNode.SetSelectedFunc(func() {
+					go func() {
+						err := session.runCustomCommand(context)
+						if err != nil {
+							session.logError(err)
+						}
+					}()
+				})
 				nodes = append(nodes, customNode)
 			}
 		}
 	}
 
-	playNode := tview.NewTreeNode("Play with MPV")
-	playNode.SetReference(epID)
+	playNode := tview.NewTreeNode("Play with MPV").
+		SetColor(activeTheme.ActionNodeColor)
+	playNode.SetSelectedFunc(func() {
+		url, err := getPlayableURL(epID)
+		if err != nil {
+			session.logError(err)
+			return
+		}
+		cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0", "--quiet")
+		err = session.runCmd(cmd)
+		if err != nil {
+			session.logError(err)
+		}
+	})
 	nodes = append(nodes, playNode)
 
-	downloadNode := tview.NewTreeNode("Download .m3u8")
-	downloadNode.SetReference([]string{epID, title})
+	downloadNode := tview.NewTreeNode("Download .m3u8").
+		SetColor(activeTheme.ActionNodeColor)
+	downloadNode.SetSelectedFunc(func() {
+		downloadNode.SetColor(activeTheme.ActionNodeColor)
+		url, err := getPlayableURL(epID)
+		if err != nil {
+			session.logError(err)
+			return
+		}
+		_, _, err = session.con.downloadAsset(url, sessionTitles.String())
+		if err != nil {
+			session.logError(err)
+		}
+		session.logInfo("Saved \"", sessionTitles.String(), "\"")
+	})
 	nodes = append(nodes, downloadNode)
 
-	streamNode := tview.NewTreeNode("GET URL")
-	streamNode.SetReference(epID)
+	streamNode := tview.NewTreeNode("Copy URL to clipboard").
+		SetColor(activeTheme.ActionNodeColor)
+	streamNode.SetSelectedFunc(func() {
+		url, err := getPlayableURL(epID)
+		if err != nil {
+			session.logError(err)
+			return
+		}
+		err = clipboard.WriteAll(url)
+		if err != nil {
+			session.logError(err)
+			return
+		}
+		session.logInfo("URL copied to clipboard")
+	})
 	nodes = append(nodes, streamNode)
 	return nodes
 }
 
-func getLiveNode() (bool, *tview.TreeNode, error) {
+func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 	var sessionNode *tview.TreeNode
 	home, err := getHomepageContent()
 	if err != nil {
 		return false, sessionNode, err
 	}
-	firstContent := ""
+	var contentURL string
 	found := false
-	for _, item := range home.Objects[0].Items {
-		if len(item.ContentURL.Items) > 0 {
-			firstContent = item.ContentURL.Items[0].ContentURL.Self
-			if strings.Contains(firstContent, "/api/event-occurrence/") {
-				found = true
-				break
-			}
+	for _, item := range home.Items {
+		contentURL = item.ContentURL
+		if strings.Contains(contentURL, "/api/event-occurrence/") {
+			found = true
+			break
 		}
 	}
 	if found {
-		event, err := getEvent(firstContent)
+		var t titles
+		event, err := getEvent(contentURL)
 		if err != nil {
 			return false, sessionNode, err
 		}
+		t.EventTitle = event.Name
 		for _, sessionID := range event.SessionoccurrenceUrls {
-			session, err := getSession(sessionID)
+			s, err := getSession(sessionID)
 			if err != nil {
 				return false, sessionNode, err
 			}
-			if session.Status == "live" {
-				streams, err := getSessionStreams(session.Slug)
+			st := t
+			st.SessionTitle = s.Name
+			if s.Status == "live" {
+				streams, err := getSessionStreams(s.UID)
 				if err != nil {
 					return false, sessionNode, err
 				}
-				sessionNode = tview.NewTreeNode(session.Name + " - LIVE").
-					SetSelectable(true).
-					SetColor(tcell.ColorRed).
-					SetReference(streams).
+				sessionNode = tview.NewTreeNode(s.Name + " - LIVE").
+					SetColor(activeTheme.LiveColor).
 					SetExpanded(false)
-				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
+				channels := session.getPerspectiveNodes(st, streams)
 				for _, stream := range channels {
 					sessionNode.AddChild(stream)
 				}
@@ -93,29 +138,7 @@ func getLiveNode() (bool, *tview.TreeNode, error) {
 	return false, sessionNode, nil
 }
 
-// blinks node until bool is changed
-// TODO replace done bool with channel?
-func (session *viewerSession) blinkNode(node *tview.TreeNode, done *bool, originalColor tcell.Color) {
-	colors := []tcell.Color{tcell.ColorRed, tcell.ColorOrange, tcell.ColorYellow, tcell.ColorGreen, tcell.ColorBlue, tcell.ColorIndigo, tcell.ColorViolet}
-	originalText := node.GetText()
-	node.SetText("loading...")
-	for !*done {
-		for _, color := range colors {
-			if *done {
-				break
-			}
-			node.SetColor(color)
-			session.app.Draw()
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-	node.SetColor(originalColor)
-	node.SetText(originalText)
-	session.app.Draw()
-}
-
-// returns node for every event (Australian GP, Bahrain GP, etc.)
-func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
+func (session *viewerSession) getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 	errChan := make(chan error)
 	events := make([]*tview.TreeNode, len(season.EventoccurrenceUrls))
 	// iterate through events
@@ -128,8 +151,19 @@ func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 			}
 			// if the events actually has saved sassions add it to the tree
 			if len(event.SessionoccurrenceUrls) > 0 {
-				eventNode := tview.NewTreeNode(strings.Replace(event.OfficialName, "™", "", -1)).SetSelectable(true)
-				eventNode.SetReference(event)
+				eventNode := tview.NewTreeNode(event.Name).SetSelectable(true)
+				eventNode.SetSelectedFunc(session.withBlink(eventNode, func() {
+					eventNode.SetSelectedFunc(nil)
+					sessions, err := session.getSessionNodes(titles{SeasonTitle: season.Name, CategoryTitle: "Full Race Weekends"}, event)
+					if err != nil {
+						session.logError(err)
+					} else {
+						appendNodes(eventNode, sessions...)
+					}
+					if len(eventNode.GetChildren()) == 0 {
+						eventNode.AddChild(tview.NewTreeNode("no content").SetColor(activeTheme.NoContentColor))
+					}
+				}))
 				events[m] = eventNode
 			}
 			errChan <- nil
@@ -146,59 +180,42 @@ func getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
 	return events, nil
 }
 
-// returns node for every session (FP1, FP2, etc.)
-func (session *viewerSession) getSessionNodes(event eventStruct) ([]*tview.TreeNode, error) {
-	errChan := make(chan error)
-	sessions := make([]*tview.TreeNode, len(event.SessionoccurrenceUrls))
-	bonusIDs := make([][]string, len(event.SessionoccurrenceUrls))
-	// iterate through sessions
-	for n, sessionID := range event.SessionoccurrenceUrls {
-		go func(sessionID string, n int) {
-			session, err := getSession(sessionID)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			bonusIDs[n] = session.ContentUrls
-			if session.Status != "upcoming" && session.Status != "expired" {
-				streams, err := getSessionStreams(session.Slug)
+func (session *viewerSession) getSessionNodes(t titles, event eventStruct) ([]*tview.TreeNode, error) {
+	sessions := make([]*tview.TreeNode, 0)
+	bonusIDs := make([]string, 0)
+	sessionsData, err := getSessions(event.SessionoccurrenceUrls)
+	if err != nil {
+		return nil, err
+	}
+	t.EventTitle = event.Name
+	for _, s := range sessionsData {
+		st := t
+		st.SessionTitle = s.Name
+		bonusIDs = append(bonusIDs, s.ContentUrls...)
+		if s.Status != "upcoming" && s.Status != "expired" {
+			sessionID := s.UID
+			sessionNode := tview.NewTreeNode(s.Name).
+				SetSelectable(true)
+			sessionNode.SetSelectedFunc(session.withBlink(sessionNode, func() {
+				sessionNode.SetSelectedFunc(nil)
+				streams, err := getSessionStreams(sessionID)
 				if err != nil {
-					errChan <- err
+					session.logError(err)
 					return
 				}
-				sessionNode := tview.NewTreeNode(session.Name).
-					SetSelectable(true).
-					SetReference(streams).
-					SetExpanded(false)
-				if session.Status == "live" {
-					sessionNode.SetText(session.Name + " - LIVE").
-						SetColor(tcell.ColorRed)
-				}
-				sessions[n] = sessionNode
-
-				channels := getPerspectiveNodes(streams.Objects[0].ChannelUrls)
-				for _, stream := range channels {
-					sessionNode.AddChild(stream)
-				}
+				channels := session.getPerspectiveNodes(st, streams)
+				appendNodes(sessionNode, channels...)
+			}))
+			if s.Status == "live" {
+				sessionNode.SetText(s.Name + " - LIVE").
+					SetColor(activeTheme.LiveColor)
 			}
-			errChan <- nil
-		}(sessionID, n)
-	}
-	for index := 0; index < len(event.SessionoccurrenceUrls); index++ {
-		select {
-		case err := <-errChan:
-			if err != nil {
-				return nil, err
-			}
+			sessions = append(sessions, sessionNode)
 		}
 	}
-	var allIDs []string
-	for _, idList := range bonusIDs {
-		allIDs = append(allIDs, idList...)
-	}
-	if len(allIDs) > 0 {
-		bonusNode := tview.NewTreeNode("Bonus Content").SetSelectable(true).SetExpanded(false).SetReference("bonus")
-		episodes, err := session.getEpisodeNodes(allIDs)
+	if len(bonusIDs) > 0 {
+		bonusNode := tview.NewTreeNode("Bonus Content").SetExpanded(false)
+		episodes, err := session.getEpisodeNodes(t, bonusIDs)
 		if err != nil {
 			return nil, err
 		}
@@ -208,17 +225,12 @@ func (session *viewerSession) getSessionNodes(event eventStruct) ([]*tview.TreeN
 	return sessions, nil
 }
 
-// returns nodes for every perspective (main feed, data feed, drivers, etc.)
-func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
-	channels := make([]*tview.TreeNode, len(perspectives))
-	// iterate through all available streams for the session
-	for i := range perspectives {
-		streamPerspective := perspectives[i]
+func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []channel) []*tview.TreeNode {
+	var channels []*tview.TreeNode
+	teams := make(map[string]*tview.TreeNode)
+	var teamsContasiner *tview.TreeNode
+	for _, streamPerspective := range perspectives {
 		name := streamPerspective.Name
-		if len(streamPerspective.DriverUrls) > 0 {
-			number := streamPerspective.DriverUrls[0].DriverRacingnumber
-			name = fmt.Sprintf("%4v "+name, "("+strconv.Itoa(number)+")")
-		}
 		switch name {
 		case "WIF":
 			name = "Main Feed"
@@ -229,20 +241,49 @@ func getPerspectiveNodes(perspectives []channelUrlsStruct) []*tview.TreeNode {
 		case "data":
 			name = "Data Channel"
 		}
+		newTitle := title
+		newTitle.PerspectiveTitle = name
+		if len(streamPerspective.DriverUrls) > 0 {
+			number := streamPerspective.DriverUrls[0].DriverRacingnumber
+			name = fmt.Sprintf("(%2d) %s", number, name)
+		}
+
 		streamNode := tview.NewTreeNode(name).
-			SetSelectable(true).
-			SetReference(streamPerspective).
-			SetColor(tcell.ColorGreen)
-		channels[i] = streamNode
+			SetColor(activeTheme.ItemNodeColor)
+
+		perspectiveID := streamPerspective.Self
+		streamNode.SetSelectedFunc(func() {
+			streamNode.SetSelectedFunc(nil)
+			nodes := session.getPlaybackNodes(newTitle, perspectiveID)
+			appendNodes(streamNode, nodes...)
+		})
+		if len(streamPerspective.DriverUrls) > 0 {
+			if teamsContasiner == nil {
+				teamsContasiner = tview.NewTreeNode("Teams").SetExpanded(false)
+			}
+			team := streamPerspective.DriverUrls[0].TeamURL
+			teamNode, ok := teams[team.Name]
+			if !ok {
+				teamNode = tview.NewTreeNode(team.Name).SetExpanded(false)
+				color, err := strconv.ParseInt(team.Colour[1:], 16, 32)
+				if err == nil {
+					teamNode.SetColor(tcell.NewHexColor(int32(color)))
+				}
+				teams[team.Name] = teamNode
+				teamsContasiner.AddChild(teamNode)
+			}
+			teamNode.AddChild(streamNode)
+		} else {
+			channels = append(channels, streamNode)
+		}
 	}
-	sort.Slice(channels, func(i, j int) bool {
-		return !strings.Contains(channels[i].GetText(), "(")
-	})
+	if teamsContasiner != nil {
+		channels = append(channels, teamsContasiner)
+	}
 	return channels
 }
 
-// returns nodes for every season of "Full Race Weekends"
-func getSeasonNodes() ([]*tview.TreeNode, error) {
+func (session *viewerSession) getSeasonNodes() ([]*tview.TreeNode, error) {
 	seasons, err := getSeasons()
 	if err != nil {
 		return nil, err
@@ -250,83 +291,100 @@ func getSeasonNodes() ([]*tview.TreeNode, error) {
 	var nodes []*tview.TreeNode
 	for _, s := range seasons.Seasons {
 		if s.HasContent {
-			seasonNode := tview.NewTreeNode(s.Name).
-				SetReference(s)
+			season := s
+			seasonNode := tview.NewTreeNode(s.Name)
+			seasonNode.SetSelectedFunc(session.withBlink(seasonNode, func() {
+				seasonNode.SetSelectedFunc(nil)
+				events, err := session.getEventNodes(season)
+				if err != nil {
+					session.logError(err)
+				}
+				appendNodes(seasonNode, events...)
+			}))
 			nodes = append(nodes, seasonNode)
 		}
 	}
 	return nodes, nil
 }
 
-// add episodes to VOD type
-func (session *viewerSession) getEpisodeNodes(IDs []string) ([]*tview.TreeNode, error) {
-	var skippedEpisodes []*tview.TreeNode
+func (session *viewerSession) getEpisodeNodes(title titles, IDs []string) ([]*tview.TreeNode, error) {
+	var nodes []*tview.TreeNode
 	var yearNodes []*tview.TreeNode
-
+	yearNodesMap := make(map[string]*tview.TreeNode)
 	eps, err := session.loadEpisodes(IDs)
 	if err != nil {
 		return nil, err
 	}
 	episodes := sortEpisodes(eps)
-	// add loaded and sorted episodes to tree
 	for _, ep := range episodes {
 		if len(ep.Items) < 1 {
 			continue
 		}
-		node := tview.NewTreeNode(ep.Title).SetSelectable(true).
-			SetReference(ep).
-			SetColor(tcell.ColorGreen)
-		// check for year/ race code
+		epID := ep.Items[0]
+		node := tview.NewTreeNode(ep.Title).
+			SetColor(activeTheme.ItemNodeColor)
+		tempTitle := title
+		tempTitle.EpisodeTitle = ep.Title
+		node.SetSelectedFunc(func() {
+			node.SetSelectedFunc(nil)
+			nodes := session.getPlaybackNodes(tempTitle, epID)
+			appendNodes(node, nodes...)
+		})
 		if year, _, err := getYearAndRace(ep.DataSourceID); err == nil {
-			// check if there is a node for the specified year, if not create one
-			fatherFound := false
-			var fatherNode *tview.TreeNode
-			for _, subNode := range yearNodes {
-				if subNode.GetReference() == year {
-					fatherNode = subNode
-					fatherFound = true
-				}
-			}
-			if !fatherFound {
-				yearNode := tview.NewTreeNode(year).
-					SetSelectable(true).
-					SetReference(year).
+			yearNode, ok := yearNodesMap[year]
+			if !ok {
+				yearNode = tview.NewTreeNode(year).
 					SetExpanded(false)
+				yearNodesMap[year] = yearNode
 				yearNodes = append(yearNodes, yearNode)
-				fatherNode = yearNode
 			}
-			fatherNode.AddChild(node)
+			yearNode.AddChild(node)
 		} else {
-			// save episodes with no year/race ID to be added at the end
-			skippedEpisodes = append(skippedEpisodes, node)
+			nodes = append(nodes, node)
 		}
 	}
-	if len(yearNodes) == 1 {
-		return append(yearNodes[0].GetChildren(), skippedEpisodes...), nil
-	}
-	return append(yearNodes, skippedEpisodes...), nil
+	return append(yearNodes, nodes...), nil
 }
 
 func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 	var nodes []*tview.TreeNode
-	var err error
-	session.vodTypes, err = getVodTypes()
+	vodTypes, err := getVodTypes()
 	if err != nil {
 		return nil, err
 	}
-	for i, vType := range session.vodTypes.Objects {
+	for i, vType := range vodTypes.Objects {
+		t := i
+		catTitle := vType.Name
 		if len(vType.ContentUrls) > 0 {
 			node := tview.NewTreeNode(vType.Name).
-				SetSelectable(true).
-				SetReference(i).
-				SetColor(tcell.ColorYellow)
+				SetColor(activeTheme.CategoryNodeColor)
+			node.SetSelectedFunc(session.withBlink(node, func() {
+				node.SetSelectedFunc(nil)
+				episodes, err := session.getEpisodeNodes(titles{CategoryTitle: catTitle}, vodTypes.Objects[t].ContentUrls)
+				if err != nil {
+					session.logError(err)
+				} else {
+					appendNodes(node, episodes...)
+				}
+			}))
 			nodes = append(nodes, node)
 		}
 	}
 	return nodes, nil
 }
 
-// appends children to parent
+func (session *viewerSession) getCollectionContent(id string) ([]*tview.TreeNode, error) {
+	coll, err := getCollection(id)
+	if err != nil {
+		return nil, err
+	}
+	var epIDs []string
+	for _, ep := range coll.Items {
+		epIDs = append(epIDs, ep.ContentURL)
+	}
+	return session.getEpisodeNodes(titles{CategoryTitle: coll.Title}, epIDs)
+}
+
 func appendNodes(parent *tview.TreeNode, children ...*tview.TreeNode) {
 	if children != nil {
 		for _, node := range children {
@@ -337,26 +395,8 @@ func appendNodes(parent *tview.TreeNode, children ...*tview.TreeNode) {
 	}
 }
 
-// probably needs mutex
 func insertNodeAtTop(parentNode *tview.TreeNode, childNode *tview.TreeNode) {
 	children := parentNode.GetChildren()
 	children = append([]*tview.TreeNode{childNode}, children...)
 	parentNode.SetChildren(children)
-}
-
-func removeChild(node, childNode *tview.TreeNode) error {
-	if node == nil || childNode == nil {
-		return errors.New("node can't be nil")
-	}
-	children := node.GetChildren()
-	for i, child := range children {
-		if child != nil && (child.GetReference() == childNode.GetReference()) && (child.GetText() == childNode.GetText()) {
-			copy(children[i:], children[i+1:])
-			children = children[:len(children)-1]
-			node.ClearChildren()
-			node.SetChildren(children)
-			return nil
-		}
-	}
-	return errors.New("child not found")
 }

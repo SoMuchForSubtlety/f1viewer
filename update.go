@@ -7,15 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
+
+const githubURL = "https://api.github.com/repos/SoMuchForSubtlety/F1viewer/releases/latest"
 
 type release struct {
 	Name   string `json:"name"`
@@ -28,15 +30,8 @@ type release struct {
 
 func getRelease() (release, error) {
 	var re release
-	jsonString, err := getJSON("https://api.github.com/repos/SoMuchForSubtlety/F1viewer/releases/latest")
-	if err != nil {
-		return re, err
-	}
-	err = json.Unmarshal([]byte(jsonString), &re)
-	if err != nil {
-		return re, err
-	}
-	return re, nil
+	err := doGet(githubURL, &re)
+	return re, err
 }
 
 func updateAvailable() (bool, error) {
@@ -88,15 +83,32 @@ func calculateHash() (string, error) {
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func getUpdateNode() (*tview.TreeNode, error) {
+func (session *viewerSession) getUpdateNode() (*tview.TreeNode, error) {
 	hasUpdate, err := updateAvailable()
 	if !hasUpdate {
 		err = errors.New("no update available")
 	}
-	re, _ := getRelease()
-	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(tcell.ColorRed).SetExpanded(false).SetReference(re)
-	getUpdateNode := tview.NewTreeNode("download update").SetColor(tcell.ColorRed).SetReference("update")
-	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(tcell.ColorRed).SetReference("don't check")
+	_, err = getRelease()
+	if err != nil {
+		return nil, err
+	}
+	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(activeTheme.UpdateColor).SetExpanded(false)
+	getUpdateNode := tview.NewTreeNode("download update").SetColor(activeTheme.ActionNodeColor)
+	getUpdateNode.SetSelectedFunc(func() {
+		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
+		if err != nil {
+			session.logError(err)
+		}
+	})
+	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(activeTheme.ActionNodeColor)
+	stopCheckingNode.SetSelectedFunc(func() {
+		session.con.CheckUpdate = false
+		err := session.con.save()
+		if err != nil {
+			session.logError(err)
+		}
+		session.logInfo("Checking for updates turned off.")
+	})
 	updateNode.AddChild(getUpdateNode)
 	updateNode.AddChild(stopCheckingNode)
 	return updateNode, err
@@ -118,4 +130,14 @@ func openbrowser(url string) error {
 		return err
 	}
 	return nil
+}
+
+func doGet(url string, v interface{}) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return json.NewDecoder(resp.Body).Decode(v)
 }
