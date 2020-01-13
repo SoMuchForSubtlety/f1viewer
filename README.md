@@ -5,7 +5,7 @@
 
 Watch any F1TV VOD or live stream
 
-![preview image](https://i.imgur.com/aleqsXf.png)
+![preview image](https://i.imgur.com/ik2ZRw5.png)
 
 ## Table of Contents
 
