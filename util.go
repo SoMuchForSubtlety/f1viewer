@@ -69,30 +69,35 @@ func configureLogging(cfg config) (*os.File, error) {
 
 func (session *viewerSession) withBlink(node *tview.TreeNode, fn func()) func() {
 	return func() {
-		done := false
+		done := make(chan struct{})
 		go func() {
 			fn()
-			done = true
+			done <- struct{}{}
 		}()
-		go session.blinkNode(node, &done)
+		go session.blinkNode(node, done)
 	}
 }
 
-func (session *viewerSession) blinkNode(node *tview.TreeNode, done *bool) {
+func (session *viewerSession) blinkNode(node *tview.TreeNode, done chan struct{}) {
 	originalText := node.GetText()
 	originalColor := node.GetColor()
 	node.SetText("loading...")
-	for !*done {
-		node.SetColor(activeTheme.LoadingColor)
-		session.app.Draw()
-		time.Sleep(200 * time.Millisecond)
-		node.SetColor(originalColor)
-		session.app.Draw()
-		time.Sleep(200 * time.Millisecond)
-
+	for {
+		select {
+		case <-done:
+			node.SetText(originalText)
+			session.app.Draw()
+			return
+		default:
+			node.SetColor(activeTheme.LoadingColor)
+			session.app.Draw()
+			time.Sleep(200 * time.Millisecond)
+			node.SetColor(originalColor)
+			session.app.Draw()
+			time.Sleep(200 * time.Millisecond)
+		}
 	}
-	node.SetText(originalText)
-	session.app.Draw()
+
 }
 
 func hexStringToColor(hex string) tcell.Color {
@@ -106,7 +111,6 @@ func colortoHexString(color tcell.Color) string {
 }
 
 func (t theme) apply() {
-	// apply terminal text color
 	if t.TerminalTextColor != "" {
 		tview.Styles.PrimaryTextColor = hexStringToColor(t.TerminalTextColor)
 	}

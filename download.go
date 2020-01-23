@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,19 +16,13 @@ import (
 
 // takes asset ID and downloads corresponding .m3u8
 func (cfg config) downloadAsset(url string, title string) (filepath string, cookie string, err error) {
-	// sanitize title
-	title = strings.Replace(title, ":", "", -1)
-	// abort if the URL is not valid
-	if len(url) < 10 {
-		return "", "", errors.New("invalid url")
-	}
 	// download and patch .m3u8 file
 	data, cookie, err := downloadData(url)
 	if err != nil {
 		return "", "", err
 	}
-	fixedLineArray := fixData(data, url)
-	path, err := cfg.writeToFile(fixedLineArray, title+".m3u8")
+	fixedData := fixData(data, url)
+	path, err := cfg.writeToFile(fixedData, title+".m3u8")
 	if err != nil {
 		return "", "", err
 	}
@@ -38,7 +31,7 @@ func (cfg config) downloadAsset(url string, title string) (filepath string, cook
 
 // returns valid m3u8 URL as string
 func getPlayableURL(assetID string) (string, error) {
-	formattedID := ""
+	var formattedID string
 	isChannel := false
 	if strings.Contains(assetID, "/api/channels/") {
 		isChannel = true
@@ -107,7 +100,7 @@ func downloadData(url string) (lines []string, cookie string, err error) {
 	//  Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, "", err
+		return lines, cookie, err
 	}
 	defer resp.Body.Close()
 
@@ -116,10 +109,11 @@ func downloadData(url string) (lines []string, cookie string, err error) {
 	}
 
 	//  convert body to string array
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	lineArray := strings.Split(buf.String(), "\n")
-	return lineArray, cookie, nil
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return lines, cookie, err
+	}
+	return strings.Split(string(bodyBytes), "\n"), cookie, nil
 }
 
 // chage URIs in m3u8 data to full URLs

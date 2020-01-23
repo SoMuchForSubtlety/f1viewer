@@ -85,12 +85,11 @@ func calculateHash() (string, error) {
 
 func (session *viewerSession) getUpdateNode() (*tview.TreeNode, error) {
 	hasUpdate, err := updateAvailable()
-	if !hasUpdate {
-		err = errors.New("no update available")
-	}
-	_, err = getRelease()
 	if err != nil {
 		return nil, err
+	}
+	if !hasUpdate {
+		return nil, errors.New("no update available")
 	}
 	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(activeTheme.UpdateColor).SetExpanded(false)
 	getUpdateNode := tview.NewTreeNode("download update").SetColor(activeTheme.ActionNodeColor)
@@ -102,8 +101,8 @@ func (session *viewerSession) getUpdateNode() (*tview.TreeNode, error) {
 	})
 	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(activeTheme.ActionNodeColor)
 	stopCheckingNode.SetSelectedFunc(func() {
-		session.con.CheckUpdate = false
-		err := session.con.save()
+		session.cfg.CheckUpdate = false
+		err := session.cfg.save()
 		if err != nil {
 			session.logError(err)
 		}

@@ -30,7 +30,7 @@ type appTheme struct {
 }
 
 type viewerSession struct {
-	con config
+	cfg config
 
 	// tview
 	app        *tview.Application
@@ -68,7 +68,7 @@ func main() {
 		}
 	}()
 
-	session.addCollections()
+	session.tree.GetRoot().AddChild(session.getCollectionsNode())
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -79,7 +79,7 @@ func main() {
 func newSession(cfg config) (session *viewerSession) {
 	// set defaults
 	session = &viewerSession{}
-	session.con = cfg
+	session.cfg = cfg
 	cfg.Theme.apply()
 
 	session.app = tview.NewApplication()
@@ -108,7 +108,7 @@ func newSession(cfg config) (session *viewerSession) {
 	session.tree.SetSelectedFunc(session.toggleVisibility)
 	// flex containing everything
 	flex := tview.NewFlex()
-	if session.con.HorizontalLayout {
+	if session.cfg.HorizontalLayout {
 		flex.SetDirection(tview.FlexRow)
 	}
 	// debug window
@@ -136,24 +136,27 @@ func (session *viewerSession) checkLive() {
 		isLive, liveNode, err := session.getLiveNode()
 		if err != nil {
 			session.logError("error looking for live session: ", err)
+			if session.cfg.LiveRetryTimeout <= 0 {
+				return
+			}
 		} else if isLive {
 			insertNodeAtTop(session.tree.GetRoot(), liveNode)
 			if session.app != nil {
 				session.app.Draw()
 			}
 			return
-		} else if session.con.LiveRetryTimeout < 0 {
+		} else if session.cfg.LiveRetryTimeout <= 0 {
 			session.logInfo("no live session found")
 			return
 		} else {
 			session.logInfo("no live session found")
 		}
-		time.Sleep(time.Second * time.Duration(session.con.LiveRetryTimeout))
+		time.Sleep(time.Second * time.Duration(session.cfg.LiveRetryTimeout))
 	}
 }
 
 func (session *viewerSession) CheckUpdate() {
-	if !session.con.CheckUpdate {
+	if !session.cfg.CheckUpdate {
 		return
 	}
 	node, err := session.getUpdateNode()
@@ -168,39 +171,4 @@ func (session *viewerSession) CheckUpdate() {
 		insertNodeAtTop(session.tree.GetRoot(), node)
 		session.app.Draw()
 	}
-}
-
-func (session *viewerSession) toggleVisibility(node *tview.TreeNode) {
-	if len(node.GetChildren()) > 0 {
-		node.SetExpanded(!node.IsExpanded())
-	}
-}
-
-func (session *viewerSession) addCollections() {
-	node := tview.NewTreeNode("Collections").SetColor(activeTheme.CategoryNodeColor)
-	node.SetSelectedFunc(session.withBlink(node, func() {
-		node.SetSelectedFunc(nil)
-		list, err := getCollectionList()
-		if err != nil {
-			session.logError("could not load collections: ", err)
-		}
-		for _, coll := range list.Objects {
-			child := tview.NewTreeNode(coll.Title)
-			collID := coll.UID
-			child.SetSelectedFunc(session.withBlink(child, func() {
-				child.SetSelectedFunc(nil)
-				var nodes []*tview.TreeNode
-				nodes, err = session.getCollectionContent(collID)
-				if err != nil {
-					session.logError(err)
-				} else if len(nodes) > 0 {
-					appendNodes(child, nodes...)
-				} else {
-					child.AddChild(tview.NewTreeNode("no content").SetColor(activeTheme.NoContentColor))
-				}
-			}))
-			node.AddChild(child)
-		}
-	}))
-	session.tree.GetRoot().AddChild(node)
 }

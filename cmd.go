@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -31,7 +32,6 @@ type titles struct {
 }
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {
-	// custom command
 	url, err := getPlayableURL(cc.EpID)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (session *viewerSession) runCustomCommand(cc commandContext) error {
 	copy(tmpCommand, cc.CustomOptions.Command)
 	for i := range tmpCommand {
 		if strings.Contains(tmpCommand[i], "$file") && filepath == "" {
-			filepath, _, err = session.con.downloadAsset(url, cc.Titles.String())
+			filepath, _, err = session.cfg.downloadAsset(url, cc.Titles.String())
 			if err != nil {
 				return err
 			}
@@ -77,16 +77,9 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 	accentColorString := colortoHexString(activeTheme.TerminalAccentColor)
 	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[%s::b][[-]%s[%s]]$[-::-] %s", accentColorString, wdir, accentColorString, strings.Join(cmd.Args, " ")))
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-	go io.Copy(session.textWindow, stdout)
-	go io.Copy(session.textWindow, stderr)
+	cmd.Stdout = session.textWindow
+	cmd.Stderr = session.textWindow
+
 	err = cmd.Start()
 	if err != nil {
 		return err
@@ -111,5 +104,17 @@ func (t titles) String() string {
 	if t.EpisodeTitle != "" {
 		s = append(s, t.EpisodeTitle)
 	}
-	return strings.Join(s, " - ")
+	result := strings.Join(s, " - ")
+
+	whitespace := regexp.MustCompile(`\s+`)
+	var illegal *regexp.Regexp
+	if runtime.GOOS == "windows" {
+		illegal = regexp.MustCompile(`[<>:"/\\|?*]`)
+	} else {
+		illegal = regexp.MustCompile(`/`)
+	}
+	result = illegal.ReplaceAllString(result, " ")
+	result = whitespace.ReplaceAllString(result, " ")
+
+	return result
 }

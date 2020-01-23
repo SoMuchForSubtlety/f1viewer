@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -15,9 +16,9 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	nodes := make([]*tview.TreeNode, 0)
 
 	// add custom options
-	if session.con.CustomPlaybackOptions != nil {
-		for i := range session.con.CustomPlaybackOptions {
-			com := session.con.CustomPlaybackOptions[i]
+	if session.cfg.CustomPlaybackOptions != nil {
+		for i := range session.cfg.CustomPlaybackOptions {
+			com := session.cfg.CustomPlaybackOptions[i]
 			if len(com.Command) > 0 {
 				var context commandContext
 				context.Titles = sessionTitles
@@ -46,7 +47,7 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 			session.logError(err)
 			return
 		}
-		cmd := exec.Command("mpv", url, "--alang="+session.con.Lang, "--start=0", "--quiet")
+		cmd := exec.Command("mpv", url, "--alang="+session.cfg.Lang, "--start=0", "--quiet")
 		err = session.runCmd(cmd)
 		if err != nil {
 			session.logError(err)
@@ -63,11 +64,12 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 			session.logError(err)
 			return
 		}
-		_, _, err = session.con.downloadAsset(url, sessionTitles.String())
+		path, _, err := session.cfg.downloadAsset(url, sessionTitles.String())
 		if err != nil {
 			session.logError(err)
+			return
 		}
-		session.logInfo("Saved \"", sessionTitles.String(), "\"")
+		session.logInfo("Saved \"", filepath.Base(path), "\"")
 	})
 	nodes = append(nodes, downloadNode)
 
@@ -373,6 +375,35 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 	return nodes, nil
 }
 
+func (session *viewerSession) getCollectionsNode() *tview.TreeNode {
+	node := tview.NewTreeNode("Collections").SetColor(activeTheme.CategoryNodeColor)
+	node.SetSelectedFunc(session.withBlink(node, func() {
+		node.SetSelectedFunc(nil)
+		list, err := getCollectionList()
+		if err != nil {
+			session.logError("could not load collections: ", err)
+		}
+		for _, coll := range list.Objects {
+			child := tview.NewTreeNode(coll.Title)
+			collID := coll.UID
+			child.SetSelectedFunc(session.withBlink(child, func() {
+				child.SetSelectedFunc(nil)
+				var nodes []*tview.TreeNode
+				nodes, err = session.getCollectionContent(collID)
+				if err != nil {
+					session.logError(err)
+				} else if len(nodes) > 0 {
+					appendNodes(child, nodes...)
+				} else {
+					child.AddChild(tview.NewTreeNode("no content").SetColor(activeTheme.NoContentColor))
+				}
+			}))
+			node.AddChild(child)
+		}
+	}))
+	return node
+}
+
 func (session *viewerSession) getCollectionContent(id string) ([]*tview.TreeNode, error) {
 	coll, err := getCollection(id)
 	if err != nil {
@@ -399,4 +430,10 @@ func insertNodeAtTop(parentNode *tview.TreeNode, childNode *tview.TreeNode) {
 	children := parentNode.GetChildren()
 	children = append([]*tview.TreeNode{childNode}, children...)
 	parentNode.SetChildren(children)
+}
+
+func (session *viewerSession) toggleVisibility(node *tview.TreeNode) {
+	if len(node.GetChildren()) > 0 {
+		node.SetExpanded(!node.IsExpanded())
+	}
 }

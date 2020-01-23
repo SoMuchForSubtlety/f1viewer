@@ -38,10 +38,11 @@ type theme struct {
 	TerminalTextColor   string `json:"terminal_text_color"`
 }
 
-func loadConfig() (cfg config, err error) {
+func loadConfig() (config, error) {
+	var cfg config
 	path, err := getConfigPath()
 	if err != nil {
-		return
+		return cfg, err
 	}
 
 	if _, err = os.Stat(path + "config.json"); os.IsNotExist(err) {
@@ -52,13 +53,13 @@ func loadConfig() (cfg config, err error) {
 		cfg.TreeRatio = 1
 		cfg.OutputRatio = 1
 		err = cfg.save()
-		return
+		return cfg, err
 	}
 
 	var data []byte
 	data, err = ioutil.ReadFile(path + "config.json")
 	if err != nil {
-		return
+		return cfg, err
 	}
 	err = json.Unmarshal(data, &cfg)
 	if cfg.TreeRatio < 1 {
@@ -67,7 +68,7 @@ func loadConfig() (cfg config, err error) {
 	if cfg.OutputRatio < 1 {
 		cfg.OutputRatio = 1
 	}
-	return
+	return cfg, err
 }
 
 func (cfg config) save() error {
