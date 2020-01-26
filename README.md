@@ -1,5 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/SoMuchForSubtlety/F1viewer)](https://goreportcard.com/report/github.com/SoMuchForSubtlety/F1viewer)
-![](https://github.com/SoMuchForSubtlety/F1viewer/workflows/Build/badge.svg)
+![](https://github.com/SoMuchForSubtlety/F1viewer/workflows/Test/badge.svg)
 
 # F1Viewer
 
