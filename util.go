@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
+	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ func getYearAndRace(input string) (string, string, error) {
 	}
 	_, err := strconv.Atoi(input[:4])
 	if err != nil {
-		return fullYear, raceNumber, errors.New("not a valid RearRaceID")
+		return fullYear, raceNumber, errors.New("not a valid YearRaceID")
 	}
 	// TODO fix before 2020
 	if input[:4] == "2018" || input[:4] == "2019" {
@@ -48,23 +49,6 @@ func (session *viewerSession) logError(v ...interface{}) {
 func (session *viewerSession) logInfo(v ...interface{}) {
 	fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]INFO:[-::-]", colortoHexString(activeTheme.InfoColor)), fmt.Sprint(v...))
 	log.Println("[INFO]", fmt.Sprint(v...))
-}
-
-func configureLogging(cfg config) (*os.File, error) {
-	if cfg.SaveLogs {
-		logPath, err := getLogPath(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("Could not get log path: %w", err)
-		}
-		completePath := fmt.Sprint(logPath, time.Now().Format("2006-01-02"), ".log")
-		logFile, err := os.OpenFile(completePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			return nil, fmt.Errorf("Could not open log file: %w", err)
-		}
-		log.SetOutput(logFile)
-		return logFile, nil
-	}
-	return nil, nil
 }
 
 func (session *viewerSession) withBlink(node *tview.TreeNode, fn func()) func() {
@@ -97,11 +81,11 @@ func (session *viewerSession) blinkNode(node *tview.TreeNode, done chan struct{}
 			time.Sleep(200 * time.Millisecond)
 		}
 	}
-
 }
 
 func hexStringToColor(hex string) tcell.Color {
 	hex = strings.ReplaceAll(hex, "#", "")
+	//TODO: check err?
 	color, _ := strconv.ParseInt(hex, 16, 32)
 	return tcell.NewHexColor(int32(color))
 }
@@ -114,26 +98,17 @@ func (t theme) apply() {
 	if t.TerminalTextColor != "" {
 		tview.Styles.PrimaryTextColor = hexStringToColor(t.TerminalTextColor)
 	}
-
 	if t.CategoryNodeColor != "" {
 		activeTheme.CategoryNodeColor = hexStringToColor(t.CategoryNodeColor)
-	} else {
-		activeTheme.CategoryNodeColor = tcell.ColorOrange
 	}
 	if t.FolderNodeColor != "" {
 		activeTheme.FolderNodeColor = hexStringToColor(t.FolderNodeColor)
-	} else {
-		activeTheme.FolderNodeColor = tcell.ColorWhite
 	}
 	if t.ItemNodeColor != "" {
 		activeTheme.ItemNodeColor = hexStringToColor(t.ItemNodeColor)
-	} else {
-		activeTheme.ItemNodeColor = tcell.ColorLightGreen
 	}
 	if t.ActionNodeColor != "" {
 		activeTheme.ActionNodeColor = hexStringToColor(t.ActionNodeColor)
-	} else {
-		activeTheme.ActionNodeColor = tcell.ColorDarkCyan
 	}
 	if t.BackgroundColor != "" {
 		tview.Styles.PrimitiveBackgroundColor = hexStringToColor(t.BackgroundColor)
@@ -143,42 +118,40 @@ func (t theme) apply() {
 	}
 	if t.NoContentColor != "" {
 		activeTheme.NoContentColor = hexStringToColor(t.NoContentColor)
-	} else {
-		activeTheme.NoContentColor = tcell.ColorOrangeRed
 	}
 	if t.LoadingColor != "" {
 		activeTheme.LoadingColor = hexStringToColor(t.LoadingColor)
-	} else {
-		activeTheme.LoadingColor = tcell.ColorDarkCyan
 	}
 	if t.LiveColor != "" {
 		activeTheme.LiveColor = hexStringToColor(t.LiveColor)
-	} else {
-		activeTheme.LiveColor = tcell.ColorRed
 	}
 	if t.UpdateColor != "" {
 		activeTheme.UpdateColor = hexStringToColor(t.UpdateColor)
-	} else {
-		activeTheme.UpdateColor = tcell.ColorDarkRed
 	}
 	if t.TerminalAccentColor != "" {
 		activeTheme.TerminalAccentColor = hexStringToColor(t.TerminalAccentColor)
-	} else {
-		activeTheme.TerminalAccentColor = tcell.ColorGreen
 	}
 	if t.TerminalTextColor != "" {
 		activeTheme.TerminalTextColor = hexStringToColor(t.TerminalTextColor)
-	} else {
-		activeTheme.TerminalTextColor = tview.Styles.PrimaryTextColor
 	}
 	if t.InfoColor != "" {
 		activeTheme.InfoColor = hexStringToColor(t.InfoColor)
-	} else {
-		activeTheme.InfoColor = tcell.ColorGreen
 	}
 	if t.ErrorColor != "" {
 		activeTheme.ErrorColor = hexStringToColor(t.ErrorColor)
-	} else {
-		activeTheme.ErrorColor = tcell.ColorRed
 	}
+}
+
+func sanitizeFileName(s string) string {
+	whitespace := regexp.MustCompile(`\s+`)
+	var illegal *regexp.Regexp
+	if runtime.GOOS == "windows" {
+		illegal = regexp.MustCompile(`[<>:"/\\|?*]`)
+	} else {
+		illegal = regexp.MustCompile(`/`)
+	}
+	s = illegal.ReplaceAllString(s, " ")
+	s = whitespace.ReplaceAllString(s, " ")
+	s = strings.TrimSpace(s)
+	return s
 }

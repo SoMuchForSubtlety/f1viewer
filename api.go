@@ -10,7 +10,7 @@ import (
 	"github.com/SoMuchForSubtlety/golark"
 )
 
-const endpoint = "https://f1tv.formula1.com/api/"
+var endpoint = "https://f1tv.formula1.com/api/"
 
 type episode struct {
 	Title        string   `json:"title"`

@@ -12,6 +12,21 @@ import (
 	"github.com/rivo/tview"
 )
 
+func (session *viewerSession) getFullSessionsNode() *tview.TreeNode {
+	fullSessions := tview.NewTreeNode("Full Race Weekends").
+		SetColor(activeTheme.CategoryNodeColor)
+	fullSessions.SetSelectedFunc(session.withBlink(fullSessions, func() {
+		fullSessions.SetSelectedFunc(nil)
+		seasons, err := session.getSeasonNodes()
+		if err != nil {
+			session.logError(err)
+		} else {
+			appendNodes(fullSessions, seasons...)
+		}
+	}))
+	return fullSessions
+}
+
 func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string) []*tview.TreeNode {
 	nodes := make([]*tview.TreeNode, 0)
 
@@ -20,10 +35,11 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 		for i := range session.cfg.CustomPlaybackOptions {
 			com := session.cfg.CustomPlaybackOptions[i]
 			if len(com.Command) > 0 {
-				var context commandContext
-				context.Titles = sessionTitles
-				context.EpID = epID
-				context.CustomOptions = com
+				context := commandContext{
+					Titles:        sessionTitles,
+					EpID:          epID,
+					CustomOptions: com,
+				}
 				customNode := tview.NewTreeNode(com.Title).
 					SetColor(activeTheme.ActionNodeColor)
 				customNode.SetSelectedFunc(func() {
@@ -141,6 +157,7 @@ func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 }
 
 func (session *viewerSession) getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
+	// TODO: refactor
 	errChan := make(chan error)
 	events := make([]*tview.TreeNode, len(season.EventoccurrenceUrls))
 	// iterate through events
@@ -195,12 +212,12 @@ func (session *viewerSession) getSessionNodes(t titles, event eventStruct) ([]*t
 		st.SessionTitle = s.Name
 		bonusIDs = append(bonusIDs, s.ContentUrls...)
 		if s.Status != "upcoming" && s.Status != "expired" {
-			sessionID := s.UID
+			s := s
 			sessionNode := tview.NewTreeNode(s.Name).
 				SetSelectable(true)
 			sessionNode.SetSelectedFunc(session.withBlink(sessionNode, func() {
 				sessionNode.SetSelectedFunc(nil)
-				streams, err := getSessionStreams(sessionID)
+				streams, err := getSessionStreams(s.UID)
 				if err != nil {
 					session.logError(err)
 					return
@@ -232,6 +249,7 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 	teams := make(map[string]*tview.TreeNode)
 	var teamsContasiner *tview.TreeNode
 	for _, streamPerspective := range perspectives {
+		streamPerspective := streamPerspective
 		name := streamPerspective.Name
 		switch name {
 		case "WIF":
@@ -253,10 +271,9 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 		streamNode := tview.NewTreeNode(name).
 			SetColor(activeTheme.ItemNodeColor)
 
-		perspectiveID := streamPerspective.Self
 		streamNode.SetSelectedFunc(func() {
 			streamNode.SetSelectedFunc(nil)
-			nodes := session.getPlaybackNodes(newTitle, perspectiveID)
+			nodes := session.getPlaybackNodes(newTitle, streamPerspective.Self)
 			appendNodes(streamNode, nodes...)
 		})
 		if len(streamPerspective.DriverUrls) > 0 {
@@ -293,11 +310,11 @@ func (session *viewerSession) getSeasonNodes() ([]*tview.TreeNode, error) {
 	var nodes []*tview.TreeNode
 	for _, s := range seasons.Seasons {
 		if s.HasContent {
-			season := s
+			s := s
 			seasonNode := tview.NewTreeNode(s.Name)
 			seasonNode.SetSelectedFunc(session.withBlink(seasonNode, func() {
 				seasonNode.SetSelectedFunc(nil)
-				events, err := session.getEventNodes(season)
+				events, err := session.getEventNodes(s)
 				if err != nil {
 					session.logError(err)
 				}
@@ -319,17 +336,17 @@ func (session *viewerSession) getEpisodeNodes(title titles, IDs []string) ([]*tv
 	}
 	episodes := sortEpisodes(eps)
 	for _, ep := range episodes {
+		ep := ep
 		if len(ep.Items) < 1 {
 			continue
 		}
-		epID := ep.Items[0]
 		node := tview.NewTreeNode(ep.Title).
 			SetColor(activeTheme.ItemNodeColor)
 		tempTitle := title
 		tempTitle.EpisodeTitle = ep.Title
 		node.SetSelectedFunc(func() {
 			node.SetSelectedFunc(nil)
-			nodes := session.getPlaybackNodes(tempTitle, epID)
+			nodes := session.getPlaybackNodes(tempTitle, ep.Items[0])
 			appendNodes(node, nodes...)
 		})
 		if year, _, err := getYearAndRace(ep.DataSourceID); err == nil {
@@ -354,15 +371,15 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	for i, vType := range vodTypes.Objects {
-		t := i
+	for _, vType := range vodTypes.Objects {
+		vType := vType
 		catTitle := vType.Name
 		if len(vType.ContentUrls) > 0 {
 			node := tview.NewTreeNode(vType.Name).
 				SetColor(activeTheme.CategoryNodeColor)
 			node.SetSelectedFunc(session.withBlink(node, func() {
 				node.SetSelectedFunc(nil)
-				episodes, err := session.getEpisodeNodes(titles{CategoryTitle: catTitle}, vodTypes.Objects[t].ContentUrls)
+				episodes, err := session.getEpisodeNodes(titles{CategoryTitle: catTitle}, vType.ContentUrls)
 				if err != nil {
 					session.logError(err)
 				} else {

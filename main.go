@@ -12,9 +12,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-type appTheme struct {
-	BackgroundColor     tcell.Color
-	BorderColor         tcell.Color
+var activeTheme = struct {
 	CategoryNodeColor   tcell.Color
 	FolderNodeColor     tcell.Color
 	ItemNodeColor       tcell.Color
@@ -27,6 +25,19 @@ type appTheme struct {
 	ErrorColor          tcell.Color
 	TerminalAccentColor tcell.Color
 	TerminalTextColor   tcell.Color
+}{
+	CategoryNodeColor:   tcell.ColorOrange,
+	FolderNodeColor:     tcell.ColorWhite,
+	ItemNodeColor:       tcell.ColorLightGreen,
+	ActionNodeColor:     tcell.ColorDarkCyan,
+	LoadingColor:        tcell.ColorDarkCyan,
+	LiveColor:           tcell.ColorRed,
+	UpdateColor:         tcell.ColorDarkRed,
+	NoContentColor:      tcell.ColorOrangeRed,
+	InfoColor:           tcell.ColorGreen,
+	ErrorColor:          tcell.ColorRed,
+	TerminalAccentColor: tcell.ColorGreen,
+	TerminalTextColor:   tview.Styles.PrimaryTextColor,
 }
 
 type viewerSession struct {
@@ -37,8 +48,6 @@ type viewerSession struct {
 	textWindow *tview.TextView
 	tree       *tview.TreeView
 }
-
-var activeTheme appTheme
 
 func main() {
 	cfg, err := loadConfig()
@@ -53,22 +62,26 @@ func main() {
 	defer logFile.Close()
 
 	session := newSession(cfg)
+	go func() {
+		if err := session.app.Run(); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}()
 
 	go session.checkLive()
 	go session.CheckUpdate()
 
 	// set vod types nodes
-	go func() {
-		nodes, err := session.getVodTypeNodes()
-		if err != nil {
-			session.logError(err)
-		} else {
-			appendNodes(session.tree.GetRoot(), nodes...)
-			session.app.Draw()
-		}
-	}()
 
 	session.tree.GetRoot().AddChild(session.getCollectionsNode())
+	nodes, err := session.getVodTypeNodes()
+	if err != nil {
+		session.logError(err)
+	} else {
+		appendNodes(session.tree.GetRoot(), nodes...)
+		session.app.Draw()
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -76,58 +89,41 @@ func main() {
 	<-c
 }
 
-func newSession(cfg config) (session *viewerSession) {
-	// set defaults
-	session = &viewerSession{}
-	session.cfg = cfg
+func newSession(cfg config) *viewerSession {
 	cfg.Theme.apply()
-
-	session.app = tview.NewApplication()
-
-	// build base tree
 	root := tview.NewTreeNode("Categories").
 		SetSelectable(false)
-	session.tree = tview.NewTreeView().
-		SetRoot(root).
-		SetCurrentNode(root).
-		SetTopLevel(1)
 
-	// set full race weekends node
-	fullSessions := tview.NewTreeNode("Full Race Weekends").
-		SetColor(activeTheme.CategoryNodeColor)
-	fullSessions.SetSelectedFunc(session.withBlink(fullSessions, func() {
-		fullSessions.SetSelectedFunc(nil)
-		seasons, err := session.getSeasonNodes()
-		if err != nil {
-			session.logError(err)
-		} else {
-			appendNodes(fullSessions, seasons...)
-		}
-	}))
-	session.tree.GetRoot().AddChild(fullSessions)
-	session.tree.SetSelectedFunc(session.toggleVisibility)
-	// flex containing everything
-	flex := tview.NewFlex()
-	if session.cfg.HorizontalLayout {
-		flex.SetDirection(tview.FlexRow)
+	session := &viewerSession{
+		cfg: cfg,
+		app: tview.NewApplication(),
+		tree: tview.NewTreeView().
+			SetRoot(root).
+			SetCurrentNode(root).
+			SetTopLevel(1),
+		textWindow: tview.NewTextView().
+			SetWordWrap(false).
+			SetWrap(false).
+			SetDynamicColors(true),
 	}
-	// debug window
-	session.textWindow = tview.NewTextView().SetWordWrap(false).SetWrap(false)
-	session.textWindow.SetDynamicColors(true)
+
+	root.AddChild(session.getFullSessionsNode())
 	session.textWindow.SetBorder(true)
+	session.tree.SetSelectedFunc(session.toggleVisibility)
 	session.textWindow.SetChangedFunc(func() {
 		session.app.Draw()
 	})
-	flex.AddItem(session.tree, 0, cfg.TreeRatio, true)
-	flex.AddItem(session.textWindow, 0, cfg.OutputRatio, false)
-	go func() {
-		err := session.app.SetRoot(flex, true).Run()
-		if err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}()
-	return
+
+	flex := tview.NewFlex().
+		AddItem(session.tree, 0, cfg.TreeRatio, true).
+		AddItem(session.textWindow, 0, cfg.OutputRatio, false)
+
+	if session.cfg.HorizontalLayout {
+		flex.SetDirection(tview.FlexRow)
+	}
+	session.app.SetRoot(flex, true)
+
+	return session
 }
 
 func (session *viewerSession) checkLive() {

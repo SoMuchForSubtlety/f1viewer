@@ -6,8 +6,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"regexp"
-	"runtime"
 	"strings"
 )
 
@@ -104,17 +102,6 @@ func (t titles) String() string {
 	if t.EpisodeTitle != "" {
 		s = append(s, t.EpisodeTitle)
 	}
-	result := strings.Join(s, " - ")
 
-	whitespace := regexp.MustCompile(`\s+`)
-	var illegal *regexp.Regexp
-	if runtime.GOOS == "windows" {
-		illegal = regexp.MustCompile(`[<>:"/\\|?*]`)
-	} else {
-		illegal = regexp.MustCompile(`/`)
-	}
-	result = illegal.ReplaceAllString(result, " ")
-	result = whitespace.ReplaceAllString(result, " ")
-
-	return result
+	return sanitizeFileName(strings.Join(s, " - "))
 }
