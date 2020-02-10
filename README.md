@@ -3,7 +3,7 @@
 
 # F1Viewer
 
-Watch any F1TV VOD or live stream
+### F1TV was updated so F1viewer does not work anymore.
 
 ![preview image](https://i.imgur.com/ik2ZRw5.png)
 
