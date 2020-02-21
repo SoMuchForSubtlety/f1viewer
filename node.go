@@ -58,7 +58,7 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	playNode := tview.NewTreeNode("Play with MPV").
 		SetColor(activeTheme.ActionNodeColor)
 	playNode.SetSelectedFunc(func() {
-		url, err := getPlayableURL(epID)
+		url, err := getPlayableURL(epID, session.authtoken)
 		if err != nil {
 			session.logError(err)
 			return
@@ -75,7 +75,7 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 		SetColor(activeTheme.ActionNodeColor)
 	downloadNode.SetSelectedFunc(func() {
 		downloadNode.SetColor(activeTheme.ActionNodeColor)
-		url, err := getPlayableURL(epID)
+		url, err := getPlayableURL(epID, session.authtoken)
 		if err != nil {
 			session.logError(err)
 			return
@@ -92,7 +92,7 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	streamNode := tview.NewTreeNode("Copy URL to clipboard").
 		SetColor(activeTheme.ActionNodeColor)
 	streamNode.SetSelectedFunc(func() {
-		url, err := getPlayableURL(epID)
+		url, err := getPlayableURL(epID, session.authtoken)
 		if err != nil {
 			session.logError(err)
 			return
@@ -263,8 +263,8 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 		}
 		newTitle := title
 		newTitle.PerspectiveTitle = name
-		if len(streamPerspective.DriverUrls) > 0 {
-			number := streamPerspective.DriverUrls[0].DriverRacingnumber
+		if len(streamPerspective.Drivers) > 0 {
+			number := streamPerspective.Drivers[0].Driver.DriverRacingnumber
 			name = fmt.Sprintf("(%2d) %s", number, name)
 		}
 
@@ -276,11 +276,11 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 			nodes := session.getPlaybackNodes(newTitle, streamPerspective.Self)
 			appendNodes(streamNode, nodes...)
 		})
-		if len(streamPerspective.DriverUrls) > 0 {
+		if len(streamPerspective.Drivers) > 0 {
 			if teamsContasiner == nil {
 				teamsContasiner = tview.NewTreeNode("Teams").SetExpanded(false)
 			}
-			team := streamPerspective.DriverUrls[0].TeamURL
+			team := streamPerspective.Drivers[0].Driver.TeamURL
 			teamNode, ok := teams[team.Name]
 			if !ok {
 				teamNode = tview.NewTreeNode(team.Name).SetExpanded(false)

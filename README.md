@@ -3,7 +3,7 @@
 
 # F1Viewer
 
-### F1TV was updated so F1viewer does not work anymore.
+### F1Viewer requires an F1TV pro account to stream VODs!
 
 ![preview image](https://i.imgur.com/ik2ZRw5.png)
 
@@ -11,9 +11,9 @@
 
 * [Usage](#usage)
 * [FAQ](#faq)
-* [Logs](#logs)
 * [Config](#config)
 * [Custom Commands](#custom-commands)
+* [Logs](#logs)
 
 ## Usage
 
@@ -44,15 +44,14 @@ F1TV sometimes requires a cookie to be set to open the links in a .m3u8 file. If
 #### MPV is opening but I'm not getting audio
 Please make sure you are using the latest version of MPV. If you use Windows please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
 
-## Logs
-By default F1viewer saves all info and error messages to log files. Under Windows the logs are saved in the same folder as the binary, with macOS and Linux they are saved to `$HOME/.local/share/F1viewer/`. 
-The log folder can be changed in the config.
 ## Config
-When you first start F1viewer a boilerplate config is automatically generated. On widows systems it is located in the same folder as the binary, on macOS and Linux it is in `$HOME/.config/F1viewer`
+When you first start F1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
 
 The default config looks like this
 ```json
 {
+	"username": "",
+	"password": "",
 	"live_retry_timeout": 60,
 	"preferred_language": "en",
 	"check_updates": true,
@@ -131,3 +130,7 @@ There are several placeholder variables you can use that will be replaced by F1v
 If you have ideas for more variables feel free to open an issue.
 
 **Tip**: To get Windows commands like `echo`, `dir`, etc. to work, you'll need to prepend them with `"cmd", "/C"`, so for example `["echo", "hello"]` turns into `["cmd", "/C", "echo", "hello"]`
+
+## Logs
+By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. 
+The log folder can be changed in the config. Logs can also be turned off completely.

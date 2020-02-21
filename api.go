@@ -66,10 +66,14 @@ type sessionStruct struct {
 }
 
 type channel struct {
-	UID        string   `json:"uid"`
-	Self       string   `json:"self"`
-	Name       string   `json:"name"`
-	DriverUrls []driver `json:"driver_urls"`
+	UID     string             `json:"uid"`
+	Self    string             `json:"self"`
+	Name    string             `json:"name"`
+	Drivers []driveroccurrence `json:"driveroccurrence_urls"`
+}
+
+type driveroccurrence struct {
+	Driver driver `json:"driver_url,omitempty"`
 }
 
 type driver struct {
@@ -151,7 +155,7 @@ func getSeasons() (s seasons, err error) {
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("has_content")).
 		AddField(golark.NewField("eventoccurrence_urls")).
-		OrderBy(year).
+		OrderBy(year, golark.Ascending).
 		Execute(&s)
 	return
 }
@@ -206,11 +210,12 @@ func getSessionStreams(sessionID string) ([]channel, error) {
 		AddField(golark.NewField("channel_urls").
 			WithSubField(golark.NewField("self")).
 			WithSubField(golark.NewField("name")).
-			WithSubField(golark.NewField("driver_urls").
-				WithSubField(golark.NewField("driver_racingnumber")).
-				WithSubField(golark.NewField("team_url").
-					WithSubField(golark.NewField("name")).
-					WithSubField(golark.NewField("colour"))))).
+			WithSubField(golark.NewField("driveroccurrence_urls").
+				WithSubField(golark.NewField("driver_url").
+					WithSubField(golark.NewField("driver_racingnumber")).
+					WithSubField(golark.NewField("team_url").
+						WithSubField(golark.NewField("name")).
+						WithSubField(golark.NewField("colour")))))).
 		Execute(&channels)
 
 	return channels.Channels, err

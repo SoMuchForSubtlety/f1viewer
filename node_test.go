@@ -13,6 +13,7 @@ import (
 )
 
 func TestFullSessionSeasons(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"objects":[{"uid":"race_12345","year":2019,"has_content":true,"name":"2019 Season"},{"uid":"race_6789","year":2020,"has_content":false,"name":"2020 Season"}]}`)
 	}))

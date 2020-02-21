@@ -43,6 +43,7 @@ var activeTheme = struct {
 type viewerSession struct {
 	cfg config
 
+	authtoken string
 	// tview
 	app        *tview.Application
 	textWindow *tview.TextView
@@ -73,7 +74,6 @@ func main() {
 	go session.CheckUpdate()
 
 	// set vod types nodes
-
 	session.tree.GetRoot().AddChild(session.getCollectionsNode())
 	nodes, err := session.getVodTypeNodes()
 	if err != nil {
@@ -114,16 +114,63 @@ func newSession(cfg config) *viewerSession {
 		session.app.Draw()
 	})
 
+	token, err := session.login()
+	if err != nil {
+		session.logError(err)
+		session.initUIWithForm()
+	} else {
+		session.authtoken = token
+		session.logInfo("logged in!")
+		session.initUI()
+	}
+
+	return session
+}
+
+func (session *viewerSession) initUIWithForm() {
+
+	form := tview.NewForm().
+		AddInputField("username", session.cfg.Username, 30, nil, session.updateUsername).
+		AddInputField("password", session.cfg.Password, 30, nil, session.updatePassword).
+		AddButton("test", session.testAuth).
+		AddButton("save", session.closeForm)
+
+	formTreeFlex := tview.NewFlex()
+	if !session.cfg.HorizontalLayout {
+		formTreeFlex.SetDirection(tview.FlexRow)
+	}
+
+	formTreeFlex.
+		AddItem(form, 0, 2, true).
+		AddItem(session.tree, 0, 3, false)
+
+	masterFlex := tview.NewFlex()
+	if session.cfg.HorizontalLayout {
+		masterFlex.SetDirection(tview.FlexRow)
+	}
+
+	masterFlex.
+		AddItem(formTreeFlex, 0, session.cfg.TreeRatio, true).
+		AddItem(session.textWindow, 0, session.cfg.OutputRatio, false)
+
+	session.app.SetRoot(masterFlex, true)
+}
+
+func (session *viewerSession) initUI() {
 	flex := tview.NewFlex().
-		AddItem(session.tree, 0, cfg.TreeRatio, true).
-		AddItem(session.textWindow, 0, cfg.OutputRatio, false)
+		AddItem(session.tree, 0, session.cfg.TreeRatio, true).
+		AddItem(session.textWindow, 0, session.cfg.OutputRatio, false)
 
 	if session.cfg.HorizontalLayout {
 		flex.SetDirection(tview.FlexRow)
 	}
-	session.app.SetRoot(flex, true)
 
-	return session
+	session.app.SetRoot(flex, true)
+}
+
+func (session *viewerSession) closeForm() {
+	session.testAuth()
+	session.initUI()
 }
 
 func (session *viewerSession) checkLive() {

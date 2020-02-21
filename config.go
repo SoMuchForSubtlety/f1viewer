@@ -6,21 +6,24 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"time"
 )
 
 type config struct {
-	LiveRetryTimeout      int       `json:"live_retry_timeout"`
-	Lang                  string    `json:"preferred_language"`
-	CheckUpdate           bool      `json:"check_updates"`
-	SaveLogs              bool      `json:"save_logs"`
-	LogLocation           string    `json:"log_location"`
-	DownloadLocation      string    `json:"download_location"`
-	CustomPlaybackOptions []command `json:"custom_playback_options"`
-	HorizontalLayout      bool      `json:"horizontal_layout"`
-	Theme                 theme     `json:"theme"`
-	TreeRatio             int       `json:"tree_ratio"`
-	OutputRatio           int       `json:"output_ratio"`
+	Username              string    `json:"username,omitempty"`
+	Password              string    `json:"password,omitempty"`
+	LiveRetryTimeout      int       `json:"live_retry_timeout,omitempty"`
+	Lang                  string    `json:"preferred_language,omitempty"`
+	CheckUpdate           bool      `json:"check_updates,omitempty"`
+	SaveLogs              bool      `json:"save_logs,omitempty"`
+	LogLocation           string    `json:"log_location,omitempty"`
+	DownloadLocation      string    `json:"download_location,omitempty"`
+	CustomPlaybackOptions []command `json:"custom_playback_options,omitempty"`
+	HorizontalLayout      bool      `json:"horizontal_layout,omitempty"`
+	Theme                 theme     `json:"theme,omitempty"`
+	TreeRatio             int       `json:"tree_ratio,omitempty"`
+	OutputRatio           int       `json:"output_ratio,omitempty"`
 }
 
 type theme struct {
@@ -51,7 +54,7 @@ func loadConfig() (config, error) {
 		cfg.LiveRetryTimeout = 60
 		cfg.Lang = "en"
 		cfg.CheckUpdate = true
-		cfg.SaveLogs = true
+		cfg.SaveLogs = false
 		cfg.TreeRatio = 1
 		cfg.OutputRatio = 1
 		err = cfg.save()
@@ -71,6 +74,50 @@ func loadConfig() (config, error) {
 		cfg.OutputRatio = 1
 	}
 	return cfg, err
+}
+
+func getConfigPath() (string, error) {
+	path, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	path += string(os.PathSeparator) + "f1viewer" + string(os.PathSeparator)
+
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(path, os.ModePerm)
+	}
+	return path, err
+}
+
+func getLogPath(cfg config) (string, error) {
+	var path string
+	if cfg.LogLocation == "" {
+		// windows, macos
+		switch runtime.GOOS {
+		case "windows", "darwin":
+			configPath, err := getConfigPath()
+			if err != nil {
+				return "", err
+			}
+			path = configPath + string(os.PathSeparator) + "logs" + string(os.PathSeparator)
+		default:
+			// linux, etc.
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return "", err
+			}
+			path = home + "/.local/share/f1viewer/"
+		}
+	} else {
+		path = cfg.LogLocation
+	}
+
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(path, os.ModePerm)
+	}
+	return path, err
 }
 
 func (cfg config) save() error {
@@ -105,4 +152,20 @@ func configureLogging(cfg config) (*os.File, error) {
 		return logFile, nil
 	}
 	return nil, nil
+}
+
+func (session *viewerSession) updateUsername(username string) {
+	session.cfg.Username = username
+	err := session.cfg.save()
+	if err != nil {
+		session.logError("[ERROR] could not save login credentials", err)
+	}
+}
+
+func (session *viewerSession) updatePassword(password string) {
+	session.cfg.Password = password
+	err := session.cfg.save()
+	if err != nil {
+		session.logError("[ERROR] could not save login credentials", err)
+	}
 }

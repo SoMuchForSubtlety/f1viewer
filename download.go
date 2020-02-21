@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,7 +29,7 @@ func (cfg config) downloadAsset(url string, title string) (filepath string, cook
 }
 
 // returns valid m3u8 URL as string
-func getPlayableURL(assetID string) (string, error) {
+func getPlayableURL(assetID, token string) (string, error) {
 	var formattedID string
 	isChannel := false
 	if strings.Contains(assetID, "/api/channels/") {
@@ -45,18 +44,15 @@ func getPlayableURL(assetID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	req.Header.Set("Authorization", "JWT "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		message, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("Unable to read error message from server: %w", err)
-		}
-		return "", errors.New(string(message))
+	err = checkResponse(resp)
+	if err != nil {
+		return "", err
 	}
 
 	// extract url form json
@@ -140,7 +136,6 @@ func fixData(lines []string, url string) []string {
 
 // write slice of lines to file and return the full file path
 func (cfg config) writeToFile(lines []string, filename string) (string, error) {
-	log.Println(cfg.DownloadLocation)
 	if cfg.DownloadLocation != "" {
 		if _, err := os.Stat(cfg.DownloadLocation); os.IsNotExist(err) {
 			err = os.MkdirAll(cfg.DownloadLocation, os.ModePerm)

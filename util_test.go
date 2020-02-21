@@ -12,13 +12,14 @@ import (
 )
 
 func TestSanitizeFileName(t *testing.T) {
-	title := `file name: "with" <illegal> \/cahracters|`
+	t.Parallel()
+	title := `file name: "with" <illegal> \/characters|`
 	var target string
 	title = sanitizeFileName(title)
 	if runtime.GOOS == "windows" {
-		target = `file name with illegal cahracters`
+		target = `file name with illegal characters`
 	} else {
-		target = `file name: "with" <illegal> \ cahracters|`
+		target = `file name: "with" <illegal> \ characters|`
 	}
 
 	assert.Equal(t, target, title)
@@ -49,6 +50,7 @@ var colorPairs = []struct {
 }
 
 func TestColorToHexString(t *testing.T) {
+	t.Parallel()
 	for _, s := range colorPairs {
 		hex := colortoHexString(tcell.GetColor(s.name))
 		assert.Equal(t, s.hex, hex)
@@ -56,13 +58,18 @@ func TestColorToHexString(t *testing.T) {
 }
 
 func TestHexStringToColor(t *testing.T) {
+	t.Parallel()
 	for _, s := range colorPairs {
-		color := hexStringToColor(s.hex)
-		assert.Equal(t, color.Hex(), tcell.GetColor(s.name).Hex())
+		t.Run(s.name, func(t *testing.T) {
+			t.Parallel()
+			color := hexStringToColor(s.hex)
+			assert.Equal(t, color.Hex(), tcell.GetColor(s.name).Hex())
+		})
 	}
 }
 
 func TestWithBlink(t *testing.T) {
+	t.Parallel()
 	// TODO add check for colors
 	originalScreen := `
 node title┌────────┐
@@ -102,6 +109,7 @@ loading...┌────────┐
 }
 
 func TestGetYearAndRace(t *testing.T) {
+	t.Parallel()
 	// TODO add checks for post 2020 events
 	year, race, err := getYearAndRace("1914_ITA_FP2_F1TV")
 	assert.Nil(t, err)
@@ -126,6 +134,7 @@ func TestGetYearAndRace(t *testing.T) {
 }
 
 func TestLog(t *testing.T) {
+	t.Parallel()
 	expectedInfo := `
                ┌─────────────┐
                │INFO: info   │

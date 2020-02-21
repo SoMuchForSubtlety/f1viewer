@@ -30,7 +30,7 @@ type titles struct {
 }
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {
-	url, err := getPlayableURL(cc.EpID)
+	url, err := getPlayableURL(cc.EpID, session.authtoken)
 	if err != nil {
 		return err
 	}
