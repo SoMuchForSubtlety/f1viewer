@@ -1,9 +1,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/SoMuchForSubtlety/F1viewer)](https://goreportcard.com/report/github.com/SoMuchForSubtlety/F1viewer)
 ![](https://github.com/SoMuchForSubtlety/F1viewer/workflows/Test/badge.svg)
 
-# F1Viewer
+# F1viewer
 
-### F1Viewer requires an F1TV pro account to stream VODs!
+### F1viewer requires an F1TV pro account to stream VODs!
 
 ![preview image](https://i.imgur.com/ik2ZRw5.png)
 
@@ -17,7 +17,7 @@
 
 ## Usage
 
- 1. **get F1Viewer** 
+ 1. **get F1viewer** 
 
 	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
 
@@ -26,24 +26,24 @@
 	build it yourself
 	
 	    $ git clone https://github.com/SoMuchForSubtlety/F1viewer/
-	    $ cd F1Viewer
+	    $ cd F1viewer
 	    $ go build
 	    
  2. **Download MPV**
 
-	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1Viewer binary or add it to your PATH environment variable.
+	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1viewer binary or add it to your PATH environment variable.
 	
 	(You can also use other players, see [Custom Commands](#custom-commands)) 
 
 ## FAQ
-#### F1Viewer is not showing a live session / loading very slowly
+#### F1viewer is not showing a live session / loading very slowly
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
 Start your stream as soon as possible at the start of the session and you can usually avoid this. 
 #### MPV is opening but I'm not getting audio
 Please make sure you are using the latest version of MPV. If you use Windows please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
 
 ## Config
-When you first start F1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
+When you first start F1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\F1viewer`, on macOS in `$HOME/Library/Application Support/F1viewer` and on Linux in `$XDG_CONFIG_HOME/F1viewer` or `$HOME/.config/F1viewer`.
 
 The default config looks like this
 ```json
@@ -126,5 +126,5 @@ If you have ideas for more variables feel free to open an issue.
 **Tip**: To get Windows commands like `echo`, `dir`, etc. to work, you'll need to prepend them with `"cmd", "/C"`, so for example `["echo", "hello"]` turns into `["cmd", "/C", "echo", "hello"]`
 
 ## Logs
-By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. 
+By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/F1viewer/`. 
 The log folder can be changed in the config. Logs can also be turned off completely.

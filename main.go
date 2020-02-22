@@ -120,7 +120,6 @@ func newSession(cfg config) *viewerSession {
 		session.initUIWithForm()
 	} else {
 		session.authtoken = token
-		session.logInfo("logged in!")
 		session.initUI()
 	}
 
