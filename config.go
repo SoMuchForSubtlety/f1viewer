@@ -18,7 +18,6 @@ type config struct {
 	CheckUpdate           bool      `json:"check_updates,omitempty"`
 	SaveLogs              bool      `json:"save_logs,omitempty"`
 	LogLocation           string    `json:"log_location,omitempty"`
-	DownloadLocation      string    `json:"download_location,omitempty"`
 	CustomPlaybackOptions []command `json:"custom_playback_options,omitempty"`
 	HorizontalLayout      bool      `json:"horizontal_layout,omitempty"`
 	Theme                 theme     `json:"theme,omitempty"`

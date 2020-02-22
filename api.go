@@ -12,6 +12,10 @@ import (
 
 var endpoint = "https://f1tv.formula1.com/api/"
 
+const (
+	liveSlug = "grand-prix-weekend-live"
+)
+
 type episode struct {
 	Title        string   `json:"title"`
 	Subtitle     string   `json:"subtitle"`
@@ -107,6 +111,26 @@ type collectionList struct {
 	Objects []collection `json:"objects"`
 }
 
+func getLiveWeekendEvent() (eventStruct, bool, error) {
+	type container struct {
+		Objects []collection `json:"objects"`
+	}
+
+	var liveSet container
+	err := golark.NewRequest(endpoint, "sets", "").
+		AddField(golark.NewField("items")).
+		WithFilter("slug", golark.NewFilter(golark.Equals, liveSlug)).
+		Execute(&liveSet)
+	if err != nil {
+		return eventStruct{}, false, err
+	}
+	if len(liveSet.Objects) == 0 || len(liveSet.Objects[0].Items) == 0 {
+		return eventStruct{}, false, nil
+	}
+	event, err := getEvent(liveSet.Objects[0].Items[0].ContentURL)
+	return event, true, err
+}
+
 func getCollectionList() (collList collectionList, err error) {
 	err = golark.NewRequest(endpoint, "sets", "").
 		AddField(golark.NewField("title")).
@@ -174,6 +198,7 @@ func getSession(sessionID string) (session sessionStruct, err error) {
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("status")).
 		AddField(golark.NewField("uid")).
+		AddField(golark.NewField("session_name")).
 		Execute(&session)
 	return
 }

@@ -39,7 +39,7 @@ func updateAvailable() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	checksums, _, err := downloadData(url)
+	checksums, err := downloadData(url)
 	if err != nil {
 		return false, err
 	}

@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell"
@@ -71,24 +69,6 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	})
 	nodes = append(nodes, playNode)
 
-	downloadNode := tview.NewTreeNode("Download .m3u8").
-		SetColor(activeTheme.ActionNodeColor)
-	downloadNode.SetSelectedFunc(func() {
-		downloadNode.SetColor(activeTheme.ActionNodeColor)
-		url, err := getPlayableURL(epID, session.authtoken)
-		if err != nil {
-			session.logError(err)
-			return
-		}
-		path, _, err := session.cfg.downloadAsset(url, sessionTitles.String())
-		if err != nil {
-			session.logError(err)
-			return
-		}
-		session.logInfo("Saved \"", filepath.Base(path), "\"")
-	})
-	nodes = append(nodes, downloadNode)
-
 	streamNode := tview.NewTreeNode("Copy URL to clipboard").
 		SetColor(activeTheme.ActionNodeColor)
 	streamNode.SetSelectedFunc(func() {
@@ -110,47 +90,32 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 
 func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 	var sessionNode *tview.TreeNode
-	home, err := getHomepageContent()
-	if err != nil {
+
+	event, eventFound, err := getLiveWeekendEvent()
+	if err != nil || !eventFound {
 		return false, sessionNode, err
 	}
-	var contentURL string
-	found := false
-	for _, item := range home.Items {
-		contentURL = item.ContentURL
-		if strings.Contains(contentURL, "/api/event-occurrence/") {
-			found = true
-			break
-		}
-	}
-	if found {
-		var t titles
-		event, err := getEvent(contentURL)
+
+	var t titles
+	t.EventTitle = event.Name
+	for _, sessionID := range event.SessionoccurrenceUrls {
+		s, err := getSession(sessionID)
 		if err != nil {
 			return false, sessionNode, err
 		}
-		t.EventTitle = event.Name
-		for _, sessionID := range event.SessionoccurrenceUrls {
-			s, err := getSession(sessionID)
+		st := t
+		st.SessionTitle = s.Name
+		if s.Status == "live" {
+			streams, err := getSessionStreams(s.UID)
 			if err != nil {
 				return false, sessionNode, err
 			}
-			st := t
-			st.SessionTitle = s.Name
-			if s.Status == "live" {
-				streams, err := getSessionStreams(s.UID)
-				if err != nil {
-					return false, sessionNode, err
-				}
-				sessionNode = tview.NewTreeNode(s.Name + " - LIVE").
-					SetColor(activeTheme.LiveColor).
-					SetExpanded(false)
-				channels := session.getPerspectiveNodes(st, streams)
-				for _, stream := range channels {
-					sessionNode.AddChild(stream)
-				}
-				return true, sessionNode, nil
-			}
+			sessionNode = tview.NewTreeNode(s.SessionName + " - LIVE").
+				SetColor(activeTheme.LiveColor).
+				SetExpanded(false)
+			channels := session.getPerspectiveNodes(st, streams)
+			appendNodes(sessionNode, channels...)
+			return true, sessionNode, nil
 		}
 	}
 	return false, sessionNode, nil

@@ -35,17 +35,9 @@ func (session *viewerSession) runCustomCommand(cc commandContext) error {
 		return err
 	}
 	// replace variables
-	var filepath string
 	tmpCommand := make([]string, len(cc.CustomOptions.Command))
 	copy(tmpCommand, cc.CustomOptions.Command)
 	for i := range tmpCommand {
-		if strings.Contains(tmpCommand[i], "$file") && filepath == "" {
-			filepath, _, err = session.cfg.downloadAsset(url, cc.Titles.String())
-			if err != nil {
-				return err
-			}
-		}
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$file", filepath)
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$url", url)
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.Titles.SessionTitle)
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$event", cc.Titles.EventTitle)
