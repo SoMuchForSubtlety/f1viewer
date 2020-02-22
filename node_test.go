@@ -43,11 +43,11 @@ Full Race Weekends  ┌──────────────────┐
 	session.tree.GetRoot().AddChild(node)
 	session.tree.SetCurrentNode(node)
 
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	assert.Equal(t, expectedUnselected, toTextScreen(screen))
 
 	handler := session.tree.InputHandler()
 	handler(tcell.NewEventKey(tcell.KeyEnter, ' ', tcell.ModNone), func(p tview.Primitive) {})
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 1000)
 	assert.Equal(t, expectedSelected, toTextScreen(screen))
 }
