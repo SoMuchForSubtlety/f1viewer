@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var activeTheme = struct {
@@ -50,7 +51,20 @@ type viewerSession struct {
 	tree       *tview.TreeView
 }
 
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+)
+
 func main() {
+	app := kingpin.New("f1viewer", "a TUI client for F1TV")
+	app.Version(buildVersion(version, commit, date))
+	app.VersionFlag.Short('v')
+	app.HelpFlag.Short('h')
+
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+
 	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatal("Could not open config: ", err)
@@ -197,20 +211,13 @@ func (session *viewerSession) checkLive() {
 	}
 }
 
-func (session *viewerSession) CheckUpdate() {
-	if !session.cfg.CheckUpdate {
-		return
+func buildVersion(version, commit, date string) string {
+	result := fmt.Sprintf("Version:     %s", version)
+	if commit != "" {
+		result += fmt.Sprintf("\nGit commit:  %s", commit)
 	}
-	node, err := session.getUpdateNode()
-	if err != nil {
-		session.logInfo(err)
-	} else {
-		session.logInfo("Newer version found!")
-		if re, ok := node.GetReference().(release); ok {
-			fmt.Fprintln(session.textWindow, "\n[blue::bu]"+re.Name+"[-::-]\n")
-			fmt.Fprintln(session.textWindow, re.Body)
-		}
-		insertNodeAtTop(session.tree.GetRoot(), node)
-		session.app.Draw()
+	if date != "" {
+		result += fmt.Sprintf("\nBuilt:       %s", date)
 	}
+	return result
 }

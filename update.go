@@ -1,18 +1,11 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
-	"strings"
 
 	"github.com/rivo/tview"
 )
@@ -20,12 +13,11 @@ import (
 const githubURL = "https://api.github.com/repos/SoMuchForSubtlety/F1viewer/releases/latest"
 
 type release struct {
-	Name   string `json:"name"`
-	Body   string `json:"body"`
-	Assets []struct {
-		Name               string `json:"name"`
-		BrowserDownloadURL string `json:"browser_download_url"`
-	} `json:"assets"`
+	TagName    string `json:"tag_name"`
+	Name       string `json:"name"`
+	Draft      bool   `json:"draft"`
+	Prerelease bool   `json:"prerelease"`
+	Body       string `json:"body"`
 }
 
 func getRelease() (release, error) {
@@ -34,83 +26,50 @@ func getRelease() (release, error) {
 	return re, err
 }
 
-func updateAvailable() (bool, error) {
-	url, err := getHashfileLink()
+func (session *viewerSession) CheckUpdate() {
+	if !session.cfg.CheckUpdate {
+		return
+	}
+	release, err := getRelease()
 	if err != nil {
-		return false, err
+		session.logError("could not check for release: ", err)
+		return
 	}
-	checksums, err := downloadData(url)
-	if err != nil {
-		return false, err
+	if release.TagName == version {
+		return
 	}
-	hash, err := calculateHash()
-	if err != nil {
-		return false, err
-	}
-	re1 := regexp.MustCompile(`^[a-z0-9]+`)
-	for _, line := range checksums {
-		match := re1.FindString(line)
-		if strings.ToLower(match) == strings.ToLower(hash) {
-			return false, nil
-		}
-	}
-	return true, nil
-}
 
-func getHashfileLink() (string, error) {
-	re, err := getRelease()
-	if err != nil {
-		return "", err
-	}
-	for _, asset := range re.Assets {
-		if asset.Name == "checksums.txt" {
-			return asset.BrowserDownloadURL, nil
-		}
-	}
-	return "", errors.New("no checksums.txt found")
-}
+	session.logInfo("New version found!")
+	fmt.Fprintln(session.textWindow, "\n[blue::bu]"+release.Name+"[-::-]\n")
+	fmt.Fprintln(session.textWindow, release.Body)
 
-func calculateHash() (string, error) {
-	hasher := sha256.New()
-	f, err := os.Open(os.Args[0])
-	if err != nil {
-		return "", err
-	}
-	if _, err := io.Copy(hasher, f); err != nil {
-		return "", err
-	}
-	f.Close()
-	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
+	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").
+		SetColor(activeTheme.UpdateColor).
+		SetExpanded(false)
+	getUpdateNode := tview.NewTreeNode("download update").
+		SetColor(activeTheme.ActionNodeColor).
+		SetSelectedFunc(func() {
+			err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
+			if err != nil {
+				session.logError(err)
+			}
+		})
+	stopCheckingNode := tview.NewTreeNode("don't tell me about updates")
 
-func (session *viewerSession) getUpdateNode() (*tview.TreeNode, error) {
-	hasUpdate, err := updateAvailable()
-	if err != nil {
-		return nil, err
-	}
-	if !hasUpdate {
-		return nil, errors.New("no update available")
-	}
-	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").SetColor(activeTheme.UpdateColor).SetExpanded(false)
-	getUpdateNode := tview.NewTreeNode("download update").SetColor(activeTheme.ActionNodeColor)
-	getUpdateNode.SetSelectedFunc(func() {
-		err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
-		if err != nil {
-			session.logError(err)
-		}
-	})
-	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").SetColor(activeTheme.ActionNodeColor)
-	stopCheckingNode.SetSelectedFunc(func() {
-		session.cfg.CheckUpdate = false
-		err := session.cfg.save()
-		if err != nil {
-			session.logError(err)
-		}
-		session.logInfo("Checking for updates turned off.")
-	})
+	stopCheckingNode.SetColor(activeTheme.ActionNodeColor).
+		SetSelectedFunc(func() {
+			session.cfg.CheckUpdate = false
+			err := session.cfg.save()
+			if err != nil {
+				session.logError(err)
+			}
+			stopCheckingNode.SetText("update checks turned off")
+		})
 	updateNode.AddChild(getUpdateNode)
 	updateNode.AddChild(stopCheckingNode)
-	return updateNode, err
+
+	insertNodeAtTop(session.tree.GetRoot(), updateNode)
+	session.app.Draw()
 }
 
 func openbrowser(url string) error {

@@ -4,7 +4,6 @@ config.json
 *.m3u8
 goreleaser.exe
 .backup.yml
-.goreleaser.yml
 dist/
 *.exe~
 .vscode/

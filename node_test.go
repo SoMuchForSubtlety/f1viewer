@@ -43,7 +43,7 @@ Full Race Weekends  ┌──────────────────┐
 	session.tree.GetRoot().AddChild(node)
 	session.tree.SetCurrentNode(node)
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 1000)
 	assert.Equal(t, expectedUnselected, toTextScreen(screen))
 
 	handler := session.tree.InputHandler()

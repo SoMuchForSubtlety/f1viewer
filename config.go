@@ -11,18 +11,18 @@ import (
 )
 
 type config struct {
-	Username              string    `json:"username,omitempty"`
-	Password              string    `json:"password,omitempty"`
-	LiveRetryTimeout      int       `json:"live_retry_timeout,omitempty"`
-	Lang                  string    `json:"preferred_language,omitempty"`
-	CheckUpdate           bool      `json:"check_updates,omitempty"`
-	SaveLogs              bool      `json:"save_logs,omitempty"`
-	LogLocation           string    `json:"log_location,omitempty"`
-	CustomPlaybackOptions []command `json:"custom_playback_options,omitempty"`
-	HorizontalLayout      bool      `json:"horizontal_layout,omitempty"`
-	Theme                 theme     `json:"theme,omitempty"`
-	TreeRatio             int       `json:"tree_ratio,omitempty"`
-	OutputRatio           int       `json:"output_ratio,omitempty"`
+	Username              string    `json:"username"`
+	Password              string    `json:"password"`
+	LiveRetryTimeout      int       `json:"live_retry_timeout"`
+	Lang                  string    `json:"preferred_language"`
+	CheckUpdate           bool      `json:"check_updates"`
+	SaveLogs              bool      `json:"save_logs"`
+	LogLocation           string    `json:"log_location"`
+	CustomPlaybackOptions []command `json:"custom_playback_options"`
+	HorizontalLayout      bool      `json:"horizontal_layout"`
+	Theme                 theme     `json:"theme"`
+	TreeRatio             int       `json:"tree_ratio"`
+	OutputRatio           int       `json:"output_ratio"`
 }
 
 type theme struct {

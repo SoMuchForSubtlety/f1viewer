@@ -1,0 +1,71 @@
+project_name: f1viewer
+builds:
+  - 
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - 386
+archive:
+  format: binary
+  replacements:
+    amd64: 64-bit
+    386: 32-bit
+    darwin: macOS
+  files:
+    - none*
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - Merge pull request
+    - Merge branch
+nfpms:
+  -
+    description: TUI client for F1TV
+    license: GPLv3
+    homepage: https://github.com/SoMuchForSubtlety/f1viewer/
+    maintainer: SoMuchForSubtlety <s0muchfrsubtlety@gmail.com>
+    replacements:
+      darwin: macOS
+    formats:
+      - deb
+      - rpm
+    dependencies:
+      - mpv
+    recommends:
+      - xclip
+snapcrafts:
+  -
+    replacements:
+      darwin: macOS
+    publish: true
+    summary: TUI client for F1TV
+    description: |
+      F1viewer is a terminal F1TV client that lets you watch F1 with mpv
+      or any other player that supports HLS streams.
+    grade: stable
+    confinement: classic
+    license: GPL-3.0-only
+    base: core18
+brews:
+  -
+    description: TUI client for F1TV
+    homepage: https://github.com/SoMuchForSubtlety/f1viewer/
+    folder: Formula
+    github:
+      owner: SoMuchForSubtlety
+      name: homebrew-tap
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    dependencies:
+      - mpv
