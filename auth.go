@@ -116,7 +116,7 @@ func checkResponse(resp *http.Response) error {
 func (session *viewerSession) testAuth() {
 	token, err := session.login()
 	if err != nil {
-		session.logError("could not log in ", err)
+		session.logError(err)
 	} else {
 		session.authtoken = token
 		session.logInfo("login successful!")

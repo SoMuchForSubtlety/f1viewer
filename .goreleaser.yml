@@ -8,14 +8,15 @@ builds:
     goarch:
       - amd64
       - 386
-archive:
-  format: binary
-  replacements:
-    amd64: 64-bit
-    386: 32-bit
-    darwin: macOS
-  files:
-    - none*
+archives:
+  -
+    format: binary
+    replacements:
+      amd64: 64-bit
+      386: 32-bit
+      darwin: macOS
+    files:
+      - none*
 checksum:
   name_template: "checksums.txt"
 snapshot:
@@ -31,7 +32,7 @@ changelog:
 nfpms:
   -
     description: TUI client for F1TV
-    license: GPLv3
+    license: GPL-3.0
     homepage: https://github.com/SoMuchForSubtlety/f1viewer/
     maintainer: SoMuchForSubtlety <s0muchfrsubtlety@gmail.com>
     replacements:
@@ -52,9 +53,9 @@ snapcrafts:
     description: |
       F1viewer is a terminal F1TV client that lets you watch F1 with mpv
       or any other player that supports HLS streams.
-    grade: stable
+    grade: edge
     confinement: classic
-    license: GPL-3.0-only
+    license: GPL-3.0
     base: core18
 brews:
   -

@@ -124,15 +124,12 @@ func newSession(cfg config) *viewerSession {
 	root.AddChild(session.getFullSessionsNode())
 	session.textWindow.SetBorder(true)
 	session.tree.SetSelectedFunc(session.toggleVisibility)
-	session.textWindow.SetChangedFunc(func() {
-		session.app.Draw()
-	})
 
 	token, err := session.login()
 	if err != nil {
-		session.logError(err)
 		session.initUIWithForm()
 	} else {
+		log.Println("logged in!")
 		session.authtoken = token
 		session.initUI()
 	}
@@ -144,7 +141,7 @@ func (session *viewerSession) initUIWithForm() {
 
 	form := tview.NewForm().
 		AddInputField("username", session.cfg.Username, 30, nil, session.updateUsername).
-		AddInputField("password", session.cfg.Password, 30, nil, session.updatePassword).
+		AddPasswordField("password", "", 30, '*', session.updatePassword).
 		AddButton("test", session.testAuth).
 		AddButton("save", session.closeForm)
 
