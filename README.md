@@ -55,7 +55,7 @@ The default config looks like this
 	"check_updates": true,
 	"save_logs": true,
 	"log_location": "",
-	"custom_playback_options": null,
+	"custom_playback_options": [],
 	"horizontal_layout": false,
 	"tree_ratio": 1,
 	"output_ratio": 1,

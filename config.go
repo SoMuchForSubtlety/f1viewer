@@ -137,20 +137,21 @@ func (cfg config) save() error {
 }
 
 func configureLogging(cfg config) (*os.File, error) {
-	if cfg.SaveLogs {
-		logPath, err := getLogPath(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("Could not get log path: %w", err)
-		}
-		completePath := fmt.Sprint(logPath, time.Now().Format("2006-01-02"), ".log")
-		logFile, err := os.OpenFile(completePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			return nil, fmt.Errorf("Could not open log file: %w", err)
-		}
-		log.SetOutput(logFile)
-		return logFile, nil
+	if !cfg.SaveLogs {
+		log.SetOutput(ioutil.Discard)
+		return nil, nil
 	}
-	return nil, nil
+	logPath, err := getLogPath(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get log path: %w", err)
+	}
+	completePath := fmt.Sprint(logPath, time.Now().Format("2006-01-02"), ".log")
+	logFile, err := os.OpenFile(completePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("Could not open log file: %w", err)
+	}
+	log.SetOutput(logFile)
+	return logFile, nil
 }
 
 func (session *viewerSession) updateUsername(username string) {

@@ -48,12 +48,12 @@ snapcrafts:
   -
     replacements:
       darwin: macOS
-    publish: true
+    publish: false
     summary: TUI client for F1TV
     description: |
       F1viewer is a terminal F1TV client that lets you watch F1 with mpv
       or any other player that supports HLS streams.
-    grade: edge
+    grade: stable
     confinement: classic
     license: GPL-3.0
     base: core18

@@ -150,9 +150,15 @@ func (session *viewerSession) initUIWithForm() {
 		formTreeFlex.SetDirection(tview.FlexRow)
 	}
 
-	formTreeFlex.
-		AddItem(form, 0, 2, true).
-		AddItem(session.tree, 0, 3, false)
+	if session.cfg.HorizontalLayout {
+		formTreeFlex.
+			AddItem(form, 50, 0, true).
+			AddItem(session.tree, 0, 1, false)
+	} else {
+		formTreeFlex.
+			AddItem(form, 7, 0, true).
+			AddItem(session.tree, 0, 1, false)
+	}
 
 	masterFlex := tview.NewFlex()
 	if session.cfg.HorizontalLayout {
