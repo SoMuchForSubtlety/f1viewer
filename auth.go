@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/99designs/keyring"
 )
 
 const (
@@ -30,7 +32,7 @@ type tokenResponse struct {
 }
 
 func (session *viewerSession) login() (string, error) {
-	auth, err := authenticate(session.cfg.Username, session.cfg.Password)
+	auth, err := authenticate(session.username, session.password)
 	if err != nil {
 		return "", fmt.Errorf("could not log in: %w", err)
 	}
@@ -120,5 +122,63 @@ func (session *viewerSession) testAuth() {
 	} else {
 		session.authtoken = token
 		session.logInfo("login successful!")
+	}
+}
+
+func (session *viewerSession) openRing() error {
+	backupPath, err := getConfigPath()
+	if err != nil {
+		return fmt.Errorf("Could not open config: %w", err)
+	}
+	ring, err := keyring.Open(keyring.Config{
+		ServiceName: "f1viewer",
+		FileDir:     backupPath,
+		FilePasswordFunc: func(s string) (string, error) {
+			return s, nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+	session.ring = ring
+	return nil
+}
+
+func (session *viewerSession) loadCredentials() error {
+	username, err := session.ring.Get("username")
+	if err != nil {
+		return fmt.Errorf("Could not get username: %w", err)
+	}
+	session.username = string(username.Data)
+
+	password, err := session.ring.Get("password")
+	if err != nil {
+		return fmt.Errorf("Could not get password: %w", err)
+	}
+	session.password = string(password.Data)
+	return nil
+}
+
+func (session *viewerSession) updateUsername(username string) {
+	session.username = username
+	err := session.ring.Set(keyring.Item{
+		Description: "F1TV username",
+		Key:         "username",
+		Data:        []byte(username),
+	})
+	if err != nil {
+		session.logError("[ERROR] could not save login credentials", err)
+	}
+}
+
+func (session *viewerSession) updatePassword(password string) {
+	session.password = password
+	err := session.ring.Set(keyring.Item{
+		Description: "F1TV password",
+		Key:         "password",
+		Data:        []byte(password),
+	})
+	if err != nil {
+		session.logError("[ERROR] could not save login credentials", err)
 	}
 }

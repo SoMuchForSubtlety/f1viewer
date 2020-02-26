@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/99designs/keyring"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -44,6 +45,9 @@ var activeTheme = struct {
 type viewerSession struct {
 	cfg config
 
+	ring      keyring.Keyring
+	username  string
+	password  string
 	authtoken string
 	// tview
 	app        *tview.Application
@@ -65,18 +69,10 @@ func main() {
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	cfg, err := loadConfig()
-	if err != nil {
-		log.Fatal("Could not open config: ", err)
-	}
-
-	logFile, err := configureLogging(cfg)
+	session, err := newSession()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logFile.Close()
-
-	session := newSession(cfg)
 	go func() {
 		if err := session.app.Run(); err != nil {
 			log.Fatal(err)
@@ -103,26 +99,46 @@ func main() {
 	<-c
 }
 
-func newSession(cfg config) *viewerSession {
-	cfg.Theme.apply()
-	root := tview.NewTreeNode("Categories").
-		SetSelectable(false)
+func newSession() (*viewerSession, error) {
+	var err error
+	session := &viewerSession{}
 
-	session := &viewerSession{
-		cfg: cfg,
-		app: tview.NewApplication(),
-		tree: tview.NewTreeView().
-			SetRoot(root).
-			SetCurrentNode(root).
-			SetTopLevel(1),
-		textWindow: tview.NewTextView().
-			SetWordWrap(false).
-			SetWrap(false).
-			SetDynamicColors(true),
+	session.cfg, err = loadConfig()
+	if err != nil {
+		return nil, fmt.Errorf("Could not open config: %w", err)
 	}
 
+	err = session.openRing()
+	if err != nil {
+		return nil, fmt.Errorf("Could not access credential store: %w", err)
+	}
+	err = session.loadCredentials()
+	if err != nil {
+		session.username = ""
+		session.password = ""
+	}
+
+	logFile, err := configureLogging(session.cfg)
+	if err != nil {
+		return nil, err
+	}
+	defer logFile.Close()
+
+	session.app = tview.NewApplication()
+
+	root := tview.NewTreeNode("Categories").SetSelectable(false)
 	root.AddChild(session.getFullSessionsNode())
+	session.tree = tview.NewTreeView().
+		SetRoot(root).
+		SetCurrentNode(root).
+		SetTopLevel(1)
+
+	session.textWindow = tview.NewTextView().
+		SetWordWrap(false).
+		SetWrap(false).
+		SetDynamicColors(true)
 	session.textWindow.SetBorder(true)
+
 	session.tree.SetSelectedFunc(session.toggleVisibility)
 
 	token, err := session.login()
@@ -134,13 +150,13 @@ func newSession(cfg config) *viewerSession {
 		session.initUI()
 	}
 
-	return session
+	return session, nil
 }
 
 func (session *viewerSession) initUIWithForm() {
 
 	form := tview.NewForm().
-		AddInputField("username", session.cfg.Username, 30, nil, session.updateUsername).
+		AddInputField("username", session.username, 30, nil, session.updateUsername).
 		AddPasswordField("password", "", 30, '*', session.updatePassword).
 		AddButton("test", session.testAuth).
 		AddButton("save", session.closeForm)

@@ -11,8 +11,6 @@ import (
 )
 
 type config struct {
-	Username              string    `json:"username"`
-	Password              string    `json:"password"`
 	LiveRetryTimeout      int       `json:"live_retry_timeout"`
 	Lang                  string    `json:"preferred_language"`
 	CheckUpdate           bool      `json:"check_updates"`
@@ -72,6 +70,7 @@ func loadConfig() (config, error) {
 	if cfg.OutputRatio < 1 {
 		cfg.OutputRatio = 1
 	}
+	cfg.Theme.apply()
 	return cfg, err
 }
 
@@ -152,20 +151,4 @@ func configureLogging(cfg config) (*os.File, error) {
 	}
 	log.SetOutput(logFile)
 	return logFile, nil
-}
-
-func (session *viewerSession) updateUsername(username string) {
-	session.cfg.Username = username
-	err := session.cfg.save()
-	if err != nil {
-		session.logError("[ERROR] could not save login credentials", err)
-	}
-}
-
-func (session *viewerSession) updatePassword(password string) {
-	session.cfg.Password = password
-	err := session.cfg.save()
-	if err != nil {
-		session.logError("[ERROR] could not save login credentials", err)
-	}
 }

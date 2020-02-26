@@ -14,6 +14,7 @@
 * [Config](#config)
 * [Custom Commands](#custom-commands)
 * [Logs](#logs)
+* [Credentials](#credentials)
 
 ## Usage
 
@@ -43,13 +44,11 @@ Start your stream as soon as possible at the start of the session and you can us
 Please make sure you are using the latest version of MPV. If you use Windows please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
 
 ## Config
-When you first start F1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\F1viewer`, on macOS in `$HOME/Library/Application Support/F1viewer` and on Linux in `$XDG_CONFIG_HOME/F1viewer` or `$HOME/.config/F1viewer`.
+When you first start F1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
 
 The default config looks like this
 ```json
 {
-	"username": "",
-	"password": "",
 	"live_retry_timeout": 60,
 	"preferred_language": "en",
 	"check_updates": true,
@@ -128,3 +127,7 @@ If you have ideas for more variables feel free to open an issue.
 ## Logs
 By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/F1viewer/`. 
 The log folder can be changed in the config. Logs can also be turned off completely.
+
+## Credentials
+Your login credentials for F1TV are not saved in the config file. On macOS they are stored in the keychain and on Windows the credential store is used. If you're using linux where they are save depends on your distro. Generally [Pass](https://www.passwordstore.org/), [Secret Service](https://specifications.freedesktop.org/secret-service/latest/) / [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring) and KWallet are supported.
+If it does not work on your distro or you encounter any problems please open an issue.
