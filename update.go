@@ -35,7 +35,9 @@ func (session *viewerSession) CheckUpdate() {
 		session.logError("could not check for release: ", err)
 		return
 	}
-	if release.TagName == version {
+	if release.TagName == version ||
+		release.TagName == "v"+version ||
+		release.TagName == "dev" {
 		return
 	}
 
