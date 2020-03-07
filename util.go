@@ -42,12 +42,16 @@ func getYearAndRace(input string) (string, string, error) {
 }
 
 func (session *viewerSession) logError(v ...interface{}) {
-	fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]ERROR:[-::-]", colortoHexString(activeTheme.ErrorColor)), fmt.Sprint(v...))
+	if session.textWindow != nil {
+		fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]ERROR:[-::-]", colortoHexString(activeTheme.ErrorColor)), fmt.Sprint(v...))
+	}
 	log.Println("[ERROR]", fmt.Sprint(v...))
 }
 
 func (session *viewerSession) logInfo(v ...interface{}) {
-	fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]INFO:[-::-]", colortoHexString(activeTheme.InfoColor)), fmt.Sprint(v...))
+	if session.textWindow != nil {
+		fmt.Fprintln(session.textWindow, fmt.Sprintf("[%s::b]INFO:[-::-]", colortoHexString(activeTheme.InfoColor)), fmt.Sprint(v...))
+	}
 	log.Println("[INFO]", fmt.Sprint(v...))
 }
 
