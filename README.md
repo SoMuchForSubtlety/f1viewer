@@ -125,7 +125,7 @@ If you have ideas for more variables feel free to open an issue.
 **Tip**: To get Windows commands like `echo`, `dir`, etc. to work, you'll need to prepend them with `"cmd", "/C"`, so for example `["echo", "hello"]` turns into `["cmd", "/C", "echo", "hello"]`
 
 ## Logs
-By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/F1viewer/`. 
+By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. 
 The log folder can be changed in the config. Logs can also be turned off completely.
 
 ## Credentials

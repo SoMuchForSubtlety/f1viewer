@@ -101,7 +101,7 @@ loading...┌────────┐
 	time.Sleep(time.Millisecond * 100)
 	assert.Equal(t, loadingScreen, toTextScreen(simScreen))
 
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 1000)
 
 	assert.Equal(t, originalScreen, toTextScreen(simScreen))
 	assert.Equal(t, originalColor, node.GetColor())

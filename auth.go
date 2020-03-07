@@ -126,15 +126,14 @@ func (session *viewerSession) testAuth() {
 }
 
 func (session *viewerSession) openRing() error {
-	backupPath, err := getConfigPath()
-	if err != nil {
-		return fmt.Errorf("Could not open config: %w", err)
-	}
 	ring, err := keyring.Open(keyring.Config{
 		ServiceName: "f1viewer",
-		FileDir:     backupPath,
-		FilePasswordFunc: func(s string) (string, error) {
-			return s, nil
+		AllowedBackends: []keyring.BackendType{
+			keyring.KWalletBackend,
+			keyring.PassBackend,
+			keyring.SecretServiceBackend,
+			keyring.KeychainBackend,
+			keyring.WinCredBackend,
 		},
 	})
 	if err != nil {
@@ -159,26 +158,31 @@ func (session *viewerSession) loadCredentials() error {
 	return nil
 }
 
-func (session *viewerSession) updateUsername(username string) {
-	session.username = username
+func (session *viewerSession) saveCredentials() error {
 	err := session.ring.Set(keyring.Item{
 		Description: "F1TV username",
 		Key:         "username",
-		Data:        []byte(username),
+		Data:        []byte(session.username),
 	})
 	if err != nil {
-		session.logError("[ERROR] could not save login credentials", err)
+		return fmt.Errorf("[ERROR] could not save username credentials %w", err)
 	}
+
+	err = session.ring.Set(keyring.Item{
+		Description: "F1TV password",
+		Key:         "password",
+		Data:        []byte(session.password),
+	})
+	if err != nil {
+		return fmt.Errorf("[ERROR] could not save password credentials %w", err)
+	}
+	return nil
+}
+
+func (session *viewerSession) updateUsername(username string) {
+	session.username = username
 }
 
 func (session *viewerSession) updatePassword(password string) {
 	session.password = password
-	err := session.ring.Set(keyring.Item{
-		Description: "F1TV password",
-		Key:         "password",
-		Data:        []byte(password),
-	})
-	if err != nil {
-		session.logError("[ERROR] could not save login credentials", err)
-	}
 }

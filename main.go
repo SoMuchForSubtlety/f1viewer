@@ -69,8 +69,10 @@ func main() {
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	session, err := newSession()
+	session, logfile, err := newSession()
+	defer logfile.Close()
 	if err != nil {
+		fmt.Println("[ERROR]", err)
 		log.Fatal(err)
 	}
 	go func() {
@@ -99,30 +101,29 @@ func main() {
 	<-c
 }
 
-func newSession() (*viewerSession, error) {
+func newSession() (*viewerSession, *os.File, error) {
 	var err error
 	session := &viewerSession{}
 
 	session.cfg, err = loadConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Could not open config: %w", err)
-	}
-
-	err = session.openRing()
-	if err != nil {
-		return nil, fmt.Errorf("Could not access credential store: %w", err)
-	}
-	err = session.loadCredentials()
-	if err != nil {
-		session.username = ""
-		session.password = ""
+		return nil, nil, fmt.Errorf("Could not open config: %w", err)
 	}
 
 	logFile, err := configureLogging(session.cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer logFile.Close()
+
+	err = session.openRing()
+	if err != nil {
+		return nil, logFile, fmt.Errorf("Could not access credential store: %w", err)
+	}
+
+	err = session.loadCredentials()
+	if err != nil {
+		session.logError(err)
+	}
 
 	session.app = tview.NewApplication()
 
@@ -145,12 +146,12 @@ func newSession() (*viewerSession, error) {
 	if err != nil {
 		session.initUIWithForm()
 	} else {
-		log.Println("logged in!")
+		session.logInfo("logged in!")
 		session.authtoken = token
 		session.initUI()
 	}
 
-	return session, nil
+	return session, logFile, nil
 }
 
 func (session *viewerSession) initUIWithForm() {
@@ -202,6 +203,10 @@ func (session *viewerSession) initUI() {
 
 func (session *viewerSession) closeForm() {
 	session.testAuth()
+	err := session.saveCredentials()
+	if err != nil {
+		session.logError(err)
+	}
 	session.initUI()
 }
 

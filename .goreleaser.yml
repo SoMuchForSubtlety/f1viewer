@@ -10,13 +10,13 @@ builds:
       - 386
 archives:
   -
-    format: binary
     replacements:
       amd64: 64-bit
       386: 32-bit
       darwin: macOS
-    files:
-      - none*
+    format_overrides:
+      - goos: windows
+        format: zip
 checksum:
   name_template: "checksums.txt"
 snapshot:
@@ -42,21 +42,22 @@ nfpms:
       - rpm
     dependencies:
       - mpv
+      - libsecret
     recommends:
       - xclip
-# snapcrafts:
-#   -
-#     replacements:
-#       darwin: macOS
-#     publish: false
-#     summary: TUI client for F1TV
-#     description: |
-#       F1viewer is a terminal F1TV client that lets you watch F1 with mpv
-#       or any other player that supports HLS streams.
-#     grade: stable
-#     confinement: classic
-#     license: GPL-3.0
-#     base: core18
+snapcrafts:
+  -
+    replacements:
+      darwin: macOS
+    publish: false
+    summary: TUI client for F1TV
+    description: |
+      F1viewer is a terminal F1TV client that lets you watch F1 with mpv
+      or any other player that supports HLS streams.
+    grade: stable
+    confinement: classic
+    license: GPL-3.0
+    base: core18
 brews:
   -
     description: TUI client for F1TV

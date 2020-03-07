@@ -51,7 +51,7 @@ func loadConfig() (config, error) {
 		cfg.LiveRetryTimeout = 60
 		cfg.Lang = "en"
 		cfg.CheckUpdate = true
-		cfg.SaveLogs = false
+		cfg.SaveLogs = true
 		cfg.TreeRatio = 1
 		cfg.OutputRatio = 1
 		err = cfg.save()
