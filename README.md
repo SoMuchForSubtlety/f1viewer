@@ -87,8 +87,6 @@ The default config looks like this
 	}
 }
 ```
- - `username` your F1TV username
- - `password` your F1TV password
  - `live_retry_timeout` is the interval f1viewer looks for a live F1TV session seconds
  - `preferred_language` is the language MPV is started with, so the correct audio track gets selected
  - `check_updates` determines if F1TV should check GitHub for new versions
