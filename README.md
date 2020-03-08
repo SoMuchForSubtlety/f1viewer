@@ -1,50 +1,61 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/SoMuchForSubtlety/F1viewer)](https://goreportcard.com/report/github.com/SoMuchForSubtlety/F1viewer)
-![](https://github.com/SoMuchForSubtlety/F1viewer/workflows/Test/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/SoMuchForSubtlety/f1viewer)](https://goreportcard.com/report/github.com/SoMuchForSubtlety/f1viewer)
+![](https://github.com/SoMuchForSubtlety/f1viewer/workflows/Test/badge.svg)
 
-# F1viewer
-
-### F1viewer requires an F1TV pro account to stream VODs!
+# f1viewer
 
 ![preview image](https://i.imgur.com/ik2ZRw5.png)
 
 ## Table of Contents
 
-* [Usage](#usage)
-* [FAQ](#faq)
-* [Config](#config)
-* [Custom Commands](#custom-commands)
-* [Logs](#logs)
-* [Credentials](#credentials)
+* [Installation](#Installation)
+* [FAQ](#Faq)
+* [Config](#Config)
+* [Custom Commands](#Custom-commands)
+* [Logs](#Logs)
+* [Credentials](#Credentials)
 
-## Usage
+## Installation
 
- 1. **get F1viewer** 
+### Windows
+1. Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)  
+2. Download [MPV](https://mpv.io/installation/)  
+**Note:** MPV needs to be in the same folder as f1viewer or added to you PATH
 
-	download [pre-compiled binaries](https://github.com/SoMuchForSubtlety/F1viewer/releases/)
+### macOS
+* You can install f1viewer with Homebrew
+	```bash
+	brew tap SoMuchForSubtlety/tap
+	brew install SoMuchForSubtlety/tap/f1viewer
+	``` 
+* Or [download the binary directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 
-	**or**
+### Debian and Ubuntu
+Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
 
-	build it yourself
-	
-	    $ git clone https://github.com/SoMuchForSubtlety/F1viewer/
-	    $ cd F1viewer
-	    $ go build
-	    
- 2. **Download MPV**
+### Fedora and openSUSE
+Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
 
-	Download it from [here](https://mpv.io/installation/) (Windows users please download from [here](https://sourceforge.net/projects/mpv-player-windows/files/)) and either put it in the same folder as the  F1viewer binary or add it to your PATH environment variable.
-	
-	(You can also use other players, see [Custom Commands](#custom-commands)) 
+### Arch
+Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/).  
+**Note:** you have to intstall one of the secret store optional dependencies!
+
+### Any other Linux distribution
+* Download the binary [directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
+* Install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
+* build it from source
+  ```bash
+  go get https://github.com/SoMuchForSubtlety/f1viewer
+  ```
 
 ## FAQ
-#### F1viewer is not showing a live session / loading very slowly
+#### f1viewer is not showing a live session / loading very slowly
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
 Start your stream as soon as possible at the start of the session and you can usually avoid this. 
 #### MPV is opening but I'm not getting audio
 Please make sure you are using the latest version of MPV. If you use Windows please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
 
 ## Config
-When you first start F1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
+When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
 
 The default config looks like this
 ```json
@@ -78,7 +89,7 @@ The default config looks like this
 ```
  - `username` your F1TV username
  - `password` your F1TV password
- - `live_retry_timeout` is the interval F1viewer looks for a live F1TV session seconds
+ - `live_retry_timeout` is the interval f1viewer looks for a live F1TV session seconds
  - `preferred_language` is the language MPV is started with, so the correct audio track gets selected
  - `check_updates` determines if F1TV should check GitHub for new versions
  - `save_logs` determines if logs should be saved
@@ -107,7 +118,7 @@ You can execute custom commands, for example to launch a different player. These
 
 `command` is where your command goes. It is saved as a list of args like in the examples above. Every argument should be a separate string! The following would be incorrect! `["ffmpeg", "-i $url", "-c copy", "$title.mp4"]`
 
-There are several placeholder variables you can use that will be replaced by F1viewer.
+There are several placeholder variables you can use that will be replaced by f1viewer.
 
  - `$url`: the content's URL
  - `$category`: the content's category (eg. "Documentary")
@@ -125,9 +136,9 @@ If you have ideas for more variables feel free to open an issue.
 **Tip**: To get Windows commands like `echo`, `dir`, etc. to work, you'll need to prepend them with `"cmd", "/C"`, so for example `["echo", "hello"]` turns into `["cmd", "/C", "echo", "hello"]`
 
 ## Logs
-By default F1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. 
+By default f1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. 
 The log folder can be changed in the config. Logs can also be turned off completely.
 
 ## Credentials
-Your login credentials for F1TV are not saved in the config file. On macOS they are stored in the keychain and on Windows the credential store is used. If you're using linux where they are save depends on your distro. Generally [Pass](https://www.passwordstore.org/), [Secret Service](https://specifications.freedesktop.org/secret-service/latest/) / [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring) and KWallet are supported.
+Your login credentials for F1TV are not saved in the config file. On macOS they are stored in the keychain and on Windows the credential store is used. If you're using Linux, where they are saved depends on your distro. Generally [Pass](https://www.passwordstore.org/), [Secret Service](https://specifications.freedesktop.org/secret-service/latest/) / [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring) and KWallet are supported.
 If it does not work on your distro or you encounter any problems please open an issue.

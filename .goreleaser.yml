@@ -32,7 +32,7 @@ changelog:
 nfpms:
   -
     description: TUI client for F1TV
-    license: GPL-3.0
+    license: GPL-3.0-only
     homepage: https://github.com/SoMuchForSubtlety/f1viewer/
     maintainer: SoMuchForSubtlety <s0muchfrsubtlety@gmail.com>
     replacements:
@@ -42,7 +42,6 @@ nfpms:
       - rpm
     dependencies:
       - mpv
-      - libsecret
     recommends:
       - xclip
 snapcrafts:
