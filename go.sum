@@ -1,5 +1,7 @@
 github.com/99designs/keyring v1.1.4 h1:x0g0zQ9bQKgNsLo0XSXAy1H8Q1RG/td+5OXJt+Ci8b8=
 github.com/99designs/keyring v1.1.4/go.mod h1:657DQuMrBZRtuL/voxVyiyb6zpMehlm5vLB9Qwrv904=
+github.com/99designs/keyring v1.1.5 h1:wLv7QyzYpFIyMSwOADq1CLTF9KbjbBfcnfmOGJ64aO4=
+github.com/99designs/keyring v1.1.5/go.mod h1:7hsVvt2qXgtadGevGJ4ujg+u8m6SpJ5TpHqTozIPqf0=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/SoMuchForSubtlety/golark v1.1.0 h1:K2uHmyXxg1km7wH8I4MoenEKqKZEkTzU/pltdO5m0u8=
 github.com/SoMuchForSubtlety/golark v1.1.0/go.mod h1:dfw7q1LhK4IcxsCSbcMYsi8snKYYhEhuuS9Lwstv9qk=
@@ -40,6 +42,8 @@ github.com/mattn/go-runewidth v0.0.8 h1:3tS41NlGYSmhhe/8fhGRzc+z3AYCw1Fe1WAyLuuj
 github.com/mattn/go-runewidth v0.0.8/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
 github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG+4E0Y=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
+github.com/mtibben/percent v0.2.1 h1:5gssi8Nqo8QU/r2pynCm+hBQHpkB/uNK7BJCFogWdzs=
+github.com/mtibben/percent v0.2.1/go.mod h1:KG9uO+SZkUp+VkRHsCdYQV3XSZrrSpR3O9ibNBTZrns=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/tview v0.0.0-20200219210816-cd38d7432498 h1:4CFNy7/q7P06AsIONZzuWy7jcdqEmYQvOZ9FAFZdbls=
