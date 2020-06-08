@@ -10,7 +10,7 @@ require (
 	github.com/atotto/clipboard v0.1.2
 	github.com/gdamore/tcell v1.3.0
 	github.com/rivo/tview v0.0.0-20200219210816-cd38d7432498
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/sys v0.0.0-20200219091948-cb0a6d8edb6c // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
