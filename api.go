@@ -70,10 +70,9 @@ type sessionStruct struct {
 }
 
 type channel struct {
-	UID     string             `json:"uid"`
-	Self    string             `json:"self"`
-	Name    string             `json:"name"`
-	Drivers []driveroccurrence `json:"driveroccurrence_urls"`
+	UID  string `json:"uid"`
+	Self string `json:"self"`
+	Name string `json:"name"`
 }
 
 type driveroccurrence struct {
@@ -235,12 +234,7 @@ func getSessionStreams(sessionID string) ([]channel, error) {
 		AddField(golark.NewField("channel_urls").
 			WithSubField(golark.NewField("self")).
 			WithSubField(golark.NewField("name")).
-			WithSubField(golark.NewField("driveroccurrence_urls").
-				WithSubField(golark.NewField("driver_url").
-					WithSubField(golark.NewField("driver_racingnumber")).
-					WithSubField(golark.NewField("team_url").
-						WithSubField(golark.NewField("name")).
-						WithSubField(golark.NewField("colour")))))).
+			WithSubField(golark.NewField("uid"))).
 		Execute(&channels)
 
 	return channels.Channels, err

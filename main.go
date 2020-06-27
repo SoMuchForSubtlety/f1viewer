@@ -117,7 +117,7 @@ func newSession() (*viewerSession, *os.File, error) {
 
 	err = session.openRing()
 	if err != nil {
-		return nil, logFile, fmt.Errorf("Could not access credential store: %w", err)
+		session.logError(fmt.Errorf("Could not access credential store: %w", err))
 	}
 
 	err = session.loadCredentials()
@@ -137,7 +137,8 @@ func newSession() (*viewerSession, *os.File, error) {
 	session.textWindow = tview.NewTextView().
 		SetWordWrap(false).
 		SetWrap(false).
-		SetDynamicColors(true)
+		SetDynamicColors(true).
+		SetChangedFunc(func() { session.app.Draw() })
 	session.textWindow.SetBorder(true)
 
 	session.tree.SetSelectedFunc(session.toggleVisibility)

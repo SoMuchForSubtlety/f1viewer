@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
-	"strconv"
 
 	"github.com/atotto/clipboard"
-	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
 
@@ -211,7 +208,6 @@ func (session *viewerSession) getSessionNodes(t titles, event eventStruct) ([]*t
 
 func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []channel) []*tview.TreeNode {
 	var channels []*tview.TreeNode
-	teams := make(map[string]*tview.TreeNode)
 	var teamsContasiner *tview.TreeNode
 	for _, streamPerspective := range perspectives {
 		streamPerspective := streamPerspective
@@ -228,10 +224,6 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 		}
 		newTitle := title
 		newTitle.PerspectiveTitle = name
-		if len(streamPerspective.Drivers) > 0 {
-			number := streamPerspective.Drivers[0].Driver.DriverRacingnumber
-			name = fmt.Sprintf("(%2d) %s", number, name)
-		}
 
 		streamNode := tview.NewTreeNode(name).
 			SetColor(activeTheme.ItemNodeColor)
@@ -241,25 +233,7 @@ func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []c
 			nodes := session.getPlaybackNodes(newTitle, streamPerspective.Self)
 			appendNodes(streamNode, nodes...)
 		})
-		if len(streamPerspective.Drivers) > 0 {
-			if teamsContasiner == nil {
-				teamsContasiner = tview.NewTreeNode("Teams").SetExpanded(false)
-			}
-			team := streamPerspective.Drivers[0].Driver.TeamURL
-			teamNode, ok := teams[team.Name]
-			if !ok {
-				teamNode = tview.NewTreeNode(team.Name).SetExpanded(false)
-				color, err := strconv.ParseInt(team.Colour[1:], 16, 32)
-				if err == nil {
-					teamNode.SetColor(tcell.NewHexColor(int32(color)))
-				}
-				teams[team.Name] = teamNode
-				teamsContasiner.AddChild(teamNode)
-			}
-			teamNode.AddChild(streamNode)
-		} else {
-			channels = append(channels, streamNode)
-		}
+		channels = append(channels, streamNode)
 	}
 	if teamsContasiner != nil {
 		channels = append(channels, teamsContasiner)

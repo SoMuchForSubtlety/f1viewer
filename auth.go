@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -144,6 +145,9 @@ func (session *viewerSession) openRing() error {
 }
 
 func (session *viewerSession) loadCredentials() error {
+	if session.ring == nil {
+		return errors.New("No keyring configured")
+	}
 	username, err := session.ring.Get("username")
 	if err != nil {
 		return fmt.Errorf("Could not get username: %w", err)
@@ -159,6 +163,9 @@ func (session *viewerSession) loadCredentials() error {
 }
 
 func (session *viewerSession) saveCredentials() error {
+	if session.ring == nil {
+		return errors.New("No keyring configured")
+	}
 	err := session.ring.Set(keyring.Item{
 		Description: "F1TV username",
 		Key:         "username",

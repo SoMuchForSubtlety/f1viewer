@@ -37,13 +37,14 @@ func (session *viewerSession) CheckUpdate() {
 	}
 	if release.TagName == version ||
 		release.TagName == "v"+version ||
-		release.TagName == "dev" {
+		version == "dev" {
 		return
 	}
 
 	session.logInfo("New version found!")
+	session.logInfo(release.TagName)
 	fmt.Fprintln(session.textWindow, "\n[blue::bu]"+release.Name+"[-::-]\n")
-	fmt.Fprintln(session.textWindow, release.Body)
+	fmt.Fprintln(session.textWindow, release.Body+"\n")
 
 	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").
 		SetColor(activeTheme.UpdateColor).
