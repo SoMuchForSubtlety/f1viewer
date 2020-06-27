@@ -10,7 +10,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13.x
+        go-version: 1.14.x
     - name: Checkout code
       uses: actions/checkout@v1
     - name: Test
@@ -24,7 +24,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13.x
+        go-version: 1.14.x
     - name: Checkout code
       uses: actions/checkout@v1
     - name: Build
