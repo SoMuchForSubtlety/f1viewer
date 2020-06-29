@@ -1,7 +1,7 @@
 # Maintainer: SoMuchForSubtlety <s0muchfrsubtlety@gmail.com>
 pkgname=f1viewer
-pkgver=1.0.0
-pkgrel=2
+pkgver=1.1.0
+pkgrel=1
 pkgdesc="TUI client for F1TV"
 arch=('x86_64')
 url="https://github.com/SoMuchForSubtlety/f1viewer"
@@ -14,22 +14,7 @@ optdepends=('xclip: copying URLs to clipboard'
             'kwallet: secret store backend')
 makedepends=('go-pie')
 source=("${pkgname}-${pkgver}.tar.gz::https://github.com/SoMuchForSubtlety/f1viewer/archive/v${pkgver}.tar.gz")
-sha256sums=('40986b7ed358adf2299882318d9ca81ef7f1bf730ed30b3c5da362518987d6af')
-
-prepare() {
-  if pacman -Qi keepassxc >/dev/null 2>&1; then
-    return 0
-  elif pacman -Qi pass >/dev/null 2>&1; then
-    return 0
-  elif pacman -Qi gnome-keyring >/dev/null 2>&1; then
-    return 0
-  elif pacman -Qi kwallet >/dev/null 2>&1; then
-    return 0
-  fi
-  
-  echo 'You need to install a secrets backend like gnome-keyring, kwallet, pass or keepassxc - you might want to install it with pacman -S --asdeps package_name' >&2;
-  return 1
-}
+sha256sums=('3d74093d54000c65f46a8a11aa55a5b535367689f963adace17d0f4c0ddf7802')
 
 build() {
   cd "${pkgname}-${pkgver}"

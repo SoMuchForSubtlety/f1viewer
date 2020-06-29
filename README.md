@@ -37,7 +37,6 @@ Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f
 
 ### Arch
 Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/).  
-**Note:** you have to intstall one of the secret store optional dependencies!
 
 ### Any other Linux distribution
 * Download the binary [directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
