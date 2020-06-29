@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/99designs/keyring"
+	"github.com/SoMuchForSubtlety/keyring"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 	"gopkg.in/alecthomas/kingpin.v2"

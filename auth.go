@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/99designs/keyring"
+	"github.com/SoMuchForSubtlety/keyring"
 )
 
 const (
