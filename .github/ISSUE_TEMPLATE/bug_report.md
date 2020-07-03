@@ -22,6 +22,9 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
+**F1TV account plan**
+Do you have a free, access or pro account?
+
 **Desktop (please complete the following information):**
  - OS
  - installation method
