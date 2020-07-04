@@ -8,7 +8,7 @@
 ## Table of Contents
 
 * [Installation](#Installation)
-* [FAQ](#Faq)
+* [FAQ](#Faq)f
 * [Config](#Config)
 * [Custom Commands](#Custom-commands)
 * [Logs](#Logs)
@@ -19,7 +19,7 @@
 ### Windows
 1. Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)  
 2. Download [MPV](https://mpv.io/installation/)  
-**Note:** MPV needs to be in the same folder as f1viewer or added to you PATH
+**Note:** MPV needs to be in the same folder as f1viewer or added to your PATH
 
 ### macOS
 * You can install f1viewer with Homebrew
@@ -49,7 +49,7 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 ## FAQ
 #### why is there a login, what credentials should I use
 You need an F1TV account to play VODs. Use your F1TV account email and password to log in. You can use the tab key to navigate the login form.
-#### when I try to play somethign I get a 4xx error
+#### when I try to play something I get a 4xx error
 You need an F1TV Access or Pro account to watch replays and live streams respectively. If you get the error but think your account should be able to play the selected content please open an issue.
 #### f1viewer is not showing a live session / loading very slowly
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
