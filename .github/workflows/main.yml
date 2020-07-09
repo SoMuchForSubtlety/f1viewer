@@ -4,28 +4,32 @@ jobs:
   test:
     strategy:
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.14.x
-    - name: Checkout code
-      uses: actions/checkout@v1
-    - name: Test
-      run: go test ./...
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.14.x
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Test
+        run: go test ./...
   build:
     strategy:
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.14.x
-    - name: Checkout code
-      uses: actions/checkout@v1
-    - name: Build
-      run: go build -v .
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.14.x
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Build
+        run: go build -v .
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}-f1viewer
+          path: f1viewer*
