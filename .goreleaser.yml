@@ -22,13 +22,7 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
-  sort: asc
-  filters:
-    exclude:
-    - '^docs:'
-    - '^test:'
-    - Merge pull request
-    - Merge branch
+  skip: true
 nfpms:
   -
     description: TUI client for F1TV
@@ -44,16 +38,17 @@ nfpms:
       - mpv
     recommends:
       - xclip
-brews:
-  -
-    description: TUI client for F1TV
-    homepage: https://github.com/SoMuchForSubtlety/f1viewer/
-    folder: Formula
-    github:
-      owner: SoMuchForSubtlety
-      name: homebrew-tap
-    commit_author:
-      name: goreleaserbot
-      email: goreleaser@carlosbecker.com
-    dependencies:
-      - mpv
+# does not work due to cgo not being supported by goreleaser
+# brews:
+#   -
+#     description: TUI client for F1TV
+#     homepage: https://github.com/SoMuchForSubtlety/f1viewer/
+#     folder: Formula
+#     github:
+#       owner: SoMuchForSubtlety
+#       name: homebrew-tap
+#     commit_author:
+#       name: goreleaserbot
+#       email: goreleaser@carlosbecker.com
+#     dependencies:
+#       - mpv
