@@ -126,6 +126,7 @@ func newSession() (*viewerSession, *os.File, error) {
 	}
 
 	session.app = tview.NewApplication()
+	session.app.EnableMouse(true)
 
 	root := tview.NewTreeNode("Categories").SetSelectable(false)
 	root.AddChild(session.getFullSessionsNode())
