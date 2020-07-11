@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 
 	"github.com/atotto/clipboard"
@@ -58,7 +59,8 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 			session.logError(err)
 			return
 		}
-		cmd := exec.Command("mpv", url, "--alang="+session.cfg.Lang, "--start=0", "--quiet")
+
+		cmd := exec.Command("mpv", url, "--alang="+session.cfg.Lang, "--start=0", "--quiet", fmt.Sprintf(`--title="%s"`, sessionTitles.String()))
 		err = session.runCmd(cmd)
 		if err != nil {
 			session.logError(err)
