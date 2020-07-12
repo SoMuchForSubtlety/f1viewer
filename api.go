@@ -75,6 +75,21 @@ type channel struct {
 	Name string `json:"name"`
 }
 
+func (c channel) PrettyName() string {
+	switch c.Name {
+	case "WIF":
+		return "Main Feed"
+	case "pit lane":
+		return "Pit Lane"
+	case "driver":
+		return "Driver Tracker"
+	case "data":
+		return "Data Channel"
+	default:
+		return c.Name
+	}
+}
+
 type driveroccurrence struct {
 	Driver driver `json:"driver_url,omitempty"`
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 
 	"github.com/atotto/clipboard"
@@ -206,22 +207,63 @@ func (session *viewerSession) getSessionNodes(t titles, event eventStruct) ([]*t
 	return sessions, nil
 }
 
+func (session *viewerSession) getFavoritesNode(perspectives []channel) *tview.TreeNode {
+	if len(session.cfg.FavoritesPlaybackOptions) == 0 {
+		return nil
+	}
+
+	// Cycle over the favorites to see if our channels contain any of them.
+	commands := make([]commandContext, 0)
+	for _, favoriteCmd := range session.cfg.FavoritesPlaybackOptions {
+		for _, channel := range perspectives {
+			// If we have a match, run the given command!
+			if favoriteCmd.Title == channel.PrettyName() {
+				context := commandContext{
+					Titles:        titles{PerspectiveTitle: favoriteCmd.Title},
+					EpID:          channel.Self,
+					CustomOptions: favoriteCmd,
+				}
+				commands = append(commands, context)
+			}
+		}
+	}
+
+	// If no favorites are found, stop.
+	if len(commands) == 0 {
+		return nil
+	}
+
+	streamNode := tview.NewTreeNode(fmt.Sprintf("Load favorites (%d found)", len(commands))).
+		SetColor(activeTheme.FavoritesNodeColor)
+
+	// When clicked, we execute all the commands.
+	streamNode.SetSelectedFunc(session.withBlink(streamNode, func() {
+		streamNode.SetSelectedFunc(nil)
+		for _, context := range commands {
+			err := session.runCustomCommand(context)
+			if err != nil {
+				session.logError(err)
+			}
+		}
+	}))
+
+	return streamNode
+}
+
 func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []channel) []*tview.TreeNode {
 	var channels []*tview.TreeNode
 	var teamsContasiner *tview.TreeNode
+
+	// Now add the favorites button at the top.
+	favorites := session.getFavoritesNode(perspectives)
+	if favorites != nil {
+		channels = append(channels, favorites)
+	}
+
 	for _, streamPerspective := range perspectives {
 		streamPerspective := streamPerspective
-		name := streamPerspective.Name
-		switch name {
-		case "WIF":
-			name = "Main Feed"
-		case "pit lane":
-			name = "Pit Lane"
-		case "driver":
-			name = "Driver Tracker"
-		case "data":
-			name = "Data Channel"
-		}
+		name := streamPerspective.PrettyName()
+
 		newTitle := title
 		newTitle.PerspectiveTitle = name
 

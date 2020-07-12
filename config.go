@@ -11,16 +11,17 @@ import (
 )
 
 type config struct {
-	LiveRetryTimeout      int       `json:"live_retry_timeout"`
-	Lang                  string    `json:"preferred_language"`
-	CheckUpdate           bool      `json:"check_updates"`
-	SaveLogs              bool      `json:"save_logs"`
-	LogLocation           string    `json:"log_location"`
-	CustomPlaybackOptions []command `json:"custom_playback_options"`
-	HorizontalLayout      bool      `json:"horizontal_layout"`
-	Theme                 theme     `json:"theme"`
-	TreeRatio             int       `json:"tree_ratio"`
-	OutputRatio           int       `json:"output_ratio"`
+	LiveRetryTimeout         int       `json:"live_retry_timeout"`
+	Lang                     string    `json:"preferred_language"`
+	CheckUpdate              bool      `json:"check_updates"`
+	SaveLogs                 bool      `json:"save_logs"`
+	LogLocation              string    `json:"log_location"`
+	CustomPlaybackOptions    []command `json:"custom_playback_options"`
+	FavoritesPlaybackOptions []command `json:"favorites_playback_options"`
+	HorizontalLayout         bool      `json:"horizontal_layout"`
+	Theme                    theme     `json:"theme"`
+	TreeRatio                int       `json:"tree_ratio"`
+	OutputRatio              int       `json:"output_ratio"`
 }
 
 type theme struct {
