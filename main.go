@@ -99,6 +99,7 @@ func main() {
 	logOutNode = logOutNode.SetColor(activeTheme.ActionNodeColor)
 	logOutNode = logOutNode.SetSelectedFunc(func()  {
 		session.logout()
+		session.initUIWithForm()
 	})
 	session.tree.GetRoot().AddChild(logOutNode)
 
