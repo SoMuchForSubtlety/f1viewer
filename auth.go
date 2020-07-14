@@ -46,9 +46,9 @@ func (session *viewerSession) login() (string, error) {
 
 func (session *viewerSession) logout() {
 	err := session.removeCredentials()
-	if err !=  nil {
+	if err != nil {
 		session.logError("Failed to log out:", err)
-	}else  {
+	} else {
 		session.logInfo("logged out!")
 	}
 	session.authtoken = ""

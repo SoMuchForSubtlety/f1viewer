@@ -97,7 +97,7 @@ func main() {
 
 	logOutNode := tview.NewTreeNode("Log Out")
 	logOutNode = logOutNode.SetColor(activeTheme.ActionNodeColor)
-	logOutNode = logOutNode.SetSelectedFunc(func()  {
+	logOutNode = logOutNode.SetSelectedFunc(func() {
 		session.logout()
 		session.initUIWithForm()
 	})
