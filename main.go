@@ -95,6 +95,14 @@ func main() {
 		session.app.Draw()
 	}
 
+	logOutNode := tview.NewTreeNode("Log Out")
+	logOutNode = logOutNode.SetColor(activeTheme.ActionNodeColor)
+	logOutNode = logOutNode.SetSelectedFunc(func() {
+		session.logout()
+		session.initUIWithForm()
+	})
+	session.tree.GetRoot().AddChild(logOutNode)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
