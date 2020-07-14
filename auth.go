@@ -44,6 +44,16 @@ func (session *viewerSession) login() (string, error) {
 	return token.Token, nil
 }
 
+func (session *viewerSession) logout() {
+	err := session.removeCredentials()
+	if err !=  nil {
+		session.logError("Failed to log out:", err)
+	}else  {
+		session.logInfo("logged out!")
+	}
+	session.authtoken = ""
+}
+
 func authenticate(username, password string) (authResponse, error) {
 	type request struct {
 		Login    string `json:"Login"`
@@ -183,6 +193,25 @@ func (session *viewerSession) saveCredentials() error {
 	if err != nil {
 		return fmt.Errorf("[ERROR] could not save password credentials %w", err)
 	}
+	return nil
+}
+
+func (session *viewerSession) removeCredentials() error {
+	if session.ring == nil {
+		return errors.New("No keyring configured")
+	}
+	err := session.ring.Remove("username")
+	if err != nil {
+		return fmt.Errorf("Could not remove username: %w", err)
+	}
+	session.username = ""
+
+	err = session.ring.Remove("password")
+	if err != nil {
+		return fmt.Errorf("Could not remove password: %w", err)
+	}
+	session.password = ""
+
 	return nil
 }
 
