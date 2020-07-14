@@ -9,9 +9,22 @@ import (
 	"strings"
 )
 
+type commandAndArgs []string
+
 type command struct {
-	Title   string   `json:"title"`
-	Command []string `json:"command"`
+	Title   string         `json:"title"`
+	Command commandAndArgs `json:"command"`
+}
+
+type multiCommand struct {
+	Title   string           `json:"title,omitempty"`
+	Targets []channelMatcher `json:"targets,omitempty"`
+}
+
+type channelMatcher struct {
+	MatchTitle string         `json:"match_title,omitempty"`
+	Command    commandAndArgs `json:"command,omitempty"`
+	CommandKey string         `json:"command_key,omitempty"`
 }
 
 type commandContext struct {

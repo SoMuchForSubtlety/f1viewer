@@ -21,7 +21,7 @@ var activeTheme = struct {
 	ActionNodeColor     tcell.Color
 	LoadingColor        tcell.Color
 	LiveColor           tcell.Color
-	FavoritesNodeColor  tcell.Color
+	MultiCommandColor   tcell.Color
 	UpdateColor         tcell.Color
 	NoContentColor      tcell.Color
 	InfoColor           tcell.Color
@@ -35,7 +35,7 @@ var activeTheme = struct {
 	ActionNodeColor:     tcell.ColorDarkCyan,
 	LoadingColor:        tcell.ColorDarkCyan,
 	LiveColor:           tcell.ColorRed,
-	FavoritesNodeColor:  tcell.ColorBlue,
+	MultiCommandColor:   tcell.ColorAquaMarine,
 	UpdateColor:         tcell.ColorDarkRed,
 	NoContentColor:      tcell.ColorOrangeRed,
 	InfoColor:           tcell.ColorGreen,

@@ -144,6 +144,9 @@ func (t theme) apply() {
 	if t.ErrorColor != "" {
 		activeTheme.ErrorColor = hexStringToColor(t.ErrorColor)
 	}
+	if t.MultiCommandColor != "" {
+		activeTheme.MultiCommandColor = hexStringToColor(t.MultiCommandColor)
+	}
 }
 
 func sanitizeFileName(s string) string {
