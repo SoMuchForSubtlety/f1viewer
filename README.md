@@ -69,7 +69,7 @@ The default config looks like this
 	"save_logs": true,
 	"log_location": "",
 	"custom_playback_options": [],
-	"favorites_playback_options": [],
+	"multi_commands": [],
 	"horizontal_layout": false,
 	"tree_ratio": 1,
 	"output_ratio": 1,
@@ -138,22 +138,28 @@ If you have ideas for more variables feel free to open an issue.
 
 **Tip**: To get Windows commands like `echo`, `dir`, etc. to work, you'll need to prepend them with `"cmd", "/C"`, so for example `["echo", "hello"]` turns into `["cmd", "/C", "echo", "hello"]`
 
-## Favorite Commands
-To make it easy to load the same feeds with the same commands every time, you can load your favorite commands. The `title` variable will be used to match the session feeds. For example, if your `title` is `Max Verstappen`, it will load any feed with that name, with the given command.
+## Multi Commands
+To make it easy to load the same feeds with the same commands every time, you can map multiple commands to one action. The `match_title` variable will be used to match the session feeds (it also allows regex). For example, if `match_title` is `Lando Norris`, it will load any feed with that name, with the given command.
+You can specify commands directly with `command`, or reference one of your [custom commands](#custom-command) titles with `command_key`.
 
 For an explanation on the `command` variable, see [Custom Commands](#custom-commands)
 
 ```json
-"favorites_playback_options": [
-	{
-		"title": "Max Verstappen",
-		"command": ["mpv", "--alang=en", "--start=0", "--quiet", "--no-border", "--title=$title", "--autofit-larger=1240", "-geometry=0:0", "$url"]
-	},
-	{
-		"title": "Lewis Hamilton",
-		"command": ["mpv", "--alang=en", "--start=0", "--quiet", "--no-border", "--title=$title", "--autofit-larger=1240", "-geometry=100%:0", "$url"]
-	}
-]
+	"multi_commands": [
+		{
+			"title": "main and pit feed",
+			"targets": [
+				{
+					"match_title": "Main Feed",
+					"command": ["mpv", "$url"]
+				},
+				{
+					"match_title": "Pit",
+					"command_key": "custom mpv"
+				}
+			]
+		}
+	]
 ```
 
 ## Logs
