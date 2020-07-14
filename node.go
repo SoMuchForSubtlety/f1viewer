@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 
 	"github.com/atotto/clipboard"
 	"github.com/rivo/tview"
@@ -208,22 +209,101 @@ func (session *viewerSession) getSessionNodes(t titles, event eventStruct) ([]*t
 	return sessions, nil
 }
 
+func (session *viewerSession) getMultiCommandNodes(perspectives []channel) []*tview.TreeNode {
+	if len(session.cfg.MultiCommand) == 0 {
+		return nil
+	}
+
+	var nodes []*tview.TreeNode
+
+	for _, multi := range session.cfg.MultiCommand {
+		var commands []commandContext
+		for _, target := range multi.Targets {
+			cmd, err := session.getCommand(target)
+			if err != nil {
+				session.logError("could not add target to multi command: ", err)
+				continue
+			}
+
+			perspective, err := findPerspectiveByName(target.MatchTitle, perspectives)
+			if err != nil {
+				continue
+			}
+
+			// If we have a match, run the given command!
+			context := commandContext{
+				Titles:        titles{PerspectiveTitle: multi.Title},
+				EpID:          perspective.Self,
+				CustomOptions: cmd,
+			}
+			commands = append(commands, context)
+		}
+		// If no favorites are found, continue
+		if len(commands) == 0 {
+			continue
+		}
+
+		multiNode := tview.NewTreeNode(multi.Title).SetColor(activeTheme.MultiCommandColor)
+		multiNode.SetSelectedFunc(session.withBlink(multiNode, func() {
+			multiNode.SetSelectedFunc(nil)
+			for _, context := range commands {
+				err := session.runCustomCommand(context)
+				if err != nil {
+					session.logError(err)
+				}
+			}
+		}))
+		nodes = append(nodes, multiNode)
+	}
+
+	return nodes
+}
+
+func findPerspectiveByName(name string, perspectives []channel) (channel, error) {
+	for _, perspective := range perspectives {
+		if perspective.PrettyName() == name {
+			return perspective, nil
+		}
+		// if the string doesn't match try regex
+		r, err := regexp.Compile(name)
+		if err != nil {
+			continue
+		}
+		if r.MatchString(perspective.PrettyName()) {
+			return perspective, nil
+		}
+	}
+	return channel{}, fmt.Errorf("found no perspective matching '%s'", name)
+}
+
+func (session *viewerSession) getCommand(matcher channelMatcher) (command, error) {
+	if len(matcher.Command) > 0 {
+		return command{Command: matcher.Command}, nil
+	}
+
+	if matcher.CommandKey == "" {
+		return command{}, fmt.Errorf("No command for matcher '%s' provided", matcher.MatchTitle)
+	}
+	for _, cmd := range session.cfg.CustomPlaybackOptions {
+		if cmd.Title == matcher.CommandKey {
+			return cmd, nil
+		}
+	}
+	return command{}, fmt.Errorf("found no command matching '%s'", matcher.CommandKey)
+}
+
 func (session *viewerSession) getPerspectiveNodes(title titles, perspectives []channel) []*tview.TreeNode {
 	var channels []*tview.TreeNode
 	var teamsContasiner *tview.TreeNode
+
+	// add the multi commands at the top
+	multiCommands := session.getMultiCommandNodes(perspectives)
+	channels = append(channels, multiCommands...)
+
 	for _, streamPerspective := range perspectives {
 		streamPerspective := streamPerspective
-		name := streamPerspective.Name
-		switch name {
-		case "WIF":
-			name = "Main Feed"
-		case "pit lane":
-			name = "Pit Lane"
-		case "driver":
-			name = "Driver Tracker"
-		case "data":
-			name = "Data Channel"
-		}
+		name := streamPerspective.PrettyName()
+
 		newTitle := title
 		newTitle.PerspectiveTitle = name
 
