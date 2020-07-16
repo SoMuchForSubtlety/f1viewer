@@ -78,7 +78,7 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 		}
 	}
 	accentColorString := colortoHexString(activeTheme.TerminalAccentColor)
-	fmt.Fprintln(session.textWindow, fmt.Sprintf("\n[%s::b][[-]%s[%s]]$[-::-] %s", accentColorString, wdir, accentColorString, strings.Join(cmd.Args, " ")))
+	fmt.Fprintf(session.textWindow, "[%s::b][[-]%s[%s]]$[-::-] %s\n", accentColorString, wdir, accentColorString, strings.Join(cmd.Args, " "))
 
 	cmd.Stdout = session.textWindow
 	cmd.Stderr = session.textWindow

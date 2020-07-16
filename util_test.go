@@ -90,9 +90,12 @@ loading...┌────────┐
 	node := tview.NewTreeNode(originalText)
 	node.SetColor(originalColor)
 
-	simScreen, s := newTestApp(20, 5)
+	simScreen, s := newTestApp(t, 20, 5)
 	s.tree.GetRoot().AddChild(node)
-	go s.app.Run()
+	go func() {
+		err := s.app.Run()
+		assert.NoError(t, err)
+	}()
 
 	go s.withBlink(node, func() {
 		time.Sleep(time.Millisecond * 200)
@@ -149,8 +152,11 @@ func TestLog(t *testing.T) {
                │             │
                └─────────────┘`
 
-	simScreen, s := newTestApp(30, 5)
-	go s.app.Run()
+	simScreen, s := newTestApp(t, 30, 5)
+	go func() {
+		err := s.app.Run()
+		assert.NoError(t, err)
+	}()
 	s.logInfo("info")
 	time.Sleep(time.Millisecond * 100)
 	assert.Equal(t, expectedInfo, toTextScreen(simScreen))
@@ -174,9 +180,10 @@ func toTextScreen(screen tcell.SimulationScreen) string {
 	return content
 }
 
-func newTestApp(x, y int) (tcell.SimulationScreen, viewerSession) {
+func newTestApp(t *testing.T, x, y int) (tcell.SimulationScreen, viewerSession) {
 	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
+	err := simScreen.Init()
+	assert.NoError(t, err)
 	simScreen.SetSize(x, y)
 
 	app := tview.NewApplication()
