@@ -32,12 +32,6 @@ type vodTypes struct {
 	} `json:"objects"`
 }
 
-type team struct {
-	Name   string `json:"name"`
-	Colour string `json:"colour"`
-	UID    string `json:"uid"`
-}
-
 type seasonStruct struct {
 	Name                string   `json:"name"`
 	HasContent          bool     `json:"has_content"`
@@ -88,19 +82,6 @@ func (c channel) PrettyName() string {
 	default:
 		return c.Name
 	}
-}
-
-type driveroccurrence struct {
-	Driver driver `json:"driver_url,omitempty"`
-}
-
-type driver struct {
-	LastName           string `json:"last_name"`
-	UID                string `json:"uid"`
-	FirstName          string `json:"first_name"`
-	DriverTla          string `json:"driver_tla"`
-	TeamURL            team   `json:"team_url"`
-	DriverRacingnumber int    `json:"driver_racingnumber"`
 }
 
 type collectionItem struct {
@@ -159,23 +140,6 @@ func getCollection(collID string) (coll collection, err error) {
 		AddField(golark.NewField("items")).
 		Execute(&coll)
 	return
-}
-
-func getHomepageContent() (collection, error) {
-	type container struct {
-		Objects []collection `json:"objects"`
-	}
-
-	var response container
-	err := golark.NewRequest(endpoint, "sets", "").
-		AddField(golark.NewField("items")).
-		WithFilter("slug", golark.NewFilter(golark.Equals, "home")).
-		Execute(&response)
-
-	if len(response.Objects) == 0 {
-		return collection{}, err
-	}
-	return response.Objects[0], err
 }
 
 func getVodTypes() (types vodTypes, err error) {

@@ -154,11 +154,9 @@ func (session *viewerSession) getEventNodes(season seasonStruct) ([]*tview.TreeN
 		}(eventID, m)
 	}
 	for index := 0; index < len(season.EventoccurrenceUrls); index++ {
-		select {
-		case err := <-errChan:
-			if err != nil {
-				return nil, err
-			}
+		err := <-errChan
+		if err != nil {
+			return nil, err
 		}
 	}
 	return events, nil
@@ -455,11 +453,9 @@ func (session *viewerSession) getCollectionContent(id string) ([]*tview.TreeNode
 }
 
 func appendNodes(parent *tview.TreeNode, children ...*tview.TreeNode) {
-	if children != nil {
-		for _, node := range children {
-			if node != nil {
-				parent.AddChild(node)
-			}
+	for _, node := range children {
+		if node != nil {
+			parent.AddChild(node)
 		}
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -81,18 +80,4 @@ func getPlayableURL(assetID, token string) (string, error) {
 	}
 	parsed, err := url.Parse(urlString)
 	return parsed.String(), err
-}
-
-func downloadData(url string) (lines []string, err error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return lines, err
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return lines, err
-	}
-	return strings.Split(string(bodyBytes), "\n"), nil
 }
