@@ -1,16 +1,13 @@
 project_name: f1viewer
 builds:
-  - 
-    goos:
+  - goos:
       - linux
       - windows
-      - darwin
     goarch:
       - amd64
       - 386
 archives:
-  -
-    replacements:
+  - replacements:
       amd64: 64-bit
       386: 32-bit
       darwin: macOS
@@ -24,8 +21,7 @@ snapshot:
 changelog:
   skip: true
 nfpms:
-  -
-    description: TUI client for F1TV
+  - description: TUI client for F1TV
     license: GPL-3.0-only
     homepage: https://github.com/SoMuchForSubtlety/f1viewer/
     maintainer: SoMuchForSubtlety <s0muchfrsubtlety@gmail.com>
@@ -34,10 +30,10 @@ nfpms:
     formats:
       - deb
       - rpm
-    dependencies:
-      - mpv
     recommends:
       - xclip
+      - mpv
+      - vlc
 # does not work due to cgo not being supported by goreleaser
 # brews:
 #   -

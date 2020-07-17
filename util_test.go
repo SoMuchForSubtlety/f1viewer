@@ -11,6 +11,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAvailableCommands(t *testing.T) {
+	t.Parallel()
+	_, s := newTestApp(t, 20, 5)
+	s.commands["test1"] = true
+	s.commands["test2"] = false
+
+	assert.True(t, s.commandAvailable("test1"))
+	assert.False(t, s.commandAvailable("test2"))
+	assert.False(t, s.commandAvailable("test3"))
+}
+
 func TestSanitizeFileName(t *testing.T) {
 	t.Parallel()
 	title := `file name: "with" <illegal> \/characters|`
@@ -209,5 +220,5 @@ func newTestApp(t *testing.T, x, y int) (tcell.SimulationScreen, viewerSession) 
 
 	app.SetRoot(flex, true)
 
-	return simScreen, viewerSession{tree: tree, app: app, textWindow: text}
+	return simScreen, viewerSession{tree: tree, app: app, textWindow: text, commands: make(map[string]bool)}
 }

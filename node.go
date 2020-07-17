@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os/exec"
 	"regexp"
 
 	"github.com/atotto/clipboard"
@@ -32,42 +31,25 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 		for i := range session.cfg.CustomPlaybackOptions {
 			com := session.cfg.CustomPlaybackOptions[i]
 			if len(com.Command) > 0 {
-				context := commandContext{
-					Titles:        sessionTitles,
-					EpID:          epID,
-					CustomOptions: com,
-				}
-				customNode := tview.NewTreeNode(com.Title).
-					SetColor(activeTheme.ActionNodeColor)
-				customNode.SetSelectedFunc(func() {
-					go func() {
-						err := session.runCustomCommand(context)
-						if err != nil {
-							session.logError(err)
-						}
-					}()
-				})
-				nodes = append(nodes, customNode)
+				nodes = append(nodes, session.createCommandNode(sessionTitles, epID, com))
 			}
 		}
 	}
 
-	playNode := tview.NewTreeNode("Play with MPV").
-		SetColor(activeTheme.ActionNodeColor)
-	playNode.SetSelectedFunc(func() {
-		url, err := getPlayableURL(epID, session.authtoken)
-		if err != nil {
-			session.logError(err)
-			return
+	if session.commandAvailable("mpv") {
+		mpvCommand := command{
+			Title:   "Play with MPV",
+			Command: []string{"mpv", "$url", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
 		}
-
-		cmd := exec.Command("mpv", url, "--alang="+session.cfg.Lang, "--start=0", "--quiet", fmt.Sprintf(`--title="%s"`, sessionTitles.String()))
-		err = session.runCmd(cmd)
-		if err != nil {
-			session.logError(err)
+		nodes = append(nodes, session.createCommandNode(sessionTitles, epID, mpvCommand))
+	}
+	if session.commandAvailable("vlc") {
+		vlcCommand := command{
+			Title:   "Play with VLC",
+			Command: []string{"vlc", "$url", "--meta-title=$title"},
 		}
-	})
-	nodes = append(nodes, playNode)
+		nodes = append(nodes, session.createCommandNode(sessionTitles, epID, vlcCommand))
+	}
 
 	streamNode := tview.NewTreeNode("Copy URL to clipboard").
 		SetColor(activeTheme.ActionNodeColor)
@@ -86,6 +68,26 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles titles, epID string
 	})
 	nodes = append(nodes, streamNode)
 	return nodes
+}
+
+func (session *viewerSession) createCommandNode(t titles, epID string, c command) *tview.TreeNode {
+	context := commandContext{
+		Titles:        t,
+		EpID:          epID,
+		CustomOptions: c,
+	}
+	node := tview.NewTreeNode(c.Title).
+		SetColor(activeTheme.ActionNodeColor)
+	node.SetSelectedFunc(func() {
+		go func() {
+			err := session.runCustomCommand(context)
+			if err != nil {
+				session.logError(err)
+			}
+		}()
+	})
+
+	return node
 }
 
 func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
