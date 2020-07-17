@@ -65,11 +65,18 @@ var (
 	date    = ""
 )
 
+var creds struct {
+	username, password string
+}
+
 func main() {
 	app := kingpin.New("f1viewer", "a TUI client for F1TV")
 	app.Version(buildVersion(version, commit, date))
 	app.VersionFlag.Short('v')
 	app.HelpFlag.Short('h')
+
+	app.Flag("user", "f1tv username").Short('u').StringVar(&creds.username)
+	app.Flag("pass", "f1tv password").Short('p').StringVar(&creds.password)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
@@ -138,6 +145,11 @@ func newSession() (*viewerSession, *os.File, error) {
 	err = session.loadCredentials()
 	if err != nil {
 		session.logError(err)
+	}
+
+	if creds.username != "" && creds.password != "" {
+		session.updateUsername(creds.username)
+		session.updatePassword(creds.password)
 	}
 
 	session.app = tview.NewApplication()
