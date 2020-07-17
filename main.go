@@ -55,6 +55,8 @@ type viewerSession struct {
 	app        *tview.Application
 	textWindow *tview.TextView
 	tree       *tview.TreeView
+
+	commands map[string]bool
 }
 
 var (
@@ -84,6 +86,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+	go session.checkCommands("vlc", "mpv")
 	go session.checkLive()
 	go session.CheckUpdate()
 
@@ -114,6 +117,8 @@ func main() {
 func newSession() (*viewerSession, *os.File, error) {
 	var err error
 	session := &viewerSession{}
+
+	session.commands = make(map[string]bool)
 
 	session.cfg, err = loadConfig()
 	if err != nil {
