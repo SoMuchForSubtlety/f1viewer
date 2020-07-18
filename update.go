@@ -43,33 +43,35 @@ func (session *viewerSession) CheckUpdate() {
 
 	session.logInfo("New version found!")
 	session.logInfo(release.TagName)
-	fmt.Fprintln(session.textWindow, "\n[blue::bu]"+release.Name+"[-::-]\n")
+	fmt.Fprintln(session.textWindow, "\n[blue::bu]"+release.Name+"[-::-]")
 	fmt.Fprintln(session.textWindow, release.Body+"\n")
 
 	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").
+		SetReference(NodeMetadata{nodeType: MiscNode}).
 		SetColor(activeTheme.UpdateColor).
 		SetExpanded(false)
 	getUpdateNode := tview.NewTreeNode("download update").
 		SetColor(activeTheme.ActionNodeColor).
+		SetReference(NodeMetadata{nodeType: ActionNode}).
 		SetSelectedFunc(func() {
 			err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 			if err != nil {
 				session.logError(err)
 			}
 		})
-	stopCheckingNode := tview.NewTreeNode("don't tell me about updates")
+	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").
+		SetColor(activeTheme.ActionNodeColor).
+		SetReference(NodeMetadata{nodeType: ActionNode})
+	stopCheckingNode.SetSelectedFunc(func() {
+		session.cfg.CheckUpdate = false
+		err := session.cfg.save()
+		if err != nil {
+			session.logError(err)
+		}
+		stopCheckingNode.SetText("update checks turned off")
+	})
 
-	stopCheckingNode.SetColor(activeTheme.ActionNodeColor).
-		SetSelectedFunc(func() {
-			session.cfg.CheckUpdate = false
-			err := session.cfg.save()
-			if err != nil {
-				session.logError(err)
-			}
-			stopCheckingNode.SetText("update checks turned off")
-		})
-	updateNode.AddChild(getUpdateNode)
-	updateNode.AddChild(stopCheckingNode)
+	appendNodes(updateNode, getUpdateNode, stopCheckingNode)
 
 	insertNodeAtTop(session.tree.GetRoot(), updateNode)
 	session.app.Draw()
