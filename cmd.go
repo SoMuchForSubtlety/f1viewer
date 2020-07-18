@@ -30,10 +30,11 @@ type channelMatcher struct {
 type commandContext struct {
 	EpID          string
 	CustomOptions command
-	Titles        titles
+	Titles        Titles
 }
 
-type titles struct {
+// Titles contains title metadata
+type Titles struct {
 	PerspectiveTitle string
 	SessionTitle     string
 	EventTitle       string
@@ -90,7 +91,7 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 	return cmd.Process.Release()
 }
 
-func (t titles) String() string {
+func (t Titles) String() string {
 	var s []string
 	if t.SeasonTitle != "" {
 		s = append(s, t.SeasonTitle)

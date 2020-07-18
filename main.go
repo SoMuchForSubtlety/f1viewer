@@ -102,9 +102,10 @@ func main() {
 		session.app.Draw()
 	}
 
-	logOutNode := tview.NewTreeNode("Log Out")
-	logOutNode = logOutNode.SetColor(activeTheme.ActionNodeColor)
-	logOutNode = logOutNode.SetSelectedFunc(func() {
+	logOutNode := tview.NewTreeNode("Log Out").
+		SetReference(NodeMetadata{nodeType: ActionNode}).
+		SetColor(activeTheme.ActionNodeColor)
+	logOutNode.SetSelectedFunc(func() {
 		session.logout()
 		session.initUIWithForm()
 	})
@@ -151,6 +152,9 @@ func newSession() (*viewerSession, *os.File, error) {
 		SetRoot(root).
 		SetCurrentNode(root).
 		SetTopLevel(1)
+
+	// refresh supported nodes on 'r' key press
+	session.tree.SetInputCapture(session.nodeRefresh)
 
 	session.textWindow = tview.NewTextView().
 		SetWordWrap(false).
