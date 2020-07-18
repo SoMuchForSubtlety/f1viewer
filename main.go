@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"github.com/SoMuchForSubtlety/keyring"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var activeTheme = struct {
@@ -66,12 +66,14 @@ var (
 )
 
 func main() {
-	app := kingpin.New("f1viewer", "a TUI client for F1TV")
-	app.Version(buildVersion(version, commit, date))
-	app.VersionFlag.Short('v')
-	app.HelpFlag.Short('h')
-
-	kingpin.MustParse(app.Parse(os.Args[1:]))
+	var showVersion bool
+	flag.BoolVar(&showVersion, "v", showVersion, "show version information")
+	flag.BoolVar(&showVersion, "version", showVersion, "show version information")
+	flag.Parse()
+	if showVersion {
+		fmt.Println(buildVersion())
+		return
+	}
 
 	session, logfile, err := newSession()
 	defer logfile.Close()
@@ -252,7 +254,7 @@ func (session *viewerSession) checkLive() {
 	}
 }
 
-func buildVersion(version, commit, date string) string {
+func buildVersion() string {
 	result := fmt.Sprintf("Version:     %s", version)
 	if commit != "" {
 		result += fmt.Sprintf("\nGit commit:  %s", commit)
