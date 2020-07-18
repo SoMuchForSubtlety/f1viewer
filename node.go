@@ -25,7 +25,6 @@ type NodeType int
 // Node types for Metadata
 const (
 	CategoryNode NodeType = iota
-	SeasonNode
 	EventNode
 	PlayableNode
 	StreamNode
