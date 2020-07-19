@@ -11,15 +11,18 @@
 * [FAQ](#Faq)
 * [Config](#Config)
 * [Custom Commands](#Custom-commands)
+* [Multi Commands](#Multi-commands)
+* [Key Bindings](#Key-bindings)
 * [Logs](#Logs)
 * [Credentials](#Credentials)
 
 ## Installation
 
+**Note:** You will also need either VLC or MPV installed for the defualt playback options to work. **Make sure you have the latest version of them!**
+
 ### Windows
-1. Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
-2. Download [MPV](https://mpv.io/installation/)
-**Note:** MPV needs to be in the same folder as f1viewer or added to your PATH
+* Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
+* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/)
 
 ### macOS
 * You can install f1viewer with Homebrew
@@ -30,7 +33,8 @@
 * Or [download the binary directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 
 ### Debian and Ubuntu
-Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
+Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.  
+**Note:** Ubuntu/Debian will probably install outdated versions of VLC and youtube-dl. If you're having issues with them you may be able to install a newer version with snap or manually.
 
 ### Fedora and openSUSE
 Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
@@ -147,7 +151,7 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
 ```json
 	"multi_commands": [
 		{
-			"title": "main and pit feed",
+			"title": "open main and pit feed",
 			"targets": [
 				{
 					"match_title": "Main Feed",
@@ -161,6 +165,12 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
 		}
 	]
 ```
+
+## Key Bindings
+* arrow keys or `h`, `j`, `k`, `l`.  
+* `tab` to cycle through the login form fields
+* enter to select / confirm
+* `r` while an event is selected to refresh it's contents
 
 ## Logs
 By default f1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`.
