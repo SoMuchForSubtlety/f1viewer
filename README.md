@@ -101,7 +101,7 @@ The default config looks like this
  - `save_logs` determines if logs should be saved
  - `log_location` can be used to set a custom log output folder
  - `custom_playback_options` can be used to set custom commands, see  [Custom Commands](#custom-commands)  for more info
- - `favorites_playback_options` can be used to load a set of feeds automatically, see [Favorites Commands](#favorite-commands) for more info
+ - `multi_commands` can be used to load a set of feeds automatically, see [Multi Commands](#Multi-commands) for more info
  - `horizontal_layout` can be used to switch the orientation from vertical to horizontal
  - `theme` can be used to set custom colors for various UI elements. Please use standard hex RGB values in the format `#FFFFFF` or `FFFFFF`.
  - `tree_ratio` and `output_ratio` can adjust the UI ratio. The values need to be integers >= 1.
