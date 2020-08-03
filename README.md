@@ -18,7 +18,7 @@
 
 ## Installation
 
-**Note:** You will also need either VLC or MPV installed for the defualt playback options to work. **Make sure you have the latest version of them!**
+**Note:** You will also need either VLC or MPV installed for the default playback options to work. **Make sure you have the latest version of them!**
 
 ### Windows
 * Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
