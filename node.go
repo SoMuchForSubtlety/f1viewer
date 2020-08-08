@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sync"
 
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell"
@@ -17,6 +18,7 @@ type NodeMetadata struct {
 	nodeType NodeType
 	id       string
 	titles   Titles
+	sync.Mutex
 }
 
 // NodeType indicates a treeview node's type
@@ -44,20 +46,21 @@ func (session *viewerSession) nodeRefresh(keyEvent *tcell.EventKey) *tcell.Event
 		session.logError(err)
 	}
 
-	var updateFunc func()
-
 	switch metadata.nodeType {
 	case EventNode:
-		updateFunc = func() { session.updateEvent(node, metadata) }
+		go func() {
+			metadata.Lock()
+			updateFunc := func() { session.updateEvent(node, metadata) }
+			session.withBlink(node, updateFunc, metadata.Unlock)()
+		}()
+		return nil
 	default:
 		return keyEvent
 	}
 
-	session.withBlink(node, updateFunc)()
-	return nil
 }
 
-func (session *viewerSession) updateEvent(node *tview.TreeNode, metadata NodeMetadata) {
+func (session *viewerSession) updateEvent(node *tview.TreeNode, metadata *NodeMetadata) {
 	node.ClearChildren().SetSelectedFunc(nil)
 	event, err := getEvent(metadata.id)
 	if err != nil {
@@ -79,22 +82,22 @@ func (session *viewerSession) updateEvent(node *tview.TreeNode, metadata NodeMet
 	node.SetExpanded(true)
 }
 
-func getMetadata(node *tview.TreeNode) (NodeMetadata, error) {
+func getMetadata(node *tview.TreeNode) (*NodeMetadata, error) {
 	if node == nil {
-		return NodeMetadata{}, errors.New("node is nil")
+		return &NodeMetadata{}, errors.New("node is nil")
 	}
 	switch v := node.GetReference().(type) {
-	case NodeMetadata:
+	case *NodeMetadata:
 		return v, nil
 	default:
-		return NodeMetadata{}, fmt.Errorf("Node has reference of unexpected type %T", v)
+		return &NodeMetadata{}, fmt.Errorf("Node has reference of unexpected type %T", v)
 	}
 }
 
 func (session *viewerSession) getFullSessionsNode() *tview.TreeNode {
 	fullSessions := tview.NewTreeNode("Full Seasons").
 		SetColor(activeTheme.CategoryNodeColor).
-		SetReference(NodeMetadata{nodeType: CategoryNode, titles: Titles{CategoryTitle: "Full Seasons"}})
+		SetReference(&NodeMetadata{nodeType: CategoryNode, titles: Titles{CategoryTitle: "Full Seasons"}})
 
 	fullSessions.SetSelectedFunc(session.withBlink(fullSessions, func() {
 		fullSessions.SetSelectedFunc(nil)
@@ -104,7 +107,7 @@ func (session *viewerSession) getFullSessionsNode() *tview.TreeNode {
 		} else {
 			appendNodes(fullSessions, seasons...)
 		}
-	}))
+	}, nil))
 	return fullSessions
 }
 
@@ -138,7 +141,7 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles Titles, epID string
 
 	streamNode := tview.NewTreeNode("Copy URL to clipboard").
 		SetColor(activeTheme.ActionNodeColor).
-		SetReference(NodeMetadata{nodeType: ActionNode, titles: sessionTitles})
+		SetReference(&NodeMetadata{nodeType: ActionNode, titles: sessionTitles})
 	streamNode.SetSelectedFunc(func() {
 		url, err := getPlayableURL(epID, session.authtoken)
 		if err != nil {
@@ -164,7 +167,7 @@ func (session *viewerSession) createCommandNode(t Titles, epID string, c command
 	}
 	node := tview.NewTreeNode(c.Title).
 		SetColor(activeTheme.ActionNodeColor).
-		SetReference(NodeMetadata{nodeType: ActionNode, titles: t})
+		SetReference(&NodeMetadata{nodeType: ActionNode, titles: t})
 	node.SetSelectedFunc(func() {
 		go func() {
 			err := session.runCustomCommand(context)
@@ -202,7 +205,7 @@ func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 			sessionNode = tview.NewTreeNode(s.SessionName + " - LIVE").
 				SetColor(activeTheme.LiveColor).
 				SetExpanded(false).
-				SetReference(NodeMetadata{nodeType: PlayableNode, id: event.UID, titles: t})
+				SetReference(&NodeMetadata{nodeType: PlayableNode, id: event.UID, titles: t})
 			channels := session.getPerspectiveNodes(st, streams)
 			appendNodes(sessionNode, channels...)
 			return true, sessionNode, nil
@@ -253,7 +256,7 @@ func (session *viewerSession) getEventNode(eventID string, seasonName string) (*
 
 	eventNode := tview.NewTreeNode(event.Name).
 		SetSelectable(true).
-		SetReference(NodeMetadata{nodeType: EventNode, id: eventID, titles: titles})
+		SetReference(&NodeMetadata{nodeType: EventNode, id: eventID, titles: titles})
 	eventNode.SetSelectedFunc(session.withBlink(eventNode, func() {
 		eventNode.SetSelectedFunc(nil)
 		sessions, err := session.getSessionNodes(titles, event)
@@ -265,7 +268,7 @@ func (session *viewerSession) getEventNode(eventID string, seasonName string) (*
 		if len(eventNode.GetChildren()) == 0 {
 			eventNode.AddChild(nocontentNode())
 		}
-	}))
+	}, nil))
 	return eventNode, nil
 
 }
@@ -286,7 +289,7 @@ func (session *viewerSession) getSessionNodes(t Titles, event eventStruct) ([]*t
 			s := s
 			sessionNode := tview.NewTreeNode(s.Name).
 				SetSelectable(true).
-				SetReference(NodeMetadata{nodeType: PlayableNode, id: s.UID, titles: t})
+				SetReference(&NodeMetadata{nodeType: PlayableNode, id: s.UID, titles: t})
 			sessionNode.SetSelectedFunc(session.withBlink(sessionNode, func() {
 				sessionNode.SetSelectedFunc(nil)
 				streams, err := getSessionStreams(s.UID)
@@ -296,7 +299,7 @@ func (session *viewerSession) getSessionNodes(t Titles, event eventStruct) ([]*t
 				}
 				channels := session.getPerspectiveNodes(st, streams)
 				appendNodes(sessionNode, channels...)
-			}))
+			}, nil))
 			if s.Status == "live" {
 				sessionNode.SetText(s.Name + " - LIVE").
 					SetColor(activeTheme.LiveColor)
@@ -306,7 +309,7 @@ func (session *viewerSession) getSessionNodes(t Titles, event eventStruct) ([]*t
 	}
 	if len(bonusIDs) > 0 {
 		bonusNode := tview.NewTreeNode("Bonus Content").
-			SetExpanded(false).SetReference(NodeMetadata{nodeType: MiscNode, titles: t})
+			SetExpanded(false).SetReference(&NodeMetadata{nodeType: MiscNode, titles: t})
 		episodes, err := session.getEpisodeNodes(t, bonusIDs)
 		if err != nil {
 			return nil, err
@@ -353,7 +356,7 @@ func (session *viewerSession) getMultiCommandNodes(perspectives []channel) []*tv
 
 		multiNode := tview.NewTreeNode(multi.Title).
 			SetColor(activeTheme.MultiCommandColor).
-			SetReference(NodeMetadata{nodeType: ActionNode})
+			SetReference(&NodeMetadata{nodeType: ActionNode})
 		multiNode.SetSelectedFunc(session.withBlink(multiNode, func() {
 			multiNode.SetSelectedFunc(nil)
 			for _, context := range commands {
@@ -362,7 +365,7 @@ func (session *viewerSession) getMultiCommandNodes(perspectives []channel) []*tv
 					session.logError(err)
 				}
 			}
-		}))
+		}, nil))
 		nodes = append(nodes, multiNode)
 	}
 
@@ -419,7 +422,7 @@ func (session *viewerSession) getPerspectiveNodes(title Titles, perspectives []c
 
 		streamNode := tview.NewTreeNode(name).
 			SetColor(activeTheme.ItemNodeColor).
-			SetReference(NodeMetadata{nodeType: StreamNode, id: streamPerspective.Self, titles: newTitle})
+			SetReference(&NodeMetadata{nodeType: StreamNode, id: streamPerspective.Self, titles: newTitle})
 
 		streamNode.SetSelectedFunc(func() {
 			streamNode.SetSelectedFunc(nil)
@@ -443,7 +446,7 @@ func (session *viewerSession) getSeasonNodes() ([]*tview.TreeNode, error) {
 	for _, s := range seasons.Seasons {
 		if s.HasContent {
 			s := s
-			seasonNode := tview.NewTreeNode(s.Name).SetReference(NodeMetadata{nodeType: CategoryNode, id: s.UID})
+			seasonNode := tview.NewTreeNode(s.Name).SetReference(&NodeMetadata{nodeType: CategoryNode, id: s.UID})
 			seasonNode.SetSelectedFunc(session.withBlink(seasonNode, func() {
 				seasonNode.SetSelectedFunc(nil)
 				events, err := session.getEventNodes(s)
@@ -451,7 +454,7 @@ func (session *viewerSession) getSeasonNodes() ([]*tview.TreeNode, error) {
 					session.logError(err)
 				}
 				appendNodes(seasonNode, events...)
-			}))
+			}, nil))
 			nodes = append(nodes, seasonNode)
 		}
 	}
@@ -476,7 +479,7 @@ func (session *viewerSession) getEpisodeNodes(title Titles, IDs []string) ([]*tv
 		tempTitle.EpisodeTitle = ep.Title
 		node := tview.NewTreeNode(ep.Title).
 			SetColor(activeTheme.ItemNodeColor).
-			SetReference(NodeMetadata{nodeType: PlayableNode, id: ep.UID, titles: tempTitle})
+			SetReference(&NodeMetadata{nodeType: PlayableNode, id: ep.UID, titles: tempTitle})
 		node.SetSelectedFunc(func() {
 			node.SetSelectedFunc(nil)
 			nodes := session.getPlaybackNodes(tempTitle, ep.Items[0])
@@ -487,7 +490,7 @@ func (session *viewerSession) getEpisodeNodes(title Titles, IDs []string) ([]*tv
 			if !ok {
 				yearNode = tview.NewTreeNode(year).
 					SetExpanded(false).
-					SetReference(NodeMetadata{nodeType: MiscNode, id: year, titles: title})
+					SetReference(&NodeMetadata{nodeType: MiscNode, id: year, titles: title})
 				yearNodesMap[year] = yearNode
 				yearNodes = append(yearNodes, yearNode)
 			}
@@ -511,7 +514,7 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 			titles := Titles{CategoryTitle: vType.Name}
 			node := tview.NewTreeNode(vType.Name).
 				SetColor(activeTheme.CategoryNodeColor).
-				SetReference(NodeMetadata{nodeType: CategoryNode, id: vType.UID, titles: titles})
+				SetReference(&NodeMetadata{nodeType: CategoryNode, id: vType.UID, titles: titles})
 			node.SetSelectedFunc(session.withBlink(node, func() {
 				node.SetSelectedFunc(nil)
 				episodes, err := session.getEpisodeNodes(titles, vType.ContentUrls)
@@ -520,7 +523,7 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 				} else {
 					appendNodes(node, episodes...)
 				}
-			}))
+			}, nil))
 			nodes = append(nodes, node)
 		}
 	}
@@ -530,7 +533,7 @@ func (session *viewerSession) getVodTypeNodes() ([]*tview.TreeNode, error) {
 func (session *viewerSession) getCollectionsNode() *tview.TreeNode {
 	node := tview.NewTreeNode("Collections").
 		SetColor(activeTheme.CategoryNodeColor).
-		SetReference(NodeMetadata{nodeType: CategoryNode})
+		SetReference(&NodeMetadata{nodeType: CategoryNode})
 	node.SetSelectedFunc(session.withBlink(node, func() {
 		node.SetSelectedFunc(nil)
 		list, err := getCollectionList()
@@ -539,7 +542,7 @@ func (session *viewerSession) getCollectionsNode() *tview.TreeNode {
 		}
 		for _, coll := range list.Objects {
 			collID := coll.UID
-			child := tview.NewTreeNode(coll.Title).SetReference(NodeMetadata{nodeType: MiscNode, id: collID})
+			child := tview.NewTreeNode(coll.Title).SetReference(&NodeMetadata{nodeType: MiscNode, id: collID})
 			child.SetSelectedFunc(session.withBlink(child, func() {
 				child.SetSelectedFunc(nil)
 				var nodes []*tview.TreeNode
@@ -551,10 +554,10 @@ func (session *viewerSession) getCollectionsNode() *tview.TreeNode {
 				} else {
 					child.AddChild(nocontentNode())
 				}
-			}))
+			}, nil))
 			node.AddChild(child)
 		}
-	}))
+	}, nil))
 	return node
 }
 
@@ -573,7 +576,7 @@ func (session *viewerSession) getCollectionContent(id string) ([]*tview.TreeNode
 func nocontentNode() *tview.TreeNode {
 	return tview.NewTreeNode("no content").
 		SetColor(activeTheme.NoContentColor).
-		SetReference(NodeMetadata{nodeType: MiscNode})
+		SetReference(&NodeMetadata{nodeType: MiscNode})
 }
 
 func appendNodes(parent *tview.TreeNode, children ...*tview.TreeNode) {

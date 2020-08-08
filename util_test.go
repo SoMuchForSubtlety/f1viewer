@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -110,16 +111,30 @@ loading...┌────────┐
 
 	go s.withBlink(node, func() {
 		time.Sleep(time.Millisecond * 200)
-	})()
+	}, nil)()
 
 	time.Sleep(time.Millisecond * 100)
 	assert.Equal(t, loadingScreen, toTextScreen(simScreen))
 
-	time.Sleep(time.Millisecond * 1000)
+	time.Sleep(time.Millisecond * 200)
 
 	assert.Equal(t, originalScreen, toTextScreen(simScreen))
 	assert.Equal(t, originalColor, node.GetColor())
 	assert.Equal(t, originalText, node.GetText())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go s.withBlink(node,
+		func() {},
+		// after function should be executed after the node is restored
+		func() {
+			assert.Equal(t, originalScreen, toTextScreen(simScreen))
+			assert.Equal(t, originalColor, node.GetColor())
+			assert.Equal(t, originalText, node.GetText())
+			wg.Done()
+		})()
+	wg.Wait()
 }
 
 func TestGetYearAndRace(t *testing.T) {

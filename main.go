@@ -103,7 +103,7 @@ func main() {
 	}
 
 	logOutNode := tview.NewTreeNode("Log Out").
-		SetReference(NodeMetadata{nodeType: ActionNode}).
+		SetReference(&NodeMetadata{nodeType: ActionNode}).
 		SetColor(activeTheme.ActionNodeColor)
 	logOutNode.SetSelectedFunc(func() {
 		session.logout()

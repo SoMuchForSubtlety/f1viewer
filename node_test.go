@@ -8,7 +8,7 @@ import (
 )
 
 func TestMetadata(t *testing.T) {
-	node := tview.NewTreeNode("Testing").SetReference(NodeMetadata{nodeType: MiscNode})
+	node := tview.NewTreeNode("Testing").SetReference(&NodeMetadata{nodeType: MiscNode})
 	metadata, err := getMetadata(node)
 	assert.NoError(t, err)
 	assert.Equal(t, MiscNode, metadata.nodeType)

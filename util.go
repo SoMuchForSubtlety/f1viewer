@@ -77,34 +77,43 @@ func (session *viewerSession) logInfo(v ...interface{}) {
 	log.Println("[INFO]", fmt.Sprint(v...))
 }
 
-func (session *viewerSession) withBlink(node *tview.TreeNode, fn func()) func() {
+func (session *viewerSession) withBlink(node *tview.TreeNode, fn func(), after func()) func() {
 	return func() {
 		done := make(chan struct{})
 		go func() {
 			fn()
 			done <- struct{}{}
 		}()
-		go session.blinkNode(node, done)
+		go func() {
+			session.blinkNode(node, done)
+			if after != nil {
+				after()
+			}
+		}()
 	}
 }
 
 func (session *viewerSession) blinkNode(node *tview.TreeNode, done chan struct{}) {
 	originalText := node.GetText()
 	originalColor := node.GetColor()
+	color1 := originalColor
+	color2 := activeTheme.LoadingColor
 	node.SetText("loading...")
+
+	ticker := time.NewTicker(200 * time.Millisecond)
 	for {
 		select {
 		case <-done:
 			node.SetText(originalText)
-			session.app.Draw()
-			return
-		default:
-			node.SetColor(activeTheme.LoadingColor)
-			session.app.Draw()
-			time.Sleep(200 * time.Millisecond)
 			node.SetColor(originalColor)
 			session.app.Draw()
-			time.Sleep(200 * time.Millisecond)
+			return
+		case <-ticker.C:
+			node.SetColor(color2)
+			session.app.Draw()
+			c := color1
+			color1 = color2
+			color2 = c
 		}
 	}
 }

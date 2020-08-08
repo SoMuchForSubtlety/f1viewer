@@ -47,12 +47,12 @@ func (session *viewerSession) CheckUpdate() {
 	fmt.Fprintln(session.textWindow, release.Body+"\n")
 
 	updateNode := tview.NewTreeNode("UPDATE AVAILABLE").
-		SetReference(NodeMetadata{nodeType: MiscNode}).
+		SetReference(&NodeMetadata{nodeType: MiscNode}).
 		SetColor(activeTheme.UpdateColor).
 		SetExpanded(false)
 	getUpdateNode := tview.NewTreeNode("download update").
 		SetColor(activeTheme.ActionNodeColor).
-		SetReference(NodeMetadata{nodeType: ActionNode}).
+		SetReference(&NodeMetadata{nodeType: ActionNode}).
 		SetSelectedFunc(func() {
 			err := openbrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
 			if err != nil {
@@ -61,7 +61,7 @@ func (session *viewerSession) CheckUpdate() {
 		})
 	stopCheckingNode := tview.NewTreeNode("don't tell me about updates").
 		SetColor(activeTheme.ActionNodeColor).
-		SetReference(NodeMetadata{nodeType: ActionNode})
+		SetReference(&NodeMetadata{nodeType: ActionNode})
 	stopCheckingNode.SetSelectedFunc(func() {
 		session.cfg.CheckUpdate = false
 		err := session.cfg.save()
