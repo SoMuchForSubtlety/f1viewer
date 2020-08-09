@@ -52,14 +52,16 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 
 ## FAQ
 #### why is there a login, what credentials should I use
-You need an F1TV account to play VODs. Use your F1TV account email and password to log in. You can use the tab key to navigate the login form.
+You need an F1TV account created with an IP in a country that has F1TV pro. Use your F1TV account email and password to log in. You can use the tab key to navigate the login form.
 #### when I try to play something I get a 4xx error
-You need an F1TV Access or Pro account to watch replays and live streams respectively. If you get the error but think your account should be able to play the selected content please open an issue.
+You need to be logged in and in a country that has F1TV pro. If you get the error but think your account should be able to play the selected content please open an issue.
 #### f1viewer is not showing a live session / loading very slowly
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
 Start your stream as soon as possible at the start of the session and you can usually avoid this.
-#### MPV is opening but I'm not getting audio
-Please make sure you are using the latest version of MPV. If you use Windows please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
+#### MPV/VLC starts but then has some issue / error
+Please make sure you are using the latest version of MPV/VLC. If you use Windows please download MPV from [here](https://sourceforge.net/projects/mpv-player-windows/files/). Generally once an external program is started f1viewer is done and you should consult the external program's documentation for troubleshooting. 
+#### MPV/VLC are not detected
+MPV and VLC need to be in your PATH environment variable to be detected by f1viewer.
 
 ## Config
 When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
@@ -149,21 +151,21 @@ You can specify commands directly with `command`, or reference one of your [cust
 For an explanation on the `command` variable, see [Custom Commands](#custom-commands)
 
 ```json
-	"multi_commands": [
-		{
-			"title": "open main and pit feed",
-			"targets": [
-				{
-					"match_title": "Main Feed",
-					"command": ["mpv", "$url"]
-				},
-				{
-					"match_title": "Pit",
-					"command_key": "custom mpv"
-				}
-			]
-		}
-	]
+"multi_commands": [
+	{
+		"title": "open main and pit feed",
+		"targets": [
+			{
+				"match_title": "Main Feed",
+				"command": ["mpv", "$url"]
+			},
+			{
+				"match_title": "Pit",
+				"command_key": "custom mpv"
+			}
+		]
+	}
+]
 ```
 
 ## Key Bindings
