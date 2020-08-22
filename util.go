@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os/exec"
 	"reflect"
 	"regexp"
 	"runtime"
