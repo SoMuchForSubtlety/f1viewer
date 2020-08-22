@@ -178,10 +178,13 @@ func newSession() (*viewerSession, *os.File, error) {
 func (session *viewerSession) initUIWithForm() {
 
 	form := tview.NewForm().
-		AddInputField("username", session.username, 30, nil, session.updateUsername).
+		AddInputField("email", session.username, 30, nil, session.updateUsername).
 		AddPasswordField("password", "", 30, '*', session.updatePassword).
 		AddButton("test", session.testAuth).
 		AddButton("save", session.closeForm)
+
+	session.enablePaste(form.GetFormItem(0).(*tview.InputField), form)
+	session.enablePaste(form.GetFormItem(1).(*tview.InputField), form)
 
 	formTreeFlex := tview.NewFlex()
 	if !session.cfg.HorizontalLayout {
