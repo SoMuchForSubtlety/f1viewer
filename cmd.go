@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -41,6 +42,42 @@ type Titles struct {
 	CategoryTitle    string
 	EpisodeTitle     string
 	SeasonTitle      string
+}
+
+func (session *viewerSession) loadCommands() {
+	commands := []command{
+		{
+			Title:   "Play with MPV",
+			Command: []string{"mpv", "$url", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
+		},
+		{
+			Title:   "Play with VLC",
+			Command: []string{"vlc", "$url", "--meta-title=$title"},
+		},
+		{
+			Title:   "Play with IINA",
+			Command: []string{"iina", "--no-stdin", "$url"},
+		},
+	}
+
+	for _, c := range commands {
+		_, err := exec.LookPath(c.Command[0])
+		if err == nil {
+			session.commands = append(session.commands, c)
+		}
+	}
+
+	if runtime.GOOS == "darwin" {
+		session.commands = append(session.commands, command{
+			Title:   "Play with QuickTime Player",
+			Command: []string{"open", "-a", "quicktime player", "$url"},
+		})
+	}
+
+	if len(session.commands) == 0 {
+		session.logError("No compatible players found, make sure they are in your PATH environmen variable")
+	}
+
 }
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {

@@ -124,25 +124,14 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles Titles, epID string
 		}
 	}
 
-	if session.commandAvailable("mpv") {
-		mpvCommand := command{
-			Title:   "Play with MPV",
-			Command: []string{"mpv", "$url", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
-		}
-		nodes = append(nodes, session.createCommandNode(sessionTitles, epID, mpvCommand))
-	}
-	if session.commandAvailable("vlc") {
-		vlcCommand := command{
-			Title:   "Play with VLC",
-			Command: []string{"vlc", "$url", "--meta-title=$title"},
-		}
-		nodes = append(nodes, session.createCommandNode(sessionTitles, epID, vlcCommand))
+	for _, c := range session.commands {
+		nodes = append(nodes, session.createCommandNode(sessionTitles, epID, c))
 	}
 
-	streamNode := tview.NewTreeNode("Copy URL to clipboard").
+	clipboardNode := tview.NewTreeNode("Copy URL to clipboard").
 		SetColor(activeTheme.ActionNodeColor).
 		SetReference(&NodeMetadata{nodeType: ActionNode, titles: sessionTitles})
-	streamNode.SetSelectedFunc(func() {
+	clipboardNode.SetSelectedFunc(func() {
 		url, err := getPlayableURL(epID, session.authtoken)
 		if err != nil {
 			session.logError(err)
@@ -155,7 +144,7 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles Titles, epID string
 		}
 		session.logInfo("URL copied to clipboard")
 	})
-	nodes = append(nodes, streamNode)
+	nodes = append(nodes, clipboardNode)
 	return nodes
 }
 

@@ -7,6 +7,8 @@ assignees: SoMuchForSubtlety
 
 ---
 
+Please check the [FAQ](https://github.com/SoMuchForSubtlety/f1viewer#Faq) and search [existing issues](https://github.com/SoMuchForSubtlety/f1viewer/issues?q=is%3Aissue) before you submit a new one!
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
@@ -23,7 +25,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **F1TV account plan**
-Do you have a free, access or pro account?
+Do you have a free, access or pro account? Are you using a VPN / proxy?
 
 **Desktop (please complete the following information):**
  - OS
@@ -31,4 +33,4 @@ Do you have a free, access or pro account?
  - Version [`f1viewer -v` output]
 
 **Logs**
-Please provide the relevant portion of your logs. On Windows you can find them under `%appdata%\f1viewer\logs`, on macOs in `$HOME/Library/Application Support/f1viewer/logs` and on linux in `$HOME/.local/share/f1viewer/`
+If applicable please provide the relevant portion of your logs. On Windows you can find them under `%appdata%\f1viewer\logs`, on macOs in `$HOME/Library/Application Support/f1viewer/logs` and on linux in `$HOME/.local/share/f1viewer/`

@@ -18,14 +18,14 @@
 
 ## Installation
 
-**Note:** You will also need either VLC or MPV installed for the defualt playback options to work. **Make sure you have the latest version of them!**
+**Note:** You also need a compatible player installed, you can find a list [here](https://github.com/SoMuchForSubtlety/f1viewer/wiki/Players-Supported-by-Default).
 
 ### Windows
 * Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
-* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/)
+* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/) (often outdated due to the slow review process)
 
 ### macOS
-* You can install f1viewer with Homebrew
+* You can install f1viewer with Homebrew (recommended)
 	```bash
 	brew tap SoMuchForSubtlety/tap
 	brew install SoMuchForSubtlety/tap/f1viewer
@@ -34,7 +34,6 @@
 
 ### Debian and Ubuntu
 Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.  
-**Note:** Ubuntu/Debian will probably install outdated versions of VLC and youtube-dl. If you're having issues with them you may be able to install a newer version with snap or manually.
 
 ### Fedora and openSUSE
 Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
@@ -52,14 +51,16 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 
 ## FAQ
 #### why is there a login, what credentials should I use
-You need an F1TV account to play VODs. Use your F1TV account email and password to log in. You can use the tab key to navigate the login form.
+You need an F1TV account created with an IP in a country that has F1TV pro. Use your F1TV account email and password to log in. You can use the tab key to navigate the login form.
 #### when I try to play something I get a 4xx error
-You need an F1TV Access or Pro account to watch replays and live streams respectively. If you get the error but think your account should be able to play the selected content please open an issue.
+You need to be logged in and in a country that has F1TV pro. If you get the error but think your account should be able to play the selected content please open an issue.
 #### f1viewer is not showing a live session / loading very slowly
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
 Start your stream as soon as possible at the start of the session and you can usually avoid this.
-#### MPV is opening but I'm not getting audio
-Please make sure you are using the latest version of MPV. If you use Windows please download it from [here](https://sourceforge.net/projects/mpv-player-windows/files/).
+#### The player starts but then has some issue / error
+Please make sure you are using the latest version of the player. If you use Windows please download MPV from [here](https://sourceforge.net/projects/mpv-player-windows/files/). Generally once an external program is started f1viewer is done and you should consult the external program's documentation for troubleshooting. 
+#### No players are detected
+Players need to be in your PATH environment variable to be detected by f1viewer.
 
 ## Config
 When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
@@ -77,6 +78,7 @@ The default config looks like this
 	"horizontal_layout": false,
 	"tree_ratio": 1,
 	"output_ratio": 1,
+	"terminal_wrap": true,
 	"theme": {
 		"background_color": "",
 		"border_color": "",
@@ -105,6 +107,7 @@ The default config looks like this
  - `horizontal_layout` can be used to switch the orientation from vertical to horizontal
  - `theme` can be used to set custom colors for various UI elements. Please use standard hex RGB values in the format `#FFFFFF` or `FFFFFF`.
  - `tree_ratio` and `output_ratio` can adjust the UI ratio. The values need to be integers >= 1.
+ - `terminal_wrap` toggles line wrap for the terminal window. Default is value `true`
 
 ## Custom Commands
 You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options`. You can add as many as you want.
@@ -149,21 +152,21 @@ You can specify commands directly with `command`, or reference one of your [cust
 For an explanation on the `command` variable, see [Custom Commands](#custom-commands)
 
 ```json
-	"multi_commands": [
-		{
-			"title": "open main and pit feed",
-			"targets": [
-				{
-					"match_title": "Main Feed",
-					"command": ["mpv", "$url"]
-				},
-				{
-					"match_title": "Pit",
-					"command_key": "custom mpv"
-				}
-			]
-		}
-	]
+"multi_commands": [
+	{
+		"title": "open main and pit feed",
+		"targets": [
+			{
+				"match_title": "Main Feed",
+				"command": ["mpv", "$url"]
+			},
+			{
+				"match_title": "Pit",
+				"command_key": "custom mpv"
+			}
+		]
+	}
+]
 ```
 
 ## Key Bindings
