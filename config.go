@@ -22,6 +22,7 @@ type config struct {
 	Theme                 theme          `json:"theme"`
 	TreeRatio             int            `json:"tree_ratio"`
 	OutputRatio           int            `json:"output_ratio"`
+	TerminalWrap          bool           `json:"terminal_wrap"`
 }
 
 type theme struct {
@@ -56,6 +57,7 @@ func loadConfig() (config, error) {
 		cfg.SaveLogs = true
 		cfg.TreeRatio = 1
 		cfg.OutputRatio = 1
+		cfg.TerminalWrap = true
 		err = cfg.save()
 		return cfg, err
 	}
