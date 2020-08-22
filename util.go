@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os/exec"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -14,27 +13,6 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
-
-func (session *viewerSession) checkCommands(commands ...string) {
-	var found int
-	for _, cmd := range commands {
-		_, err := exec.LookPath(cmd)
-		session.commands[cmd] = err == nil
-		if err == nil {
-			found++
-		} else {
-			session.logInfo("could not find ", cmd)
-		}
-	}
-	if found == 0 {
-		session.logError("Both MPV and VLC are unavailable!")
-	}
-}
-
-func (session *viewerSession) commandAvailable(command string) bool {
-	available, ok := session.commands[command]
-	return ok && available
-}
 
 // takes year/race ID and returns full year and race nuber as strings
 func getYearAndRace(input string) (string, string, error) {
