@@ -18,14 +18,14 @@
 
 ## Installation
 
-**Note:** You will also need either VLC or MPV installed for the default playback options to work. **Make sure you have the latest version of them!**
+**Note:** You also need a compatible player installed, you can find a list [here](https://github.com/SoMuchForSubtlety/f1viewer/wiki/Players-Supported-by-Default).
 
 ### Windows
 * Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
-* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/)
+* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/) (often outdated due to the slow review process)
 
 ### macOS
-* You can install f1viewer with Homebrew
+* You can install f1viewer with Homebrew (recommended)
 	```bash
 	brew tap SoMuchForSubtlety/tap
 	brew install SoMuchForSubtlety/tap/f1viewer
@@ -34,7 +34,6 @@
 
 ### Debian and Ubuntu
 Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.  
-**Note:** Ubuntu/Debian will probably install outdated versions of VLC and youtube-dl. If you're having issues with them you may be able to install a newer version with snap or manually.
 
 ### Fedora and openSUSE
 Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
@@ -58,10 +57,10 @@ You need to be logged in and in a country that has F1TV pro. If you get the erro
 #### f1viewer is not showing a live session / loading very slowly
 This can happen if the F1TV servers are overloaded. There is nothing I can do to fix this.
 Start your stream as soon as possible at the start of the session and you can usually avoid this.
-#### MPV/VLC starts but then has some issue / error
-Please make sure you are using the latest version of MPV/VLC. If you use Windows please download MPV from [here](https://sourceforge.net/projects/mpv-player-windows/files/). Generally once an external program is started f1viewer is done and you should consult the external program's documentation for troubleshooting. 
-#### MPV/VLC are not detected
-MPV and VLC need to be in your PATH environment variable to be detected by f1viewer.
+#### The player starts but then has some issue / error
+Please make sure you are using the latest version of the player. If you use Windows please download MPV from [here](https://sourceforge.net/projects/mpv-player-windows/files/). Generally once an external program is started f1viewer is done and you should consult the external program's documentation for troubleshooting. 
+#### No players are detected
+Players need to be in your PATH environment variable to be detected by f1viewer.
 
 ## Config
 When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
