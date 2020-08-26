@@ -7,7 +7,7 @@ require (
 	github.com/SoMuchForSubtlety/golark v1.1.0
 	github.com/SoMuchForSubtlety/keyring v1.1.6
 	github.com/atotto/clipboard v0.1.2
-	github.com/gdamore/tcell v1.3.0
+	github.com/gdamore/tcell v1.4.0
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/rivo/tview v0.0.0-20200528200248-fe953220389f
 	github.com/stretchr/testify v1.6.1
