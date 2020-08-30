@@ -81,9 +81,18 @@ func (session *viewerSession) loadCommands() {
 }
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {
-	url, err := getPlayableURL(cc.EpID, session.authtoken)
-	if err != nil {
-		return err
+	var url string
+	var err error
+	if cc.EpID != "" {
+		url, err = getPlayableURL(cc.EpID, session.authtoken)
+		if err != nil {
+			return err
+		}
+	} else {
+		url, err = getBackupStream()
+		if err != nil {
+			return err
+		}
 	}
 	// replace variables
 	tmpCommand := make([]string, len(cc.CustomOptions.Command))

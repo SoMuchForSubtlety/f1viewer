@@ -132,10 +132,20 @@ func (session *viewerSession) getPlaybackNodes(sessionTitles Titles, epID string
 		SetColor(activeTheme.ActionNodeColor).
 		SetReference(&NodeMetadata{nodeType: ActionNode, titles: sessionTitles})
 	clipboardNode.SetSelectedFunc(func() {
-		url, err := getPlayableURL(epID, session.authtoken)
-		if err != nil {
-			session.logError(err)
-			return
+		var url string
+		var err error
+		if epID != "" {
+			url, err = getPlayableURL(epID, session.authtoken)
+			if err != nil {
+				session.logError(err)
+				return
+			}
+		} else {
+			url, err = getBackupStream()
+			if err != nil {
+				session.logError(err)
+				return
+			}
 		}
 		err = clipboard.WriteAll(url)
 		if err != nil {
@@ -197,10 +207,21 @@ func (session *viewerSession) getLiveNode() (bool, *tview.TreeNode, error) {
 				SetReference(&NodeMetadata{nodeType: PlayableNode, id: event.UID, titles: t})
 			channels := session.getPerspectiveNodes(st, streams)
 			appendNodes(sessionNode, channels...)
+			sessionNode.AddChild(session.getBackupNode(t))
 			return true, sessionNode, nil
 		}
 	}
 	return false, sessionNode, nil
+}
+
+func (session *viewerSession) getBackupNode(sessionTitles Titles) *tview.TreeNode {
+	node := tview.NewTreeNode("backup stream").
+		SetExpanded(false).
+		SetReference(&NodeMetadata{nodeType: StreamNode, id: "", titles: sessionTitles})
+	nodes := session.getPlaybackNodes(sessionTitles, "")
+	appendNodes(node, nodes...)
+
+	return node
 }
 
 func (session *viewerSession) getEventNodes(season seasonStruct) ([]*tview.TreeNode, error) {
