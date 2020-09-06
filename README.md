@@ -1,5 +1,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/SoMuchForSubtlety/f1viewer)](https://goreportcard.com/report/github.com/SoMuchForSubtlety/f1viewer)
 ![](https://github.com/SoMuchForSubtlety/f1viewer/workflows/Test/badge.svg)
+# Changes from original Version by somuchforsubtlety
+
+* Added support for borderless play of stream with MPV without having to fiddle with the config
 
 # f1viewer
 
