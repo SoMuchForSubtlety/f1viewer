@@ -51,6 +51,10 @@ func (session *viewerSession) loadCommands() {
 			Command: []string{"mpv", "$url", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
 		},
 		{
+			Title:   "Play with MPV without border",
+			Command: []string{"mpv", "$url", "--border=no", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
+		},
+		{
 			Title:   "Play with VLC",
 			Command: []string{"vlc", "$url", "--meta-title=$title"},
 		},
