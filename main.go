@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/SoMuchForSubtlety/keyring"
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -182,9 +182,6 @@ func (session *viewerSession) initUIWithForm() {
 		AddPasswordField("password", "", 30, '*', session.updatePassword).
 		AddButton("test", session.testAuth).
 		AddButton("save", session.closeForm)
-
-	session.enablePaste(form.GetFormItem(0).(*tview.InputField), form)
-	session.enablePaste(form.GetFormItem(1).(*tview.InputField), form)
 
 	formTreeFlex := tview.NewFlex()
 	if !session.cfg.HorizontalLayout {
