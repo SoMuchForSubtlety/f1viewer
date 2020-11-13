@@ -33,6 +33,12 @@ type tokenResponse struct {
 }
 
 func (session *viewerSession) login() (string, error) {
+	if session.authtoken != "" {
+		if tokenValid(session.authtoken) {
+			return session.authtoken, nil
+		}
+	}
+
 	auth, err := authenticate(session.username, session.password)
 	if err != nil {
 		return "", fmt.Errorf("could not log in: %w", err)
@@ -42,6 +48,11 @@ func (session *viewerSession) login() (string, error) {
 		return "", fmt.Errorf("could not authenticate in: %w", err)
 	}
 	return token.Token, nil
+}
+
+func tokenValid(token string) bool {
+	_, err := getPlayableURL("/api/channels/chan_d77f90b2775f4db4855d32605f2c65da/", token)
+	return err == nil
 }
 
 func (session *viewerSession) logout() {
@@ -61,7 +72,8 @@ func authenticate(username, password string) (authResponse, error) {
 	}
 
 	header := http.Header{}
-	header["apiKey"] = []string{apiKey}
+	header.Set("apiKey", apiKey)
+	header.Set("User-Agent", "RaceControl f1viewer")
 	respBody, err := post(request{Login: username, Password: password}, authURL, header)
 	if err != nil {
 		return authResponse{}, err
@@ -127,12 +139,21 @@ func checkResponse(resp *http.Response) error {
 }
 
 func (session *viewerSession) testAuth() {
-	token, err := session.login()
-	if err != nil {
-		session.logError(err)
+	if session.authtoken != "" {
+		_, err := getPlayableURL("/api/channels/chan_d77f90b2775f4db4855d32605f2c65da/", session.authtoken)
+		if err != nil {
+			session.logError(err)
+		} else {
+			session.logInfo("token works!")
+		}
 	} else {
-		session.authtoken = token
-		session.logInfo("login successful!")
+		token, err := session.login()
+		if err != nil {
+			session.logError(err)
+		} else {
+			session.authtoken = token
+			session.logInfo("login successful!")
+		}
 	}
 }
 
@@ -169,6 +190,13 @@ func (session *viewerSession) loadCredentials() error {
 		return fmt.Errorf("Could not get password: %w", err)
 	}
 	session.password = string(password.Data)
+
+	token, err := session.ring.Get("skylarkToken")
+	if err != nil {
+		session.logError("Could not get auth token: ", err)
+	} else {
+		session.authtoken = string(token.Data)
+	}
 	return nil
 }
 
@@ -182,7 +210,7 @@ func (session *viewerSession) saveCredentials() error {
 		Data:        []byte(session.username),
 	})
 	if err != nil {
-		return fmt.Errorf("[ERROR] could not save username credentials %w", err)
+		return fmt.Errorf("[ERROR] could not save username %w", err)
 	}
 
 	err = session.ring.Set(keyring.Item{
@@ -191,7 +219,16 @@ func (session *viewerSession) saveCredentials() error {
 		Data:        []byte(session.password),
 	})
 	if err != nil {
-		return fmt.Errorf("[ERROR] could not save password credentials %w", err)
+		return fmt.Errorf("[ERROR] could not save password %w", err)
+	}
+
+	err = session.ring.Set(keyring.Item{
+		Description: "F1TV auth token",
+		Key:         "skylarkToken",
+		Data:        []byte(session.authtoken),
+	})
+	if err != nil {
+		return fmt.Errorf("[ERROR] could not save auth token %w", err)
 	}
 	return nil
 }
@@ -212,6 +249,12 @@ func (session *viewerSession) removeCredentials() error {
 	}
 	session.password = ""
 
+	err = session.ring.Remove("skylarkToken")
+	if err != nil {
+		return fmt.Errorf("Could not remove auth token: %w", err)
+	}
+	session.authtoken = ""
+
 	return nil
 }
 
@@ -221,4 +264,8 @@ func (session *viewerSession) updateUsername(username string) {
 
 func (session *viewerSession) updatePassword(password string) {
 	session.password = password
+}
+
+func (session *viewerSession) updateToken(token string) {
+	session.authtoken = token
 }

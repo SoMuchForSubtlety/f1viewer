@@ -176,12 +176,48 @@ func newSession() (*viewerSession, *os.File, error) {
 }
 
 func (session *viewerSession) initUIWithForm() {
-
+	session.authtoken = ""
 	form := tview.NewForm().
 		AddInputField("email", session.username, 30, nil, session.updateUsername).
 		AddPasswordField("password", "", 30, '*', session.updatePassword).
 		AddButton("test", session.testAuth).
-		AddButton("save", session.closeForm)
+		AddButton("save", session.closeForm).
+		AddButton("log in skylark token", session.initUIWithTokenForm)
+
+	formTreeFlex := tview.NewFlex()
+	if !session.cfg.HorizontalLayout {
+		formTreeFlex.SetDirection(tview.FlexRow)
+	}
+
+	if session.cfg.HorizontalLayout {
+		formTreeFlex.
+			AddItem(form, 50, 0, true).
+			AddItem(session.tree, 0, 1, false)
+	} else {
+		formTreeFlex.
+			AddItem(form, 7, 0, true).
+			AddItem(session.tree, 0, 1, false)
+	}
+
+	masterFlex := tview.NewFlex()
+	if session.cfg.HorizontalLayout {
+		masterFlex.SetDirection(tview.FlexRow)
+	}
+
+	masterFlex.
+		AddItem(formTreeFlex, 0, session.cfg.TreeRatio, true).
+		AddItem(session.textWindow, 0, session.cfg.OutputRatio, false)
+
+	session.app.SetRoot(masterFlex, true)
+}
+
+func (session *viewerSession) initUIWithTokenForm() {
+	session.authtoken = ""
+	form := tview.NewForm().
+		AddInputField("skylarkToken", "", 70, nil, session.updateToken).
+		AddButton("test", session.testAuth).
+		AddButton("save", session.closeForm).
+		AddButton("log in email & password", session.initUIWithForm)
 
 	formTreeFlex := tview.NewFlex()
 	if !session.cfg.HorizontalLayout {
