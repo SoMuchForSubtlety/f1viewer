@@ -35,7 +35,14 @@
 ### Debian and Ubuntu
 Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.  
 
-### Fedora and openSUSE
+### Fedora
+Install from the f1viewer copr repository
+```bash
+sudo dnf copr enable somuchforsubtlety/f1viewer
+sudo dnf install f1viewer
+```
+
+### openSUSE
 Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
 
 ### Arch
