@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/99designs/keyring v1.1.5 // indirect
-	github.com/SoMuchForSubtlety/golark v1.1.0
+	github.com/SoMuchForSubtlety/golark v1.1.1
 	github.com/SoMuchForSubtlety/keyring v1.1.6
 	github.com/atotto/clipboard v0.1.2
 	github.com/dvsekhvalnov/jose2go v0.0.0-20201001154944-b09cfaf05951 // indirect
