@@ -2,6 +2,8 @@ github.com/99designs/keyring v1.1.5 h1:wLv7QyzYpFIyMSwOADq1CLTF9KbjbBfcnfmOGJ64a
 github.com/99designs/keyring v1.1.5/go.mod h1:7hsVvt2qXgtadGevGJ4ujg+u8m6SpJ5TpHqTozIPqf0=
 github.com/SoMuchForSubtlety/golark v1.1.0 h1:K2uHmyXxg1km7wH8I4MoenEKqKZEkTzU/pltdO5m0u8=
 github.com/SoMuchForSubtlety/golark v1.1.0/go.mod h1:dfw7q1LhK4IcxsCSbcMYsi8snKYYhEhuuS9Lwstv9qk=
+github.com/SoMuchForSubtlety/golark v1.1.1 h1:IKyAdyRCAxq/AvUOrbCkOYDtGv9mX0D9lmP1jnM7hDE=
+github.com/SoMuchForSubtlety/golark v1.1.1/go.mod h1:huks7AYvHCFMbZXfAHIwwlKgXycpFOuQ+ddYWA0OFnE=
 github.com/SoMuchForSubtlety/keyring v1.1.6 h1:nObpYSKtjp9OfAgT9TGAm23PD886JdH5xtHD+HScZNk=
 github.com/SoMuchForSubtlety/keyring v1.1.6/go.mod h1:hVnJb2jtLXWRexWlVMhCSPdXVBYismixa1MdXxH3dYo=
 github.com/atotto/clipboard v0.1.2 h1:YZCtFu5Ie8qX2VmVTBnrqLSiU9XOWwqNRmdT3gIQzbY=
