@@ -110,11 +110,22 @@ func main() {
 		session.initUIWithForm()
 	})
 	session.tree.GetRoot().AddChild(logOutNode)
+	session.app.SetInputCapture(session.quit)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	<-c
+
+	session.app.Stop()
+}
+
+func (s *viewerSession) quit(event *tcell.EventKey) *tcell.EventKey {
+	if event.Key() != tcell.KeyRune || event.Rune() != 'q' {
+		return event
+	}
+	s.app.Stop()
+	return nil
 }
 
 func newSession() (*viewerSession, *os.File, error) {
