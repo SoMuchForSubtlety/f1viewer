@@ -9,6 +9,6 @@ dist/
 .vscode/
 downloads/
 *.txt
-streambest-config.json
 F1viewer
 *.log
+f1viewer

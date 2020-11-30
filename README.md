@@ -145,6 +145,9 @@ There are several placeholder variables you can use that will be replaced by f1v
  - `$perspective`: the perspective (eg. "Main Feed", "Kimi Räikkönen", etc.)
  - `$episode`: the name of the episode (eg. "Chasing The Dream - Episode 1")
  - `$title`: a formatted combination of `$category`,  `$season`, `$event` , `$session`, `$perspective` and `$episode` depending on what is available for the given content. (eg. "2019 Formula 1 World Championship - Singapore Grand Prix - Race - Main Feed")
+ - `$time`: the time of the session in RFC3339 format (`$year`, `$month`, `$day`, `$hour` and `$minute` are also available)
+ - `$date`: the date of the session in ISO 8601 format
+ - `$ordinal`: the ordinal numer of the event
 
 **Note**: `$title` has illegal characters removed so it can be used as a filename, the other variables are left unmodified.
 

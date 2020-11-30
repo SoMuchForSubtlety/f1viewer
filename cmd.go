@@ -7,7 +7,9 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type commandAndArgs []string
@@ -31,17 +33,19 @@ type channelMatcher struct {
 type commandContext struct {
 	EpID          string
 	CustomOptions command
-	Titles        Titles
+	MetaData      MetaData
 }
 
-// Titles contains title metadata
-type Titles struct {
+// MetaData contains title metadata
+type MetaData struct {
 	PerspectiveTitle string
 	SessionTitle     string
 	EventTitle       string
 	CategoryTitle    string
 	EpisodeTitle     string
 	SeasonTitle      string
+	Date             time.Time
+	OrdinalNumber    int
 }
 
 func (session *viewerSession) loadCommands() {
@@ -99,13 +103,21 @@ func (session *viewerSession) runCustomCommand(cc commandContext) error {
 	copy(tmpCommand, cc.CustomOptions.Command)
 	for i := range tmpCommand {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$url", url)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.Titles.SessionTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$event", cc.Titles.EventTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$perspective", cc.Titles.PerspectiveTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$category", cc.Titles.CategoryTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$episode", cc.Titles.EpisodeTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$season", cc.Titles.SeasonTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$title", cc.Titles.String())
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.MetaData.SessionTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$event", cc.MetaData.EventTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$perspective", cc.MetaData.PerspectiveTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$category", cc.MetaData.CategoryTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$episode", cc.MetaData.EpisodeTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$season", cc.MetaData.SeasonTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$title", cc.MetaData.String())
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$ordinal", strconv.Itoa(cc.MetaData.OrdinalNumber))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$time", cc.MetaData.Date.Format(time.RFC3339))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$date", cc.MetaData.Date.Format("2006-01-02"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$year", cc.MetaData.Date.Format("2006"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$month", cc.MetaData.Date.Format("01"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$day", cc.MetaData.Date.Format("02"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$hour", cc.MetaData.Date.Format("15"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$minute", cc.MetaData.Date.Format("04"))
 	}
 	return session.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...))
 }
@@ -137,7 +149,7 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 	return cmd.Process.Release()
 }
 
-func (t Titles) String() string {
+func (t MetaData) String() string {
 	var s []string
 	if t.SeasonTitle != "" {
 		s = append(s, t.SeasonTitle)

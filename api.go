@@ -52,8 +52,7 @@ type eventStruct struct {
 	Name                  string   `json:"name"`
 	OfficialName          string   `json:"official_name"`
 	SessionoccurrenceUrls []string `json:"sessionoccurrence_urls"`
-	StartDate             string   `json:"start_date"`
-	EndDate               string   `json:"end_date"`
+	EndDate               ISODate  `json:"end_date"`
 }
 
 type sessionStruct struct {
@@ -109,6 +108,26 @@ type collectionList struct {
 	Objects []collection `json:"objects"`
 }
 
+type ISODate struct {
+	Format string
+	time.Time
+}
+
+func (Date *ISODate) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	Date.Format = "2006-01-02"
+	t, _ := time.Parse(Date.Format, s)
+	Date.Time = t
+	return nil
+}
+
+func (Date ISODate) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Date.Time.Format(Date.Format))
+}
+
 func getLiveWeekendEvent() (eventStruct, bool, error) {
 	type container struct {
 		Objects []collection `json:"objects"`
@@ -154,13 +173,13 @@ func getVodTypes() (types vodTypes, err error) {
 }
 
 func getSeasons() (s seasons, err error) {
-	year := golark.NewField("year").WithFilter(golark.NewFilter(golark.GreaterThan, "2017"))
+	year := golark.NewField("year")
 	err = golark.NewRequest(endpoint, "race-season", "").
-		AddField(year).
+		AddField(golark.NewField("year")).
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("has_content")).
 		AddField(golark.NewField("eventoccurrence_urls")).
-		OrderBy(year, golark.Ascending).
+		OrderBy(year, golark.Descending).
 		Execute(&s)
 	return
 }
@@ -169,6 +188,7 @@ func getEvent(eventID string) (event eventStruct, err error) {
 	// TODO: use proper ID
 	err = golark.NewRequest(endpoint, "event-occurrence", pathToUID(eventID)).
 		AddField(golark.NewField("name")).
+		AddField(golark.NewField("end_date")).
 		AddField(golark.NewField("sessionoccurrence_urls")).
 		Execute(&event)
 	return
@@ -180,6 +200,8 @@ func getSession(sessionID string) (session sessionStruct, err error) {
 		AddField(golark.NewField("status")).
 		AddField(golark.NewField("uid")).
 		AddField(golark.NewField("session_name")).
+		AddField(golark.NewField("start_time")).
+		AddField(golark.NewField("end_time")).
 		Execute(&session)
 	return
 }
@@ -199,6 +221,8 @@ func getSessions(sessionIDs []string) ([]sessionStruct, error) {
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("status")).
 		AddField(golark.NewField("content_urls")).
+		AddField(golark.NewField("start_time")).
+		AddField(golark.NewField("end_time")).
 		AddField(golark.NewField("uid").
 			WithFilter(golark.NewFilter(golark.Equals, strings.Join(sessionIDs, ",")))).
 		Execute(&response)
