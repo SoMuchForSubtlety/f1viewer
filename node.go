@@ -38,10 +38,15 @@ const (
 	CollectionNode
 )
 
-func (session *viewerSession) nodeRefresh(keyEvent *tcell.EventKey) *tcell.EventKey {
+func (session *viewerSession) treeInputHanlder(keyEvent *tcell.EventKey) *tcell.EventKey {
 	// only listen for 'r' key
-	if keyEvent.Key() != tcell.KeyRune || keyEvent.Rune() != 'r' {
+	if keyEvent.Key() != tcell.KeyRune || (keyEvent.Rune() != 'r' && keyEvent.Rune() != 'q') {
 		return keyEvent
+	}
+
+	if keyEvent.Rune() == 'q' {
+		session.app.Stop()
+		return nil
 	}
 
 	node := session.tree.GetCurrentNode()

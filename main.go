@@ -110,7 +110,6 @@ func main() {
 		session.initUIWithForm()
 	})
 	session.tree.GetRoot().AddChild(logOutNode)
-	session.app.SetInputCapture(session.quit)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -118,14 +117,6 @@ func main() {
 	<-c
 
 	session.app.Stop()
-}
-
-func (s *viewerSession) quit(event *tcell.EventKey) *tcell.EventKey {
-	if event.Key() != tcell.KeyRune || event.Rune() != 'q' {
-		return event
-	}
-	s.app.Stop()
-	return nil
 }
 
 func newSession() (*viewerSession, *os.File, error) {
@@ -162,8 +153,8 @@ func newSession() (*viewerSession, *os.File, error) {
 		SetCurrentNode(root).
 		SetTopLevel(1)
 
-	// refresh supported nodes on 'r' key press
-	session.tree.SetInputCapture(session.nodeRefresh)
+	// refresh supported nodes on 'r' key press or quit on 'q'
+	session.tree.SetInputCapture(session.treeInputHanlder)
 
 	session.textWindow = tview.NewTextView().
 		SetWordWrap(false).
