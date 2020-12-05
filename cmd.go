@@ -15,8 +15,10 @@ import (
 type commandAndArgs []string
 
 type command struct {
-	Title   string         `json:"title"`
-	Command commandAndArgs `json:"command"`
+	Title      string         `json:"title"`
+	Command    commandAndArgs `json:"command"`
+	registry   string
+	registry32 string
 }
 
 type multiCommand struct {
@@ -55,8 +57,10 @@ func (session *viewerSession) loadCommands() {
 			Command: []string{"mpv", "$url", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
 		},
 		{
-			Title:   "Play with VLC",
-			Command: []string{"vlc", "$url", "--meta-title=$title"},
+			Title:      "Play with VLC",
+			registry:   "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
+			registry32: "SOFTWARE\\VideoLAN\\VLC",
+			Command:    []string{"vlc", "$url", "--meta-title=$title"},
 		},
 		{
 			Title:   "Play with IINA",
@@ -67,6 +71,8 @@ func (session *viewerSession) loadCommands() {
 	for _, c := range commands {
 		_, err := exec.LookPath(c.Command[0])
 		if err == nil {
+			session.commands = append(session.commands, c)
+		} else if c, found := session.checkRegistry(c); found {
 			session.commands = append(session.commands, c)
 		}
 	}
@@ -81,7 +87,6 @@ func (session *viewerSession) loadCommands() {
 	if len(session.commands) == 0 {
 		session.logError("No compatible players found, make sure they are in your PATH environmen variable")
 	}
-
 }
 
 func (session *viewerSession) runCustomCommand(cc commandContext) error {
