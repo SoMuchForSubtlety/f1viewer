@@ -2,6 +2,8 @@ module github.com/SoMuchForSubtlety/f1viewer
 
 go 1.14
 
+replace github.com/rivo/tview => github.com/SoMuchForSubtlety/tview v0.0.0-20210213192247-c4de038979df
+
 require (
 	github.com/99designs/keyring v1.1.6 // indirect
 	github.com/SoMuchForSubtlety/golark v1.2.0

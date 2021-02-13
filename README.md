@@ -3,7 +3,7 @@
 
 # f1viewer
 
-![preview image](https://i.imgur.com/ik2ZRw5.png)
+![preview image](https://user-images.githubusercontent.com/15961647/107859733-c6a8a900-6e3b-11eb-82b8-5b1ee0a16297.png)
 
 ## Table of Contents
 

@@ -4,6 +4,10 @@ github.com/SoMuchForSubtlety/golark v1.2.0 h1:AL3xjJcakjdGIri+BwgPjruOYiNwJuzy1g
 github.com/SoMuchForSubtlety/golark v1.2.0/go.mod h1:k11uLJFf5SHrMsLlJ0Jvy8hESyLBzNsiDSS6gkz0K24=
 github.com/SoMuchForSubtlety/keyring v1.1.6 h1:nObpYSKtjp9OfAgT9TGAm23PD886JdH5xtHD+HScZNk=
 github.com/SoMuchForSubtlety/keyring v1.1.6/go.mod h1:hVnJb2jtLXWRexWlVMhCSPdXVBYismixa1MdXxH3dYo=
+github.com/SoMuchForSubtlety/tview v0.0.0-20210213154721-a5251e8ff746 h1:3l9cm3SeI2qoWt0wqLEP4moH7RqHyDfXMwB28ZypTvI=
+github.com/SoMuchForSubtlety/tview v0.0.0-20210213154721-a5251e8ff746/go.mod h1:n2q/ydglZJ1kqxiNrnYO+FaX1H14vA0wKyIo953QakU=
+github.com/SoMuchForSubtlety/tview v0.0.0-20210213192247-c4de038979df h1:uVa6c4GilT/174Xr51V2+CukBMarvu1t1UvK61r7/O4=
+github.com/SoMuchForSubtlety/tview v0.0.0-20210213192247-c4de038979df/go.mod h1:n2q/ydglZJ1kqxiNrnYO+FaX1H14vA0wKyIo953QakU=
 github.com/atotto/clipboard v0.1.2 h1:YZCtFu5Ie8qX2VmVTBnrqLSiU9XOWwqNRmdT3gIQzbY=
 github.com/atotto/clipboard v0.1.2/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

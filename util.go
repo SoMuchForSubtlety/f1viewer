@@ -98,7 +98,6 @@ func (session *viewerSession) blinkNode(node *tview.TreeNode, done chan struct{}
 
 func hexStringToColor(hex string) tcell.Color {
 	hex = strings.ReplaceAll(hex, "#", "")
-	//TODO: check err?
 	color, _ := strconv.ParseInt(hex, 16, 32)
 	return tcell.NewHexColor(int32(color))
 }
@@ -125,6 +124,8 @@ func (t theme) apply() {
 	}
 	if t.BackgroundColor != "" {
 		tview.Styles.PrimitiveBackgroundColor = hexStringToColor(t.BackgroundColor)
+	} else {
+		tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
 	}
 	if t.BorderColor != "" {
 		tview.Styles.BorderColor = hexStringToColor(t.BorderColor)
