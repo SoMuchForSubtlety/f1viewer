@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -18,6 +20,10 @@ var endpoint = "https://f1tv.formula1.com/api/"
 const (
 	liveSlug = "grand-prix-weekend-live"
 )
+
+var headers = http.Header{
+	"User-Agent": []string{fmt.Sprintf("f1viewer/%s (%s)", version, runtime.GOOS)},
+}
 
 type episode struct {
 	Title        string   `json:"title"`
@@ -137,6 +143,7 @@ func getLiveWeekendEvent() (eventStruct, bool, error) {
 	err := golark.NewRequest(endpoint, "sets", "").
 		AddField(golark.NewField("items")).
 		WithFilter("slug", golark.NewFilter(golark.Equals, liveSlug)).
+		Headers(headers).
 		Execute(&liveSet)
 	if err != nil {
 		return eventStruct{}, false, err
@@ -153,6 +160,7 @@ func getCollectionList() (collList collectionList, err error) {
 		AddField(golark.NewField("title")).
 		AddField(golark.NewField("uid")).
 		WithFilter("set_type_slug", golark.NewFilter(golark.Equals, "video")).
+		Headers(headers).
 		Execute(&collList)
 	return
 }
@@ -160,6 +168,7 @@ func getCollectionList() (collList collectionList, err error) {
 func getCollection(collID string) (coll collection, err error) {
 	err = golark.NewRequest(endpoint, "sets", collID).
 		AddField(golark.NewField("items")).
+		Headers(headers).
 		Execute(&coll)
 	return
 }
@@ -168,6 +177,7 @@ func getVodTypes() (types vodTypes, err error) {
 	err = golark.NewRequest(endpoint, "vod-type-tag", "").
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("content_urls")).
+		Headers(headers).
 		Execute(&types)
 	return
 }
@@ -180,6 +190,7 @@ func getSeasons() (s seasons, err error) {
 		AddField(golark.NewField("has_content")).
 		AddField(golark.NewField("eventoccurrence_urls")).
 		OrderBy(year, golark.Descending).
+		Headers(headers).
 		Execute(&s)
 	return
 }
@@ -190,6 +201,7 @@ func getEvent(eventID string) (event eventStruct, err error) {
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("end_date")).
 		AddField(golark.NewField("sessionoccurrence_urls")).
+		Headers(headers).
 		Execute(&event)
 	return
 }
@@ -202,6 +214,7 @@ func getSession(sessionID string) (session sessionStruct, err error) {
 		AddField(golark.NewField("session_name")).
 		AddField(golark.NewField("start_time")).
 		AddField(golark.NewField("end_time")).
+		Headers(headers).
 		Execute(&session)
 	return
 }
@@ -225,6 +238,7 @@ func getSessions(sessionIDs []string) ([]sessionStruct, error) {
 		AddField(golark.NewField("end_time")).
 		AddField(golark.NewField("uid").
 			WithFilter(golark.NewFilter(golark.Equals, strings.Join(sessionIDs, ",")))).
+		Headers(headers).
 		Execute(&response)
 
 	return response.Objects, err
@@ -241,6 +255,7 @@ func getSessionStreams(sessionID string) ([]channel, error) {
 			WithSubField(golark.NewField("self")).
 			WithSubField(golark.NewField("name")).
 			WithSubField(golark.NewField("uid"))).
+		Headers(headers).
 		Execute(&channels)
 
 	return channels.Channels, err
@@ -280,6 +295,7 @@ func (s *viewerSession) loadEpisodes(episodeIDs []string) ([]episode, error) {
 					WithFilter(golark.NewFilter(golark.Equals, query))).
 				AddField(golark.NewField("data_source_id")).
 				AddField(golark.NewField("items")).
+				Headers(headers).
 				Execute(&response)
 			if err != nil {
 				s.logError(err)
