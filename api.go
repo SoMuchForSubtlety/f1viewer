@@ -77,6 +77,31 @@ type channel struct {
 	Name string `json:"name"`
 }
 
+type Plan struct {
+	Amount        int      `json:"amount"`
+	ContentURL    string   `json:"content_url"`
+	Currency      string   `json:"currency"`
+	ID            int      `json:"id"`
+	PricePointURL string   `json:"price_point_url"`
+	Self          string   `json:"self"`
+	CsgItemUrls   []string `json:"csg_item_urls"`
+	UID           string   `json:"uid"`
+	DataSourceID  string   `json:"data_source_id"`
+	ObjectID      int      `json:"object_id"`
+	Name          string   `json:"name"`
+	Recurring     bool     `json:"recurring"`
+	Interval      string   `json:"interval"`
+	IntervalCount int      `json:"interval_count"`
+	Sku           string   `json:"sku"`
+	StripeID      int      `json:"stripe_id"`
+	Product       Product  `json:"product"`
+}
+
+type Product struct {
+	Type string `json:"type"`
+	Slug string `json:"slug"`
+}
+
 func (c channel) PrettyName() string {
 	switch c.Name {
 	case "WIF":
@@ -132,6 +157,15 @@ func (Date *ISODate) UnmarshalJSON(b []byte) error {
 
 func (Date ISODate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(Date.Time.Format(Date.Format))
+}
+
+func getPlan(uri string) (Plan, error) {
+	var plan Plan
+	err := golark.NewRequest(endpoint, "plans", path.Base(uri)).
+		Headers(headers).
+		Execute(&plan)
+
+	return plan, err
 }
 
 func getLiveWeekendEvent() (eventStruct, bool, error) {

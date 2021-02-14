@@ -43,7 +43,7 @@ func (session *viewerSession) login() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not log in: %w", err)
 	}
-	token, err := getToken(auth.Data.SubscriptionToken)
+	token, err := session.getToken(auth.Data.SubscriptionToken)
 	if err != nil {
 		return "", fmt.Errorf("could not authenticate in: %w", err)
 	}
@@ -84,21 +84,44 @@ func authenticate(username, password string) (authResponse, error) {
 	return auth, err
 }
 
-func getToken(accessToken string) (tokenResponse, error) {
+func (session *viewerSession) getToken(accessToken string) (tokenResponse, error) {
 	type request struct {
 		IdentityProviderURL string `json:"identity_provider_url"`
 		AccessToken         string `json:"access_token"`
 	}
 
 	// TODO: double ckeck auth providers
-	respBody, err := post(request{IdentityProviderURL: identityProvider, AccessToken: accessToken}, getTokenURL, http.Header{})
+	respBody, err := post(request{identityProvider, accessToken}, getTokenURL, headers)
 	if err != nil {
 		return tokenResponse{}, err
 	}
 
 	var token tokenResponse
 	err = json.Unmarshal(respBody, &token)
+	go session.checkPlans(token)
 	return token, err
+}
+
+func (session *viewerSession) checkPlans(token tokenResponse) {
+	if len(token.PlanUrls) == 0 {
+		session.logInfo("looks like you don't have an F1TV subscription, some streams might not be accessible")
+		return
+	}
+
+	plan, err := getPlan(token.PlanUrls[0])
+	if err != nil {
+		session.logErrorf("failed to get user subscription information: %v", err)
+		return
+	}
+
+	switch plan.Product.Slug {
+	case "pro":
+		session.logInfo("detected active F1TV pro subscription")
+	case "access":
+		session.logInfo("looks like you have an F1TV access subscription, some streams might not be accessible")
+	default:
+		session.logInfof("unknown F1TV subscription tier '%s'", plan.Product.Slug)
+	}
 }
 
 func post(content interface{}, url string, header http.Header) ([]byte, error) {
