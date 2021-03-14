@@ -67,11 +67,18 @@ var (
 
 func main() {
 	var showVersion bool
+	var showConfig bool
 	flag.BoolVar(&showVersion, "v", showVersion, "show version information")
 	flag.BoolVar(&showVersion, "version", showVersion, "show version information")
+	flag.BoolVar(&showConfig, "c", showConfig, "show config information")
+	flag.BoolVar(&showConfig, "config", showConfig, "show config information")
 	flag.Parse()
 	if showVersion {
 		fmt.Println(buildVersion())
+		return
+	}
+	if showConfig {
+		fmt.Println(buildConfigPath())
 		return
 	}
 
@@ -301,6 +308,15 @@ func buildVersion() string {
 	}
 	if date != "" {
 		result += fmt.Sprintf("\nBuilt:       %s", date)
+	}
+	return result
+}
+
+func buildConfigPath() string {
+	path, err := getConfigPath()
+	result := fmt.Sprintf("Config file:  %s", path)
+	if err != nil {
+		result += fmt.Sprintf("\nThere was an error reading config file:  %s", err)
 	}
 	return result
 }
