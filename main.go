@@ -66,8 +66,7 @@ var (
 )
 
 func main() {
-	var showVersion bool
-	var showConfig bool
+	var showVersion, showConfig bool
 	flag.BoolVar(&showVersion, "v", showVersion, "show version information")
 	flag.BoolVar(&showVersion, "version", showVersion, "show version information")
 	flag.BoolVar(&showConfig, "c", showConfig, "show config information")
