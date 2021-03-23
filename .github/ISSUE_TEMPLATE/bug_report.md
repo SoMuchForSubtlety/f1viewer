@@ -14,8 +14,8 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
-1. Go to '...'
-2. Try to play '....'
+1. Go to...
+2. Try to play...
 3. See error
 
 **Expected behaviour**
@@ -33,4 +33,4 @@ Do you have a free, access or pro account? Are you using a VPN / proxy?
  - Version [`f1viewer -v` output]
 
 **Logs**
-If applicable please provide the relevant portion of your logs. On Windows you can find them under `%appdata%\f1viewer\logs`, on macOs in `$HOME/Library/Application Support/f1viewer/logs` and on linux in `$HOME/.local/share/f1viewer/`
+If applicable please provide the relevant portion of your logs. You can find them by running `f1viewer -logs`.

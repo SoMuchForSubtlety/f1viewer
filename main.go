@@ -6,12 +6,14 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
 	"github.com/SoMuchForSubtlety/keyring"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/skratchdot/open-golang/open"
 )
 
 var activeTheme = struct {
@@ -67,15 +69,45 @@ var (
 
 func main() {
 	var showVersion bool
+	var openConfig bool
+	var openLogs bool
 	flag.BoolVar(&showVersion, "v", showVersion, "show version information")
 	flag.BoolVar(&showVersion, "version", showVersion, "show version information")
+	flag.BoolVar(&openConfig, "config", openConfig, "open config file")
+	flag.BoolVar(&openLogs, "logs", openLogs, "open logs directory")
 	flag.Parse()
 	if showVersion {
 		fmt.Println(buildVersion())
 		return
 	}
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("Could not open config: %v", err)
+	}
+	if openConfig {
+		cfgPath, err := getConfigPath()
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = open.Start(path.Join(cfgPath, "config.json"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if openLogs {
+		logPath, err := getLogPath(cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = open.Start(logPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
-	session, logfile, err := newSession()
+	session, logfile, err := newSession(cfg)
 	defer logfile.Close()
 	if err != nil {
 		fmt.Println("[ERROR]", err)
@@ -119,13 +151,10 @@ func main() {
 	session.app.Stop()
 }
 
-func newSession() (*viewerSession, *os.File, error) {
+func newSession(cfg config) (*viewerSession, *os.File, error) {
 	var err error
-	session := &viewerSession{}
-
-	session.cfg, err = loadConfig()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Could not open config: %w", err)
+	session := &viewerSession{
+		cfg: cfg,
 	}
 
 	logFile, err := configureLogging(session.cfg)

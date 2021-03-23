@@ -70,7 +70,7 @@ Please make sure you are using the latest version of the player. If you use Wind
 Players need to be in your PATH environment variable to be detected by f1viewer.
 
 ## Config
-When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`.
+When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`. You can access it quickly by running `f1viewer -config`.
 
 The default config looks like this
 ```json
@@ -184,9 +184,10 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
 * `tab` to cycle through the login form fields
 * enter to select / confirm
 * `r` while an event is selected to refresh it's contents
+* `q` to quit
 
 ## Logs
-By default f1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`.
+By default f1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. You can access them quickly by running `f1viewer -logs`.
 The log folder can be changed in the config. Logs can also be turned off completely.
 
 ## Credentials
