@@ -21,8 +21,8 @@
 **Note:** You also need a compatible player installed, you can find a list [here](https://github.com/SoMuchForSubtlety/f1viewer/wiki/Players-Supported-by-Default).
 
 ### Windows
-* Download and [the latest release for Windows](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
-* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/) (often outdated due to the slow review process)
+* Download [the latest release directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
+* Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/) 
 
 ### macOS
 * You can install f1viewer with Homebrew (recommended)
@@ -53,7 +53,7 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 * Install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
 * build it from source
   ```bash
-  go get github.com/SoMuchForSubtlety/f1viewer
+  go install github.com/SoMuchForSubtlety/f1viewer@latest
   ```
 
 ## FAQ

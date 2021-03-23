@@ -149,7 +149,7 @@ func configureLogging(cfg config) (*os.File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Could not get log path: %w", err)
 	}
-	completePath := fmt.Sprint(logPath, time.Now().Format("2006-01-02"), ".log")
+	completePath := path.Join(logPath, time.Now().Format("2006-01-02")+".log")
 	logFile, err := os.OpenFile(completePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("Could not open log file: %w", err)
