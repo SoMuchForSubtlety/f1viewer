@@ -53,7 +53,7 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 * Install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
 * build it from source
   ```bash
-  go install github.com/SoMuchForSubtlety/f1viewer@latest
+  go get github.com/SoMuchForSubtlety/f1viewer
   ```
 
 ## FAQ
