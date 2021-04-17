@@ -32,7 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v1
       - name: Build
-        run: go build -v .
+        run: go build -v -o f1viewer cmd/main.go
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}-f1viewer
