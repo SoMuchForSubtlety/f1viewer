@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func checkRegistry(c command) (command, bool) {
+func checkRegistry(c Command) (Command, bool) {
 	regPath := c.registry
 	if runtime.GOARCH == "386" {
 		regPath = c.registry32

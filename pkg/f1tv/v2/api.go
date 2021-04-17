@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"path/filepath"
+	"path"
 	"runtime"
 	"strconv"
 )
@@ -93,7 +93,7 @@ func (f *F1TV) Authenticate(username, password string) error {
 }
 
 func GetContent(format StreamType, category RequestCategory, v interface{}) error {
-	resp, err := http.Get(fmt.Sprintf(baseURL+filepath.Join(pathStart, "PAGE/%v/F1_TV_Pro_Annual/2"), format, category))
+	resp, err := http.Get(fmt.Sprintf(baseURL+path.Join(pathStart, "PAGE/%v/F1_TV_Pro_Annual/2"), format, category))
 	if err != nil {
 		return fmt.Errorf("error during request: %w", err)
 	}
