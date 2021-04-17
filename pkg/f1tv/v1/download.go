@@ -1,4 +1,4 @@
-package main
+package f1tv
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 )
 
 // returns valid m3u8 URL as string
-func getPlayableURL(assetID, token string) (string, error) {
+func (f *F1TV) GetPlayableURL(assetID string) (string, error) {
 	type channelContainer struct {
 		ChannelURL string `json:"channel_url"`
 	}
@@ -35,7 +35,7 @@ func getPlayableURL(assetID, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Authorization", "JWT "+token)
+	req.Header.Set("Authorization", "JWT "+f.AuthToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err

@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"encoding/json"
@@ -9,24 +9,26 @@ import (
 	"path"
 	"runtime"
 	"time"
+
+	"github.com/SoMuchForSubtlety/f1viewer/internal/cmd"
 )
 
-type config struct {
-	LiveRetryTimeout      int            `json:"live_retry_timeout"`
-	Lang                  string         `json:"preferred_language"`
-	CheckUpdate           bool           `json:"check_updates"`
-	SaveLogs              bool           `json:"save_logs"`
-	LogLocation           string         `json:"log_location"`
-	CustomPlaybackOptions []command      `json:"custom_playback_options"`
-	MultiCommand          []multiCommand `json:"multi_commands"`
-	HorizontalLayout      bool           `json:"horizontal_layout"`
-	Theme                 theme          `json:"theme"`
-	TreeRatio             int            `json:"tree_ratio"`
-	OutputRatio           int            `json:"output_ratio"`
-	TerminalWrap          bool           `json:"terminal_wrap"`
+type Config struct {
+	LiveRetryTimeout      int                `json:"live_retry_timeout"`
+	Lang                  string             `json:"preferred_language"`
+	CheckUpdate           bool               `json:"check_updates"`
+	SaveLogs              bool               `json:"save_logs"`
+	LogLocation           string             `json:"log_location"`
+	CustomPlaybackOptions []cmd.Command      `json:"custom_playback_options"`
+	MultiCommand          []cmd.MultiCommand `json:"multi_commands"`
+	HorizontalLayout      bool               `json:"horizontal_layout"`
+	Theme                 Theme              `json:"theme"`
+	TreeRatio             int                `json:"tree_ratio"`
+	OutputRatio           int                `json:"output_ratio"`
+	TerminalWrap          bool               `json:"terminal_wrap"`
 }
 
-type theme struct {
+type Theme struct {
 	BackgroundColor     string `json:"background_color"`
 	BorderColor         string `json:"border_color"`
 	CategoryNodeColor   string `json:"category_node_color"`
@@ -44,9 +46,9 @@ type theme struct {
 	MultiCommandColor   string `json:"multi_command_color"`
 }
 
-func loadConfig() (config, error) {
-	var cfg config
-	p, err := getConfigPath()
+func LoadConfig() (Config, error) {
+	var cfg Config
+	p, err := GetConfigPath()
 	if err != nil {
 		return cfg, err
 	}
@@ -59,7 +61,7 @@ func loadConfig() (config, error) {
 		cfg.TreeRatio = 1
 		cfg.OutputRatio = 1
 		cfg.TerminalWrap = true
-		err = cfg.save()
+		err = cfg.Save()
 		return cfg, err
 	}
 
@@ -75,11 +77,11 @@ func loadConfig() (config, error) {
 	if cfg.OutputRatio < 1 {
 		cfg.OutputRatio = 1
 	}
-	cfg.Theme.apply()
+
 	return cfg, err
 }
 
-func getConfigPath() (string, error) {
+func GetConfigPath() (string, error) {
 	p, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -93,13 +95,13 @@ func getConfigPath() (string, error) {
 	return p, err
 }
 
-func getLogPath(cfg config) (string, error) {
+func GetLogPath(cfg Config) (string, error) {
 	var p string
 	if cfg.LogLocation == "" {
 		// windows, macos
 		switch runtime.GOOS {
 		case "windows", "darwin":
-			configPath, err := getConfigPath()
+			configPath, err := GetConfigPath()
 			if err != nil {
 				return "", err
 			}
@@ -123,8 +125,8 @@ func getLogPath(cfg config) (string, error) {
 	return p, err
 }
 
-func (cfg config) save() error {
-	p, err := getConfigPath()
+func (cfg Config) Save() error {
+	p, err := GetConfigPath()
 	if err != nil {
 		return err
 	}
@@ -140,12 +142,12 @@ func (cfg config) save() error {
 	return nil
 }
 
-func configureLogging(cfg config) (*os.File, error) {
+func configureLogging(cfg Config) (*os.File, error) {
 	if !cfg.SaveLogs {
 		log.SetOutput(ioutil.Discard)
 		return nil, nil
 	}
-	logPath, err := getLogPath(cfg)
+	logPath, err := GetLogPath(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get log path: %w", err)
 	}

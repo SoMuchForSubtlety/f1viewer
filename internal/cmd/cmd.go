@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -6,36 +6,47 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
+	"github.com/gdamore/tcell/v2"
 )
+
+type Store struct {
+	Commands    []Command
+	logger      util.Logger
+	lang        string
+	accentColor tcell.Color
+}
 
 type commandAndArgs []string
 
-type command struct {
+type Command struct {
 	Title      string         `json:"title"`
 	Command    commandAndArgs `json:"command"`
 	registry   string
 	registry32 string
 }
 
-type multiCommand struct {
+type MultiCommand struct {
 	Title   string           `json:"title,omitempty"`
-	Targets []channelMatcher `json:"targets,omitempty"`
+	Targets []ChannelMatcher `json:"targets,omitempty"`
 }
 
-type channelMatcher struct {
+type ChannelMatcher struct {
 	MatchTitle string         `json:"match_title,omitempty"`
 	Command    commandAndArgs `json:"command,omitempty"`
 	CommandKey string         `json:"command_key,omitempty"`
 }
 
-type commandContext struct {
-	EpID          string
-	CustomOptions command
+type CommandContext struct {
+	CustomOptions Command
 	MetaData      MetaData
+	URL           func() (string, error)
 }
 
 // MetaData contains title metadata
@@ -50,11 +61,17 @@ type MetaData struct {
 	OrdinalNumber    int
 }
 
-func (session *viewerSession) loadCommands() {
-	commands := []command{
+func NewStore(customCommands []Command, lang string, logger util.Logger, accentColor tcell.Color) *Store {
+	store := Store{
+		logger:      logger,
+		lang:        lang,
+		accentColor: accentColor,
+	}
+
+	commands := []Command{
 		{
 			Title:   "Play with MPV",
-			Command: []string{"mpv", "$url", "--alang=" + session.cfg.Lang, "--start=0", "--quiet", "--title=$title"},
+			Command: []string{"mpv", "$url", "--alang=" + lang, "--start=0", "--quiet", "--title=$title"},
 		},
 		{
 			Title:      "Play with VLC",
@@ -71,37 +88,32 @@ func (session *viewerSession) loadCommands() {
 	for _, c := range commands {
 		_, err := exec.LookPath(c.Command[0])
 		if err == nil {
-			session.commands = append(session.commands, c)
-		} else if c, found := session.checkRegistry(c); found {
-			session.commands = append(session.commands, c)
+			store.Commands = append(store.Commands, c)
+		} else if c, found := checkRegistry(c); found {
+			store.Commands = append(store.Commands, c)
 		}
 	}
 
 	if runtime.GOOS == "darwin" {
-		session.commands = append(session.commands, command{
+		store.Commands = append(store.Commands, Command{
 			Title:   "Play with QuickTime Player",
 			Command: []string{"open", "-a", "quicktime player", "$url"},
 		})
 	}
 
-	if len(session.commands) == 0 {
-		session.logError("No compatible players found, make sure they are in your PATH environmen variable")
+	if len(store.Commands) == 0 {
+		store.logger.Error("No compatible players found, make sure they are in your PATH environmen variable")
 	}
+
+	store.Commands = append(store.Commands, customCommands...)
+
+	return &store
 }
 
-func (session *viewerSession) runCustomCommand(cc commandContext) error {
-	var url string
-	var err error
-	if cc.EpID != "" {
-		url, err = getPlayableURL(cc.EpID, session.authtoken)
-		if err != nil {
-			return err
-		}
-	} else {
-		url, err = getBackupStream()
-		if err != nil {
-			return err
-		}
+func (s *Store) RunCommand(cc CommandContext) error {
+	url, err := cc.URL()
+	if err != nil {
+		return fmt.Errorf("could not get video URL: %w", err)
 	}
 	// replace variables
 	tmpCommand := make([]string, len(cc.CustomOptions.Command))
@@ -124,13 +136,13 @@ func (session *viewerSession) runCustomCommand(cc commandContext) error {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$hour", cc.MetaData.Date.Format("15"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$minute", cc.MetaData.Date.Format("04"))
 	}
-	return session.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...))
+	return s.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...))
 }
 
-func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
+func (s *Store) runCmd(cmd *exec.Cmd) error {
 	wdir, err := os.Getwd()
 	if err != nil {
-		session.logError("unable to get working directory: ", err)
+		// session.logError("unable to get working directory: ", err)
 		wdir = "?"
 	}
 	user, err := user.Current()
@@ -141,11 +153,12 @@ func (session *viewerSession) runCmd(cmd *exec.Cmd) error {
 			wdir = filepath.Base(wdir)
 		}
 	}
-	accentColorString := colortoHexString(activeTheme.TerminalAccentColor)
-	fmt.Fprintf(session.textWindow, "[%s::b][[-]%s[%s]]$[-::-] %s\n", accentColorString, wdir, accentColorString, strings.Join(cmd.Args, " "))
 
-	cmd.Stdout = session.textWindow
-	cmd.Stderr = session.textWindow
+	accentColorString := util.ColortoHexString(s.accentColor)
+	fmt.Fprintf(s.logger, "[%s::b][[-]%s[%s]]$[-::-] %s\n", accentColorString, wdir, accentColorString, strings.Join(cmd.Args, " "))
+
+	cmd.Stdout = s.logger
+	cmd.Stderr = s.logger
 
 	err = cmd.Start()
 	if err != nil {
@@ -173,4 +186,18 @@ func (t MetaData) String() string {
 	}
 
 	return sanitizeFileName(strings.Join(s, " - "))
+}
+
+func sanitizeFileName(s string) string {
+	whitespace := regexp.MustCompile(`\s+`)
+	var illegal *regexp.Regexp
+	if runtime.GOOS == "windows" {
+		illegal = regexp.MustCompile(`[<>:"/\\|?*]`)
+	} else {
+		illegal = regexp.MustCompile(`/`)
+	}
+	s = illegal.ReplaceAllString(s, " ")
+	s = whitespace.ReplaceAllString(s, " ")
+	s = strings.TrimSpace(s)
+	return s
 }

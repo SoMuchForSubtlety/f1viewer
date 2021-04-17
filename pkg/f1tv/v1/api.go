@@ -1,4 +1,4 @@
-package main
+package f1tv
 
 import (
 	"encoding/json"
@@ -9,10 +9,11 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
 	"github.com/SoMuchForSubtlety/golark"
+	"golang.org/x/sync/errgroup"
 )
 
 var endpoint = "https://f1tv.formula1.com/api/"
@@ -22,10 +23,26 @@ const (
 )
 
 var headers = http.Header{
-	"User-Agent": []string{fmt.Sprintf("f1viewer/%s (%s)", version, runtime.GOOS)},
+	// "User-Agent": []string{},
 }
 
-type episode struct {
+type F1TV struct {
+	subscriptionToken string
+	AuthToken         string
+	plan              SubscriptionPlan
+
+	userAgent string
+	Client    http.Client
+}
+
+func NewF1TV(version string) *F1TV {
+	return &F1TV{
+		Client:    *http.DefaultClient,
+		userAgent: fmt.Sprintf("f1viewer/%s (%s)", version, runtime.GOOS),
+	}
+}
+
+type Episode struct {
 	Title        string   `json:"title"`
 	Subtitle     string   `json:"subtitle"`
 	UID          string   `json:"uid"`
@@ -33,7 +50,7 @@ type episode struct {
 	Items        []string `json:"items"`
 }
 
-type vodTypes struct {
+type VodTypes struct {
 	Objects []struct {
 		Name        string   `json:"name"`
 		ContentUrls []string `json:"content_urls"`
@@ -41,7 +58,7 @@ type vodTypes struct {
 	} `json:"objects"`
 }
 
-type seasonStruct struct {
+type Season struct {
 	Name                string   `json:"name"`
 	HasContent          bool     `json:"has_content"`
 	Year                int      `json:"year"`
@@ -49,11 +66,7 @@ type seasonStruct struct {
 	UID                 string   `json:"uid"`
 }
 
-type seasons struct {
-	Seasons []seasonStruct `json:"objects"`
-}
-
-type eventStruct struct {
+type Event struct {
 	UID                   string   `json:"uid"`
 	Name                  string   `json:"name"`
 	OfficialName          string   `json:"official_name"`
@@ -61,7 +74,7 @@ type eventStruct struct {
 	EndDate               ISODate  `json:"end_date"`
 }
 
-type sessionStruct struct {
+type Session struct {
 	UID         string    `json:"uid"`
 	SessionName string    `json:"session_name"`
 	Name        string    `json:"name"`
@@ -71,7 +84,7 @@ type sessionStruct struct {
 	EndTime     time.Time `json:"end_time"`
 }
 
-type channel struct {
+type Channel struct {
 	UID  string `json:"uid"`
 	Self string `json:"self"`
 	Name string `json:"name"`
@@ -102,7 +115,7 @@ type Product struct {
 	Slug string `json:"slug"`
 }
 
-func (c channel) PrettyName() string {
+func (c Channel) PrettyName() string {
 	switch c.Name {
 	case "WIF":
 		return "Main Feed"
@@ -117,7 +130,7 @@ func (c channel) PrettyName() string {
 	}
 }
 
-type collectionItem struct {
+type CollectionItem struct {
 	Archived    bool   `json:"archived"`
 	UID         string `json:"uid"`
 	Language    string `json:"language"`
@@ -127,16 +140,12 @@ type collectionItem struct {
 	SetURL      string `json:"set_url"`
 }
 
-type collection struct {
+type Collection struct {
 	UID         string           `json:"uid"`
 	Title       string           `json:"title"`
 	UniqueItems bool             `json:"unique_items"`
-	Items       []collectionItem `json:"items"`
+	Items       []CollectionItem `json:"items"`
 	Summary     string           `json:"summary"`
-}
-
-type collectionList struct {
-	Objects []collection `json:"objects"`
 }
 
 type ISODate struct {
@@ -159,7 +168,7 @@ func (Date ISODate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(Date.Time.Format(Date.Format))
 }
 
-func getPlan(uri string) (Plan, error) {
+func GetPlan(uri string) (Plan, error) {
 	var plan Plan
 	err := golark.NewRequest(endpoint, "plans", path.Base(uri)).
 		Headers(headers).
@@ -168,9 +177,9 @@ func getPlan(uri string) (Plan, error) {
 	return plan, err
 }
 
-func getLiveWeekendEvent() (eventStruct, bool, error) {
+func GetLiveWeekendEvent() (Event, bool, error) {
 	type container struct {
-		Objects []collection `json:"objects"`
+		Objects []Collection `json:"objects"`
 	}
 
 	var liveSet container
@@ -180,26 +189,30 @@ func getLiveWeekendEvent() (eventStruct, bool, error) {
 		Headers(headers).
 		Execute(&liveSet)
 	if err != nil {
-		return eventStruct{}, false, err
+		return Event{}, false, err
 	}
 	if len(liveSet.Objects) == 0 || len(liveSet.Objects[0].Items) == 0 {
-		return eventStruct{}, false, nil
+		return Event{}, false, nil
 	}
-	event, err := getEvent(liveSet.Objects[0].Items[0].ContentURL)
+	event, err := GetEvent(liveSet.Objects[0].Items[0].ContentURL)
 	return event, true, err
 }
 
-func getCollectionList() (collList collectionList, err error) {
-	err = golark.NewRequest(endpoint, "sets", "").
+func GetCollectionList() ([]Collection, error) {
+	var collList struct {
+		Objects []Collection `json:"objects"`
+	}
+
+	err := golark.NewRequest(endpoint, "sets", "").
 		AddField(golark.NewField("title")).
 		AddField(golark.NewField("uid")).
 		WithFilter("set_type_slug", golark.NewFilter(golark.Equals, "video")).
 		Headers(headers).
 		Execute(&collList)
-	return
+	return collList.Objects, err
 }
 
-func getCollection(collID string) (coll collection, err error) {
+func GetCollection(collID string) (coll Collection, err error) {
 	err = golark.NewRequest(endpoint, "sets", collID).
 		AddField(golark.NewField("items")).
 		Headers(headers).
@@ -207,7 +220,7 @@ func getCollection(collID string) (coll collection, err error) {
 	return
 }
 
-func getVodTypes() (types vodTypes, err error) {
+func GetVodTypes() (types VodTypes, err error) {
 	err = golark.NewRequest(endpoint, "vod-type-tag", "").
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("content_urls")).
@@ -216,9 +229,13 @@ func getVodTypes() (types vodTypes, err error) {
 	return
 }
 
-func getSeasons() (s seasons, err error) {
+func GetSeasons() ([]Season, error) {
 	year := golark.NewField("year")
-	err = golark.NewRequest(endpoint, "race-season", "").
+	var s struct {
+		Seasons []Season `json:"objects"`
+	}
+
+	err := golark.NewRequest(endpoint, "race-season", "").
 		AddField(golark.NewField("year")).
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("has_content")).
@@ -226,11 +243,11 @@ func getSeasons() (s seasons, err error) {
 		OrderBy(year, golark.Descending).
 		Headers(headers).
 		Execute(&s)
-	return
+
+	return s.Seasons, err
 }
 
-func getEvent(eventID string) (event eventStruct, err error) {
-	// TODO: use proper ID
+func GetEvent(eventID string) (event Event, err error) {
 	err = golark.NewRequest(endpoint, "event-occurrence", pathToUID(eventID)).
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("end_date")).
@@ -240,7 +257,7 @@ func getEvent(eventID string) (event eventStruct, err error) {
 	return
 }
 
-func getSession(sessionID string) (session sessionStruct, err error) {
+func GetSession(sessionID string) (session Session, err error) {
 	err = golark.NewRequest(endpoint, "session-occurrence", pathToUID(sessionID)).
 		AddField(golark.NewField("name")).
 		AddField(golark.NewField("status")).
@@ -253,9 +270,9 @@ func getSession(sessionID string) (session sessionStruct, err error) {
 	return
 }
 
-func getSessions(sessionIDs []string) ([]sessionStruct, error) {
+func GetSessions(sessionIDs []string) ([]Session, error) {
 	type container struct {
-		Objects []sessionStruct `json:"objects"`
+		Objects []Session `json:"objects"`
 	}
 
 	var response container
@@ -278,9 +295,9 @@ func getSessions(sessionIDs []string) ([]sessionStruct, error) {
 	return response.Objects, err
 }
 
-func getSessionStreams(sessionID string) ([]channel, error) {
+func GetSessionStreams(sessionID string) ([]Channel, error) {
 	type container struct {
-		Channels []channel `json:"channel_urls"`
+		Channels []Channel `json:"channel_urls"`
 	}
 	var channels container
 
@@ -295,9 +312,9 @@ func getSessionStreams(sessionID string) ([]channel, error) {
 	return channels.Channels, err
 }
 
-func (s *viewerSession) loadEpisodes(episodeIDs []string) ([]episode, error) {
+func LoadEpisodes(episodeIDs []string) ([]Episode, error) {
 	type container struct {
-		Objects []episode `json:"objects"`
+		Objects []Episode `json:"objects"`
 	}
 
 	const batchSize = 5
@@ -305,15 +322,12 @@ func (s *viewerSession) loadEpisodes(episodeIDs []string) ([]episode, error) {
 		episodeIDs[i] = pathToUID(id)
 	}
 
-	episodes := make([]episode, len(episodeIDs))
+	episodes := make([]Episode, len(episodeIDs))
 
-	var wg sync.WaitGroup
-	wg.Add(len(episodes) / batchSize)
-	if len(episodeIDs)%batchSize > 0 {
-		wg.Add(1)
-	}
+	var loadingGroup errgroup.Group
 	for i := 0; i < len(episodeIDs); i += batchSize {
-		go func(rangeStart int) {
+		rangeStart := i
+		loadingGroup.Go(func() error {
 			rangeEnd := rangeStart + batchSize
 			if rangeEnd > len(episodeIDs) {
 				rangeEnd = len(episodeIDs)
@@ -321,7 +335,6 @@ func (s *viewerSession) loadEpisodes(episodeIDs []string) ([]episode, error) {
 
 			query := strings.Join(episodeIDs[rangeStart:rangeEnd], ",")
 			var response container
-			// TODO: properly handle error
 			err := golark.NewRequest(endpoint, "episodes", "").
 				AddField(golark.NewField("title")).
 				AddField(golark.NewField("subtitle")).
@@ -332,22 +345,21 @@ func (s *viewerSession) loadEpisodes(episodeIDs []string) ([]episode, error) {
 				Headers(headers).
 				Execute(&response)
 			if err != nil {
-				s.logError(err)
-				return
+				return err
 			}
 			copy(episodes[rangeStart:], response.Objects)
-			wg.Done()
-		}(i)
+			return nil
+		})
 	}
-	wg.Wait()
-	return episodes, nil
+	err := loadingGroup.Wait()
+	return sortEpisodes(episodes), err
 }
 
-func sortEpisodes(episodes []episode) []episode {
+func sortEpisodes(episodes []Episode) []Episode {
 	sort.Slice(episodes, func(i, j int) bool {
 		if len(episodes[i].DataSourceID) >= 4 && len(episodes[j].DataSourceID) >= 4 {
-			year1, race1, err := getYearAndRace(episodes[i].DataSourceID)
-			year2, race2, err2 := getYearAndRace(episodes[j].DataSourceID)
+			year1, race1, err := util.GetYearAndRace(episodes[i].DataSourceID)
+			year2, race2, err2 := util.GetYearAndRace(episodes[j].DataSourceID)
 			if err == nil && err2 == nil {
 				// sort chronologically by year and race number
 				if year1 != year2 {
