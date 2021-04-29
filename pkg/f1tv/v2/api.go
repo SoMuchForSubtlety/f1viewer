@@ -6,17 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"path"
+	"net/url"
 	"runtime"
-	"strconv"
 )
 
 const (
-	baseURL             = "https://f1tv.formula1.com"
-	backupStreamURL     = "https://f1tv.formula1.com/dr/stream.json"
-	authURL             = "https://api.formula1.com/v2/account/subscriber/authenticate/by-password"
-	pathStart           = "/2.0/R/ENG/%v/ALL/"
-	playbackRequestPath = "/CONTENT/PLAY?contentId=%v"
+	baseURL = "https://f1tv.formula1.com"
+	authURL = "https://api.formula1.com/v2/account/subscriber/authenticate/by-password"
+
+	playbackRequestPath            = "/1.0/R/ENG/%v/ALL/CONTENT/PLAY?contentId=%d"
+	playbackPerspectiveRequestPath = "/1.0/R/ENG/%v/ALL/%s"
+	contentDetailsPath             = "/2.0/R/ENG/%v/ALL/CONTENT/VIDEO/%d/F1_TV_Pro_Annual/14"
+	categoryPagePath               = "/2.0/R/ENG/%v/ALL/PAGE/%v/F1_TV_Pro_Annual/2"
 
 	apiKey = "fCUCjWrKPu9ylJwRAv8BpGLEgiAuThx7"
 
@@ -44,6 +45,11 @@ type ContentSubType string
 type StreamType string
 
 type RequestCategory int
+
+func assembleURL(urlPath string, format StreamType, args ...interface{}) (*url.URL, error) {
+	args = append([]interface{}{format}, args...)
+	return url.Parse(baseURL + fmt.Sprintf(urlPath, args...))
+}
 
 type F1TV struct {
 	SubscriptionToken string
@@ -92,8 +98,16 @@ func (f *F1TV) Authenticate(username, password string) error {
 	return err
 }
 
-func GetContent(format StreamType, category RequestCategory, v interface{}) error {
-	resp, err := http.Get(fmt.Sprintf(baseURL+path.Join(pathStart, "PAGE/%v/F1_TV_Pro_Annual/2"), format, category))
+func (f *F1TV) GetContent(format StreamType, category RequestCategory, v interface{}) error {
+	reqURL, err := assembleURL(categoryPagePath, format, category)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := f.Client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error during request: %w", err)
 	}
@@ -103,7 +117,7 @@ func GetContent(format StreamType, category RequestCategory, v interface{}) erro
 
 func (f *F1TV) GetVideoContainers() ([]TopContainer, error) {
 	var resp APIResponse
-	err := GetContent(WEB_DASH, CATEGORY_LIVE, &resp)
+	err := f.GetContent(WEB_DASH, CATEGORY_LIVE, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -142,15 +156,59 @@ func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 	return live, nil
 }
 
-func (f *F1TV) GetPlaybackURL(format StreamType, contentID int) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(baseURL+"/1.0/R/ENG/%v/ALL/CONTENT/PLAY", format), nil)
+func (f *F1TV) ContentDetails(contentID int) (TopContainer, error) {
+	reqURL, err := assembleURL(contentDetailsPath, BIG_SCREEN_HLS, contentID)
+	if err != nil {
+		return TopContainer{}, err
+	}
+	req, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
+	if err != nil {
+		return TopContainer{}, err
+	}
+
+	resp, err := f.Client.Do(req)
+	if err != nil {
+		return TopContainer{}, err
+	}
+	defer resp.Body.Close()
+
+	var details APIResponse
+	err = json.NewDecoder(resp.Body).Decode(&details)
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return TopContainer{}, fmt.Errorf("got status code %d: %s", resp.StatusCode, details.Message)
+	}
+
+	if len(details.ResultObj.Containers) == 0 {
+		return TopContainer{}, fmt.Errorf("no content details for %d", contentID)
+	}
+	return details.ResultObj.Containers[0], err
+}
+
+func (f *F1TV) GetPerspectivePlaybackURL(format StreamType, path string) (string, error) {
+	reqURL, err := assembleURL(playbackPerspectiveRequestPath, format, path)
 	if err != nil {
 		return "", nil
 	}
 
-	q := req.URL.Query()
-	q.Add("contentId", strconv.Itoa(contentID))
-	req.URL.RawQuery = q.Encode()
+	return f.playbackURL(reqURL.String())
+}
+
+func (f *F1TV) GetPlaybackURL(format StreamType, contentID int) (string, error) {
+	reqURL, err := assembleURL(playbackRequestPath, format, contentID)
+	if err != nil {
+		return "", nil
+	}
+
+	return f.playbackURL(reqURL.String())
+}
+
+func (f *F1TV) playbackURL(reqURL string) (string, error) {
+	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
+	if err != nil {
+		return "", nil
+	}
+
 	req.Header.Set("ascendontoken", f.SubscriptionToken)
 	httpResp, err := http.DefaultClient.Do(req)
 	if err != nil {

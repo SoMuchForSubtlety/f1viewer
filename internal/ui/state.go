@@ -104,7 +104,7 @@ func NewUI(cfg config.Config, version string) *UIState {
 
 	ui.logger = ui.Logger()
 
-	ui.cmd = cmd.NewStore(cfg.CustomPlaybackOptions, cfg.Lang, ui.logger, activeTheme.TerminalAccentColor)
+	ui.cmd = cmd.NewStore(cfg.CustomPlaybackOptions, cfg.MultiCommand, cfg.Lang, ui.logger, activeTheme.TerminalAccentColor)
 
 	err := ui.loginWithStoredCredentials()
 	if err != nil {

@@ -17,10 +17,11 @@ import (
 )
 
 type Store struct {
-	Commands    []Command
-	logger      util.Logger
-	lang        string
-	accentColor tcell.Color
+	Commands     []Command
+	MultiCommads []MultiCommand
+	logger       util.Logger
+	lang         string
+	accentColor  tcell.Color
 }
 
 type commandAndArgs []string
@@ -61,11 +62,12 @@ type MetaData struct {
 	OrdinalNumber    int
 }
 
-func NewStore(customCommands []Command, lang string, logger util.Logger, accentColor tcell.Color) *Store {
+func NewStore(customCommands []Command, multiCommands []MultiCommand, lang string, logger util.Logger, accentColor tcell.Color) *Store {
 	store := Store{
-		logger:      logger,
-		lang:        lang,
-		accentColor: accentColor,
+		logger:       logger,
+		lang:         lang,
+		accentColor:  accentColor,
+		MultiCommads: multiCommands,
 	}
 
 	commands := []Command{
