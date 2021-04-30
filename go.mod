@@ -1,6 +1,6 @@
 module github.com/SoMuchForSubtlety/f1viewer
 
-go 1.14
+go 1.16
 
 replace github.com/rivo/tview => github.com/SoMuchForSubtlety/tview v0.0.0-20210213192247-c4de038979df
 
