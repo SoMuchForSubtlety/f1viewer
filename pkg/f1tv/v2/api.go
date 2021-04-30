@@ -145,9 +145,12 @@ func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 		return nil, err
 	}
 	var live []ContentContainer
+	ids := make(map[int]struct{})
 	for _, vidContainers := range topContainers {
 		for _, v := range vidContainers.RetrieveItems.ResultObj.Containers {
-			if v.Metadata.ContentSubtype == LIVE {
+			_, ok := ids[v.Metadata.ContentID]
+			if !ok && v.Metadata.ContentSubtype == LIVE {
+				ids[v.Metadata.ContentID] = struct{}{}
 				live = append(live, v)
 			}
 		}

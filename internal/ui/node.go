@@ -145,6 +145,10 @@ func (s *UIState) getPlaybackNodes(sessionTitles cmd.MetaData, getURL func() (st
 		nodes = append(nodes, s.createCommandNode(sessionTitles, getURL, c))
 	}
 
+	// for _, c := range s.cmd.MultiCommads {
+	// 	nodes = append(nodes, s.createCommandNode(sessionTitles, getURL, c))
+	// }
+
 	clipboardNode := tview.NewTreeNode("Copy URL to clipboard").
 		SetColor(activeTheme.ActionNodeColor).
 		SetReference(&NodeMetadata{nodeType: ActionNode, metadata: sessionTitles})
@@ -197,15 +201,8 @@ func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
 		m := cmd.MetaData{
 			EpisodeTitle: v.Metadata.Title,
 		}
-		streamNode := tview.NewTreeNode(v.Metadata.Title + " - LIVE").
-			SetColor(activeTheme.LiveColor).
-			SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.Itoa(v.Metadata.ContentID), metadata: m})
-
-		streamNode.SetSelectedFunc(func() {
-			streamNode.SetSelectedFunc(nil)
-			nodes := s.getPlaybackNodes(m, func() (string, error) { return s.v2.GetPlaybackURL(v2.BIG_SCREEN_HLS, v.Metadata.ContentID) })
-			appendNodes(streamNode, nodes...)
-		})
+		streamNode := s.v2ContentNode(v, m)
+		streamNode.SetText(v.Metadata.Title + " - LIVE").SetColor(activeTheme.LiveColor)
 		nodes = append(nodes, streamNode)
 	}
 
@@ -365,26 +362,90 @@ func (s *UIState) getHomepageNodes() []*tview.TreeNode {
 			SetExpanded(false)
 
 		for _, v := range h.RetrieveItems.ResultObj.Containers {
-			v := v
-			m := cmd.MetaData{
-				CategoryTitle: title,
-				EpisodeTitle:  v.Metadata.Title,
-			}
-			streamNode := tview.NewTreeNode(v.Metadata.TitleBrief).
-				SetColor(activeTheme.ItemNodeColor).
-				SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.Itoa(v.Metadata.ContentID), metadata: m})
-
-			streamNode.SetSelectedFunc(func() {
-				streamNode.SetSelectedFunc(nil)
-				nodes := s.getPlaybackNodes(m, func() (string, error) { return s.v2.GetPlaybackURL(v2.BIG_SCREEN_HLS, v.Metadata.ContentID) })
-				appendNodes(streamNode, nodes...)
-			})
-			headingNode.AddChild(streamNode)
+			headingNode.AddChild(s.v2ContentNode(v, metadata))
 		}
 		headingNodes = append(headingNodes, headingNode)
 	}
 
 	return headingNodes
+}
+
+func (s *UIState) v2ContentNode(v v2.ContentContainer, meta cmd.MetaData) *tview.TreeNode {
+	// TODO: more metadata
+	meta.EpisodeTitle = v.Metadata.TitleBrief
+	if meta.EpisodeTitle == "" {
+		meta.EpisodeTitle = v.Metadata.Title
+	}
+
+	streamNode := tview.NewTreeNode(meta.EpisodeTitle).
+		SetColor(activeTheme.ItemNodeColor).
+		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.Itoa(v.Metadata.ContentID), metadata: meta})
+
+	streamNode.SetSelectedFunc(func() {
+		streamNode.SetSelectedFunc(nil)
+		details, err := s.v2.ContentDetails(v.Metadata.ContentID)
+		if err != nil {
+			s.logger.Errorf("could not get content details for '%d': %v", v.Metadata.ContentID, err)
+		}
+		// fall back to just the main stream if there was an error getting details
+		// or there are no more streams
+		if err != nil || len(details.Metadata.AdditionalStreams) == 0 {
+			nodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(v2.BIG_SCREEN_HLS, v.Metadata.ContentID) })
+			appendNodes(streamNode, nodes...)
+			return
+		}
+
+		streams := details.Metadata.AdditionalStreams
+		perspectives := make([]*tview.TreeNode, len(streams)+1)
+
+		sort.Slice(details.Metadata.AdditionalStreams, func(i, j int) bool {
+			if streams[i].TeamName != "" && streams[j].TeamName != "" {
+				return streams[i].TeamName < streams[j].TeamName
+			}
+			if streams[i].TeamName == "" && streams[j].TeamName == "" {
+				return streams[i].Title < streams[j].Title
+			}
+			return streams[i].TeamName == ""
+		})
+		// TODO: paralellize loading?
+		// TODO: animation
+		for i, p := range streams {
+			meta2 := meta
+			title := fmt.Sprintf("[%2d] %s %s", p.RacingNumber, p.DriverFirstName, p.DriverLastName)
+			if p.DriverLastName == "" {
+				title = p.Title
+			}
+			meta2.PerspectiveTitle = title
+
+			color := util.HexStringToColor(p.Hex)
+			if p.Hex == "" {
+				color = activeTheme.ItemNodeColor
+			}
+
+			node := tview.NewTreeNode(title).
+				SetColor(color).
+				SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta2})
+
+			node.SetSelectedFunc(func() {
+				node.SetSelectedFunc(nil)
+				playbackNodes := s.getPlaybackNodes(meta2, func() (string, error) { return s.v2.GetPerspectivePlaybackURL(v2.BIG_SCREEN_HLS, p.PlaybackURL) })
+				appendNodes(node, playbackNodes...)
+			})
+			perspectives[i+1] = node
+		}
+		node := tview.NewTreeNode("World Feed").
+			SetColor(activeTheme.ItemNodeColor).
+			SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta})
+		node.SetSelectedFunc(func() {
+			node.SetSelectedFunc(nil)
+			playbackNodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(v2.BIG_SCREEN_HLS, v.Metadata.ContentID) })
+			appendNodes(node, playbackNodes...)
+		})
+		perspectives[0] = node
+		appendNodes(streamNode, perspectives...)
+	})
+
+	return streamNode
 }
 
 // func (s *UIState) getMultiCommandNodes(perspectives []f1tv.Channel) []*tview.TreeNode {
