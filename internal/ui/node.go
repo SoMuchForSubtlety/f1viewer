@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"sync"
@@ -104,19 +105,25 @@ func getMetadata(node *tview.TreeNode) (*NodeMetadata, error) {
 	}
 }
 
-func (s *UIState) getV2Node() *tview.TreeNode {
-	homepage := tview.NewTreeNode("V2").
+func (s *UIState) getLegacyContent() *tview.TreeNode {
+	category := tview.NewTreeNode("Legacy Content").
 		SetColor(activeTheme.CategoryNodeColor).
-		SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: cmd.MetaData{CategoryTitle: "V2"}})
+		SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: cmd.MetaData{CategoryTitle: "legacy"}})
 
-	homepage.SetSelectedFunc(s.withBlink(homepage, func() {
-		homepage.SetSelectedFunc(nil)
-		seasons := s.getHomepageNodes()
-		{
-			appendNodes(homepage, seasons...)
+	category.SetSelectedFunc(s.withBlink(category, func() {
+		category.SetSelectedFunc(nil)
+
+		category.AddChild(s.getSeasonsNode())
+		// set vod types nodes
+		category.AddChild(s.getCollectionsNode())
+		nodes, err := s.getVodTypeNodes()
+		if err != nil {
+			s.logger.Error(err)
+		} else {
+			appendNodes(category, nodes...)
 		}
 	}, nil))
-	return homepage
+	return category
 }
 
 func (s *UIState) getSeasonsNode() *tview.TreeNode {
@@ -216,7 +223,6 @@ func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
 }
 
 func (s *UIState) getEventNodes(season f1tv.Season) ([]*tview.TreeNode, error) {
-	// TODO: refactor
 	errChan := make(chan error)
 	events := make([]*tview.TreeNode, len(season.EventoccurrenceUrls))
 	// iterate through events
@@ -355,7 +361,7 @@ func (s *UIState) getHomepageNodes() []*tview.TreeNode {
 		}
 		metadata := cmd.MetaData{CategoryTitle: title}
 		headingNode := tview.NewTreeNode(title).
-			SetColor(activeTheme.FolderNodeColor).
+			SetColor(activeTheme.CategoryNodeColor).
 			SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: metadata}).
 			SetExpanded(false)
 
@@ -368,99 +374,97 @@ func (s *UIState) getHomepageNodes() []*tview.TreeNode {
 	return headingNodes
 }
 
-// func (s *UIState) getMultiCommandNodes(perspectives []f1tv.Channel) []*tview.TreeNode {
-// 	if len(s.cfg.MultiCommand) == 0 {
-// 		return nil
-// 	}
+func (s *UIState) getMultiCommandNodes(perspectives []f1tv.Channel) []*tview.TreeNode {
+	if len(s.cfg.MultiCommand) == 0 {
+		return nil
+	}
 
-// 	var nodes []*tview.TreeNode
+	var nodes []*tview.TreeNode
 
-// 	for _, multi := range s.cfg.MultiCommand {
-// 		var commands []cmd.CommandContext
-// 		for _, target := range multi.Targets {
-// 			cmd, err := s.getCommand(target)
-// 			if err != nil {
-// 				s.logger.Error("could not add target to multi command: ", err)
-// 				continue
-// 			}
+	for _, multi := range s.cfg.MultiCommand {
+		var commands []cmd.CommandContext
+		for _, target := range multi.Targets {
+			command, err := s.getCommand(target)
+			if err != nil {
+				s.logger.Error("could not add target to multi command: ", err)
+				continue
+			}
 
-// 			perspective, err := findPerspectiveByName(target.MatchTitle, perspectives)
-// 			if err != nil {
-// 				continue
-// 			}
+			perspective, err := findLegacyPerspectiveByName(target.MatchTitle, perspectives)
+			if err != nil {
+				continue
+			}
 
-// 			// If we have a match, run the given command!
-// 			context := cmd.CommandContext{
-// 				MetaData:      cmd.MetaData{PerspectiveTitle: multi.Title},
-// 				EpID:          perspective.Self,
-// 				CustomOptions: cmd,
-// 			}
-// 			commands = append(commands, context)
-// 		}
-// 		// If no favorites are found, continue
-// 		if len(commands) == 0 {
-// 			continue
-// 		}
+			// If we have a match, run the given command!
+			context := cmd.CommandContext{
+				MetaData:      cmd.MetaData{PerspectiveTitle: multi.Title},
+				CustomOptions: command,
+				URL:           func() (string, error) { return s.v1.GetPlayableURL(perspective.Self) },
+			}
+			commands = append(commands, context)
+		}
+		// If no favorites are found, continue
+		if len(commands) == 0 {
+			continue
+		}
 
-// 		multiNode := tview.NewTreeNode(multi.Title).
-// 			SetColor(activeTheme.MultiCommandColor).
-// 			SetReference(&NodeMetadata{nodeType: ActionNode})
-// 		multiNode.SetSelectedFunc(s.withBlink(multiNode, func() {
-// 			multiNode.SetSelectedFunc(nil)
-// 			for _, context := range commands {
-// 				err := s.cmd.RunCommand(context, func() (string, error) { s.v1.GetPlayableURL(per) })
-// 				if err != nil {
-// 					s.logger.Error(err)
-// 				}
-// 			}
-// 		}, nil))
-// 		nodes = append(nodes, multiNode)
-// 	}
+		multiNode := tview.NewTreeNode(multi.Title).
+			SetColor(activeTheme.MultiCommandColor).
+			SetReference(&NodeMetadata{nodeType: ActionNode})
+		multiNode.SetSelectedFunc(s.withBlink(multiNode, func() {
+			multiNode.SetSelectedFunc(nil)
+			for _, context := range commands {
+				err := s.cmd.RunCommand(context)
+				if err != nil {
+					s.logger.Error(err)
+				}
+			}
+		}, nil))
+		nodes = append(nodes, multiNode)
+	}
 
-// 	return nodes
-// }
+	return nodes
+}
 
-// func findPerspectiveByName(name string, perspectives []f1tv.Channel) (f1tv.Channel, error) {
-// 	for _, perspective := range perspectives {
-// 		if perspective.PrettyName() == name {
-// 			return perspective, nil
-// 		}
-// 		// if the string doesn't match try regex
-// 		r, err := regexp.Compile(name)
-// 		if err != nil {
-// 			continue
-// 		}
-// 		if r.MatchString(perspective.PrettyName()) {
-// 			return perspective, nil
-// 		}
-// 	}
-// 	return f1tv.Channel{}, fmt.Errorf("found no perspective matching '%s'", name)
-// }
+func findLegacyPerspectiveByName(name string, perspectives []f1tv.Channel) (f1tv.Channel, error) {
+	for _, perspective := range perspectives {
+		if perspective.PrettyName() == name {
+			return perspective, nil
+		}
+		// if the string doesn't match try regex
+		r, err := regexp.Compile(name)
+		if err != nil {
+			continue
+		}
+		if r.MatchString(perspective.PrettyName()) {
+			return perspective, nil
+		}
+	}
+	return f1tv.Channel{}, fmt.Errorf("found no perspective matching '%s'", name)
+}
 
-// func (s *UIState) getCommand(matcher channelMatcher) (cmd.Command, error) {
-// 	if len(matcher.Command) > 0 {
-// 		return cmd.Command{Command: matcher.Command}, nil
-// 	}
+func (s *UIState) getCommand(matcher cmd.ChannelMatcher) (cmd.Command, error) {
+	if len(matcher.Command) > 0 {
+		return cmd.Command{Command: matcher.Command}, nil
+	}
 
-// 	if matcher.CommandKey == "" {
-// 		return cmd.Command{}, fmt.Errorf("No command for matcher '%s' provided", matcher.MatchTitle)
-// 	}
-// 	for _, cmd := range s.cfg.CustomPlaybackOptions {
-// 		if cmd.Title == matcher.CommandKey {
-// 			return cmd, nil
-// 		}
-// 	}
-// 	return cmd.Command{}, fmt.Errorf("found no command matching '%s'", matcher.CommandKey)
-// }
+	if matcher.CommandKey == "" {
+		return cmd.Command{}, fmt.Errorf("No command for matcher '%s' provided", matcher.MatchTitle)
+	}
+	for _, cmd := range s.cfg.CustomPlaybackOptions {
+		if cmd.Title == matcher.CommandKey {
+			return cmd, nil
+		}
+	}
+	return cmd.Command{}, fmt.Errorf("found no command matching '%s'", matcher.CommandKey)
+}
 
 func (s *UIState) getPerspectiveNodes(title cmd.MetaData, perspectives []f1tv.Channel) []*tview.TreeNode {
 	var channels []*tview.TreeNode
 	var teamsContasiner *tview.TreeNode
 
-	// add the multi commands at the top
-	// TODO
-	// multiCommands := s.getMultiCommandNodes(perspectives)
-	// channels = append(channels, multiCommands...)
+	multiCommands := s.getMultiCommandNodes(perspectives)
+	channels = append(channels, multiCommands...)
 
 	for _, streamPerspective := range perspectives {
 		streamPerspective := streamPerspective

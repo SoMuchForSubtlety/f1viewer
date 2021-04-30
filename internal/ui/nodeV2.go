@@ -59,15 +59,14 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer, meta cmd.MetaData)
 		}
 		return streams[i].TeamName == ""
 	})
-	// TODO: paralellize loading?
-	// TODO: animation
+
 	for i, p := range streams {
 		p := p
 		meta2 := meta
 		meta2.PerspectiveTitle = p.PrettyName()
 
 		color := util.HexStringToColor(p.Hex)
-		if p.Hex == "" {
+		if p.Hex == "" || s.cfg.DisableTeamColors {
 			color = activeTheme.ItemNodeColor
 		}
 
@@ -99,7 +98,6 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer, meta cmd.MetaData)
 
 func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, mainStream f1tv.ContentContainer) []*tview.TreeNode {
 	s.logger.Info("checking for multi commands")
-	// TODO: thi is missing the main perspective
 	if len(s.cfg.MultiCommand) == 0 {
 		return nil
 	}

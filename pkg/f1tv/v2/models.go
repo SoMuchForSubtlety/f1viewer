@@ -80,7 +80,7 @@ type EmfAttributes struct {
 	CircuitOfficialName            string      `json:"Circuit_Official_Name"`
 	ActivityDescription            string      `json:"ActivityDescription"`
 	SeriesMeetingSessionIdentifier string      `json:"SeriesMeetingSessionIdentifier"`
-	SessionEndTime                 string      `json:"sessionEndTime"` // TODO: time
+	SessionEndTime                 string      `json:"sessionEndTime"`
 	MeetingStartDate               string      `json:"Meeting_Start_Date"`
 	MeetingEndDate                 string      `json:"Meeting_End_Date"`
 	TrackLength                    string      `json:"Track_Length"`

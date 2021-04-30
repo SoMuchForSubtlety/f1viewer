@@ -85,7 +85,6 @@ func (f *F1TV) getToken(accessToken string) (tokenResponse, error) {
 		AccessToken         string `json:"access_token"`
 	}
 
-	// TODO: double ckeck auth providers
 	respBody, err := post(request{identityProvider, accessToken}, getTokenURL, headers)
 	if err != nil {
 		return tokenResponse{}, err

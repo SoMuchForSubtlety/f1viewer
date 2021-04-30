@@ -26,6 +26,7 @@ type Config struct {
 	TreeRatio             int                `json:"tree_ratio"`
 	OutputRatio           int                `json:"output_ratio"`
 	TerminalWrap          bool               `json:"terminal_wrap"`
+	DisableTeamColors     bool               `json:"disable_team_colors"`
 }
 
 type Theme struct {
@@ -71,6 +72,9 @@ func LoadConfig() (Config, error) {
 		return cfg, err
 	}
 	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		return cfg, err
+	}
 	if cfg.TreeRatio < 1 {
 		cfg.TreeRatio = 1
 	}
@@ -78,6 +82,8 @@ func LoadConfig() (Config, error) {
 		cfg.OutputRatio = 1
 	}
 
+	// TODO: move?
+	_, err = configureLogging(cfg)
 	return cfg, err
 }
 

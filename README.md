@@ -86,6 +86,7 @@ The default config looks like this
 	"tree_ratio": 1,
 	"output_ratio": 1,
 	"terminal_wrap": true,
+	"disable_team_colors": false,
 	"theme": {
 		"background_color": "",
 		"border_color": "",
@@ -115,6 +116,7 @@ The default config looks like this
  - `theme` can be used to set custom colors for various UI elements. Please use standard hex RGB values in the format `#FFFFFF` or `FFFFFF`.
  - `tree_ratio` and `output_ratio` can adjust the UI ratio. The values need to be integers >= 1.
  - `terminal_wrap` toggles line wrap for the terminal window. Default is value `true`
+ - `disable_team_colors` disables colors for perspective selection. Default is value `false`
 
 ## Custom Commands
 You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options`. You can add as many as you want.
@@ -183,7 +185,6 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
 * arrow keys or `h`, `j`, `k`, `l`.  
 * `tab` to cycle through the login form fields
 * enter to select / confirm
-* `r` while an event is selected to refresh it's contents
 * `q` to quit
 
 ## Logs

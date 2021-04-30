@@ -3,7 +3,6 @@ package f1tv
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path"
 	"runtime"
@@ -27,9 +26,8 @@ var headers = http.Header{
 }
 
 type F1TV struct {
-	subscriptionToken string
-	AuthToken         string
-	plan              SubscriptionPlan
+	AuthToken string
+	plan      SubscriptionPlan
 
 	userAgent string
 	Client    http.Client
@@ -376,29 +374,4 @@ func sortEpisodes(episodes []Episode) []Episode {
 
 func pathToUID(p string) (uid string) {
 	return path.Base(p)
-}
-
-type BackupStream struct {
-	MetricsEnvKeyPreProd string `json:"metricsEnvKeyPreProd"`
-	MetricsEnvKeyProd    string `json:"metricsEnvKeyProd"`
-	StreamManifest       string `json:"streamManifest"`
-	Poster               string `json:"poster"`
-}
-
-func getBackupStream() (string, error) {
-	resp, err := http.Get("https://f1tv.formula1.com/dr/stream.json")
-	if err != nil {
-		return "", nil
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var backup BackupStream
-	err = json.Unmarshal(body, &backup)
-	if err != nil {
-		return "", err
-	}
-	return backup.StreamManifest, nil
 }

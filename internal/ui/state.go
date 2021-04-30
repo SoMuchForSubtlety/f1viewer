@@ -58,7 +58,7 @@ type UIState struct {
 	logger util.Logger
 
 	// TODO: replace activeTheme
-	theme config.Theme
+	// theme config.Theme
 
 	changes chan *tview.TreeNode
 
@@ -81,9 +81,6 @@ func NewUI(cfg config.Config, version string) *UIState {
 	ui.app.EnableMouse(true)
 
 	root := tview.NewTreeNode("Categories").SetSelectable(false)
-
-	root.AddChild(ui.getV2Node())
-	root.AddChild(ui.getSeasonsNode())
 
 	ui.treeView = tview.NewTreeView().
 		SetRoot(root).
@@ -114,6 +111,9 @@ func NewUI(cfg config.Config, version string) *UIState {
 		ui.initUI()
 	}
 
+	appendNodes(root, ui.getHomepageNodes()...)
+	root.AddChild(ui.getLegacyContent())
+
 	return &ui
 }
 
@@ -135,16 +135,6 @@ func (ui *UIState) Run() error {
 		SetReference(&NodeMetadata{nodeType: ActionNode}).
 		SetColor(activeTheme.ActionNodeColor)
 	logOutNode.SetSelectedFunc(ui.logout)
-
-	// set vod types nodes
-	ui.treeView.GetRoot().AddChild(ui.getCollectionsNode())
-	nodes, err := ui.getVodTypeNodes()
-	if err != nil {
-		ui.logger.Error(err)
-	} else {
-		appendNodes(ui.treeView.GetRoot(), nodes...)
-		ui.app.Draw()
-	}
 
 	ui.treeView.GetRoot().AddChild(logOutNode)
 
