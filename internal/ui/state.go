@@ -74,6 +74,8 @@ func NewUI(cfg config.Config, version string) *UIState {
 		cfg:     cfg,
 		changes: make(chan *tview.TreeNode),
 		secret:  &secret.SecretStore{},
+		v2:      f1tvV2.NewF1TV(version),
+		v1:      f1tvV1.NewF1TV(version),
 	}
 	ui.applyTheme(cfg.Theme)
 
@@ -159,12 +161,10 @@ func (s *UIState) loginWithStoredCredentials() error {
 
 func (s *UIState) login(username, pw, token string) error {
 	// todo save auth token in credential store
-	s.v1 = f1tvV1.NewF1TV(s.version)
 	err := s.v1.Login(username, pw, token)
 	if err != nil {
 		return err
 	}
-	s.v2 = f1tvV2.NewF1TV(s.version)
 	err = s.v2.Authenticate(username, pw)
 	return err
 }
