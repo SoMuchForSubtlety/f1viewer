@@ -10,6 +10,8 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm
+      - arm64
   - id: mac
     goos:
       - darwin
