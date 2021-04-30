@@ -112,6 +112,21 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 	return &store
 }
 
+func (s *Store) GetCommand(multi ChannelMatcher) Command {
+	if multi.CommandKey != "" {
+		for _, c := range s.Commands {
+			if strings.EqualFold(multi.CommandKey, c.Title) {
+				return c
+			}
+		}
+	}
+
+	return Command{
+		Title:   "matcher for " + multi.MatchTitle,
+		Command: multi.Command,
+	}
+}
+
 func (s *Store) RunCommand(cc CommandContext) error {
 	url, err := cc.URL()
 	if err != nil {

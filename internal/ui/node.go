@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"sync"
@@ -12,7 +11,6 @@ import (
 	"github.com/SoMuchForSubtlety/f1viewer/internal/cmd"
 	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
 	"github.com/SoMuchForSubtlety/f1viewer/pkg/f1tv/v1"
-	v2 "github.com/SoMuchForSubtlety/f1viewer/pkg/f1tv/v2"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -370,84 +368,6 @@ func (s *UIState) getHomepageNodes() []*tview.TreeNode {
 	return headingNodes
 }
 
-func (s *UIState) v2ContentNode(v v2.ContentContainer, meta cmd.MetaData) *tview.TreeNode {
-	// TODO: more metadata
-	meta.EpisodeTitle = v.Metadata.TitleBrief
-	if meta.EpisodeTitle == "" {
-		meta.EpisodeTitle = v.Metadata.Title
-	}
-
-	streamNode := tview.NewTreeNode(meta.EpisodeTitle).
-		SetColor(activeTheme.ItemNodeColor).
-		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.Itoa(v.Metadata.ContentID), metadata: meta})
-
-	streamNode.SetSelectedFunc(func() {
-		streamNode.SetSelectedFunc(nil)
-		details, err := s.v2.ContentDetails(v.Metadata.ContentID)
-		if err != nil {
-			s.logger.Errorf("could not get content details for '%d': %v", v.Metadata.ContentID, err)
-		}
-		// fall back to just the main stream if there was an error getting details
-		// or there are no more streams
-		if err != nil || len(details.Metadata.AdditionalStreams) == 0 {
-			nodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(v2.BIG_SCREEN_HLS, v.Metadata.ContentID) })
-			appendNodes(streamNode, nodes...)
-			return
-		}
-
-		streams := details.Metadata.AdditionalStreams
-		perspectives := make([]*tview.TreeNode, len(streams)+1)
-
-		sort.Slice(details.Metadata.AdditionalStreams, func(i, j int) bool {
-			if streams[i].TeamName != "" && streams[j].TeamName != "" {
-				return streams[i].TeamName < streams[j].TeamName
-			}
-			if streams[i].TeamName == "" && streams[j].TeamName == "" {
-				return streams[i].Title < streams[j].Title
-			}
-			return streams[i].TeamName == ""
-		})
-		// TODO: paralellize loading?
-		// TODO: animation
-		for i, p := range streams {
-			meta2 := meta
-			title := fmt.Sprintf("[%2d] %s %s", p.RacingNumber, p.DriverFirstName, p.DriverLastName)
-			if p.DriverLastName == "" {
-				title = p.Title
-			}
-			meta2.PerspectiveTitle = title
-
-			color := util.HexStringToColor(p.Hex)
-			if p.Hex == "" {
-				color = activeTheme.ItemNodeColor
-			}
-
-			node := tview.NewTreeNode(title).
-				SetColor(color).
-				SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta2})
-
-			node.SetSelectedFunc(func() {
-				node.SetSelectedFunc(nil)
-				playbackNodes := s.getPlaybackNodes(meta2, func() (string, error) { return s.v2.GetPerspectivePlaybackURL(v2.BIG_SCREEN_HLS, p.PlaybackURL) })
-				appendNodes(node, playbackNodes...)
-			})
-			perspectives[i+1] = node
-		}
-		node := tview.NewTreeNode("World Feed").
-			SetColor(activeTheme.ItemNodeColor).
-			SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta})
-		node.SetSelectedFunc(func() {
-			node.SetSelectedFunc(nil)
-			playbackNodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(v2.BIG_SCREEN_HLS, v.Metadata.ContentID) })
-			appendNodes(node, playbackNodes...)
-		})
-		perspectives[0] = node
-		appendNodes(streamNode, perspectives...)
-	})
-
-	return streamNode
-}
-
 // func (s *UIState) getMultiCommandNodes(perspectives []f1tv.Channel) []*tview.TreeNode {
 // 	if len(s.cfg.MultiCommand) == 0 {
 // 		return nil
@@ -500,22 +420,22 @@ func (s *UIState) v2ContentNode(v v2.ContentContainer, meta cmd.MetaData) *tview
 // 	return nodes
 // }
 
-func findPerspectiveByName(name string, perspectives []f1tv.Channel) (f1tv.Channel, error) {
-	for _, perspective := range perspectives {
-		if perspective.PrettyName() == name {
-			return perspective, nil
-		}
-		// if the string doesn't match try regex
-		r, err := regexp.Compile(name)
-		if err != nil {
-			continue
-		}
-		if r.MatchString(perspective.PrettyName()) {
-			return perspective, nil
-		}
-	}
-	return f1tv.Channel{}, fmt.Errorf("found no perspective matching '%s'", name)
-}
+// func findPerspectiveByName(name string, perspectives []f1tv.Channel) (f1tv.Channel, error) {
+// 	for _, perspective := range perspectives {
+// 		if perspective.PrettyName() == name {
+// 			return perspective, nil
+// 		}
+// 		// if the string doesn't match try regex
+// 		r, err := regexp.Compile(name)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		if r.MatchString(perspective.PrettyName()) {
+// 			return perspective, nil
+// 		}
+// 	}
+// 	return f1tv.Channel{}, fmt.Errorf("found no perspective matching '%s'", name)
+// }
 
 // func (s *UIState) getCommand(matcher channelMatcher) (cmd.Command, error) {
 // 	if len(matcher.Command) > 0 {

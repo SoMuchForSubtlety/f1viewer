@@ -164,7 +164,7 @@ type Metadata struct {
 	MeetingKey         string               `json:"meetingKey"`
 	VideoType          string               `json:"videoType"`
 	ParentalAdvisory   string               `json:"parentalAdvisory"`
-	AdditionalStreams  []AdditionalStreams  `json:"additionalStreams"`
+	AdditionalStreams  []AdditionalStream   `json:"additionalStreams"`
 }
 
 type Container struct {
@@ -261,7 +261,7 @@ type AvailableLanguages struct {
 	LanguageName string `json:"languageName"`
 }
 
-type AdditionalStreams struct {
+type AdditionalStream struct {
 	RacingNumber    int    `json:"racingNumber"`
 	Title           string `json:"title"`
 	DriverFirstName string `json:"driverFirstName,omitempty"`

@@ -139,6 +139,19 @@ func (f *F1TV) GetVideoContainers() ([]TopContainer, error) {
 	return nonEmpty, err
 }
 
+func (s AdditionalStream) PrettyName() string {
+	switch s.Title {
+	case "PIT LANE":
+		return "Pit Lane"
+	case "TRACKER":
+		return "Driver Tracker"
+	case "DATA":
+		return "Data Channel"
+	default:
+		return fmt.Sprintf("%s %s", s.DriverFirstName, s.DriverLastName)
+	}
+}
+
 func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 	topContainers, err := f.GetVideoContainers()
 	if err != nil {
