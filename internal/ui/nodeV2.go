@@ -62,6 +62,7 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer, meta cmd.MetaData)
 	// TODO: paralellize loading?
 	// TODO: animation
 	for i, p := range streams {
+		p := p
 		meta2 := meta
 		meta2.PerspectiveTitle = p.PrettyName()
 
