@@ -250,6 +250,8 @@ func (f *F1TV) playbackURL(reqURL string) (string, error) {
 
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		err = errors.New(resp.Message)
+	} else if resp.ResultObj.URL == "" {
+		err = fmt.Errorf("API returned empty URL: %s", resp.Message)
 	}
 
 	return resp.ResultObj.URL, err
