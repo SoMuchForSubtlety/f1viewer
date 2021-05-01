@@ -73,7 +73,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 	commands := []Command{
 		{
 			Title:   "Play with MPV",
-			Command: []string{"mpv", "$url", fmt.Sprintf("--alang=%s", lang), "--quiet", "--title=$title"},
+			Command: []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
 		},
 		{
 			Title:      "Play with VLC",
