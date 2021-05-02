@@ -51,13 +51,13 @@ type Properties struct {
 	Series               string `json:"series"`
 	LastUpdatedDate      int64  `json:"lastUpdatedDate"`
 	SeasonMeetingOrdinal int    `json:"season_Meeting_Ordinal"`
-	MeetingStartDate     int    `json:"meeting_Start_Date"`
-	MeetingEndDate       int    `json:"meeting_End_Date"`
+	MeetingStartDate     int64  `json:"meeting_Start_Date"`
+	MeetingEndDate       int64  `json:"meeting_End_Date"`
 	Season               int    `json:"season"`
 	SessionIndex         int    `json:"session_index"`
-	SessionStartDate     int    `json:"sessionStartDate"`
+	SessionStartDate     int64  `json:"sessionStartDate"`
 	MeetingSessionKey    int    `json:"meetingSessionKey"`
-	SessionEndDate       int    `json:"sessionEndDate"`
+	SessionEndDate       int64  `json:"sessionEndDate"`
 }
 
 type EmfAttributes struct {
@@ -124,7 +124,7 @@ type Metadata struct {
 	Title              string               `json:"title"`
 	TitleBrief         string               `json:"titleBrief"`
 	ObjectType         string               `json:"objectType"`
-	Duration           int                  `json:"duration"`
+	Duration           int64                `json:"duration"`
 	Genres             []string             `json:"genres"`
 	ContentSubtype     ContentSubType       `json:"contentSubtype"`
 	PcLevel            int                  `json:"pcLevel"`
