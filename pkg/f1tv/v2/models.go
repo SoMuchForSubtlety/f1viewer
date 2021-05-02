@@ -5,7 +5,7 @@ type APIResponse struct {
 	Message          string    `json:"message"`
 	ErrorDescription string    `json:"errorDescription"`
 	ResultObj        ResultObj `json:"resultObj"`
-	SystemTime       int       `json:"systemTime"`
+	SystemTime       int64     `json:"systemTime"`
 	Source           string    `json:"source"`
 }
 
