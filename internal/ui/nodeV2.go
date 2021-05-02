@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/cmd"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
-	"github.com/SoMuchForSubtlety/f1viewer/pkg/f1tv/v2"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
 
 	"github.com/rivo/tview"
 )

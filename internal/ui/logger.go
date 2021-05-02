@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 )
 
 type tviewLogger struct {

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/cmd"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/config"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/github"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/secret"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
-	f1tvV1 "github.com/SoMuchForSubtlety/f1viewer/pkg/f1tv/v1"
-	f1tvV2 "github.com/SoMuchForSubtlety/f1viewer/pkg/f1tv/v2"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/github"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/secret"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
+	f1tvV1 "github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v1"
+	f1tvV2 "github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -304,7 +304,7 @@ func (ui *UIState) loadUpdate() {
 	getUpdateNode := tview.NewTreeNode("download update").
 		SetColor(activeTheme.ActionNodeColor).
 		SetSelectedFunc(func() {
-			err := util.OpenBrowser("https://github.com/SoMuchForSubtlety/F1viewer/releases/latest")
+			err := util.OpenBrowser("https://github.com/SoMuchForSubtlety/f1viewer/v2/releases/latest")
 			if err != nil {
 				ui.logger.Error(err)
 			}

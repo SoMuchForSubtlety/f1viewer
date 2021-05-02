@@ -1,4 +1,4 @@
-module github.com/SoMuchForSubtlety/f1viewer
+module github.com/SoMuchForSubtlety/f1viewer/v2
 
 go 1.14
 

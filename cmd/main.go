@@ -9,8 +9,8 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/config"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/ui"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/ui"
 	"github.com/skratchdot/open-golang/open"
 )
 

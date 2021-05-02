@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/SoMuchForSubtlety/f1viewer/internal/config"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

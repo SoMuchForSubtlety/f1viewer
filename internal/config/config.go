@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/cmd"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
 )
 
 type Config struct {

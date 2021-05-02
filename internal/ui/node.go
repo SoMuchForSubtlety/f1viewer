@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/cmd"
-	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
-	"github.com/SoMuchForSubtlety/f1viewer/pkg/f1tv/v1"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v1"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"

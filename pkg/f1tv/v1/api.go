@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SoMuchForSubtlety/f1viewer/internal/util"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/SoMuchForSubtlety/golark"
 	"golang.org/x/sync/errgroup"
 )
