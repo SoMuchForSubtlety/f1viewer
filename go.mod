@@ -10,7 +10,7 @@ require (
 	github.com/SoMuchForSubtlety/keyring v1.1.6
 	github.com/atotto/clipboard v0.1.4
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
-	github.com/gdamore/tcell/v2 v2.2.1
+	github.com/gdamore/tcell/v2 v2.3.3
 	github.com/keybase/go-keychain v0.0.0-20201121013009-976c83ec27a6 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.12 // indirect
