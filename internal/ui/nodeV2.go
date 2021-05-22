@@ -23,7 +23,7 @@ func (s *UIState) v2ContentNode(v f1tv.ContentContainer, meta cmd.MetaData) *tvi
 
 	streamNode := tview.NewTreeNode(meta.EpisodeTitle).
 		SetColor(activeTheme.ItemNodeColor).
-		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.Itoa(v.Metadata.ContentID), metadata: meta})
+		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.FormatInt(v.Metadata.ContentID, 10), metadata: meta})
 
 	streamNode.SetSelectedFunc(func() {
 		streamNode.SetSelectedFunc(nil)

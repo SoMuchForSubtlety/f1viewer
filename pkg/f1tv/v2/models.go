@@ -128,7 +128,7 @@ type Metadata struct {
 	Genres             []string             `json:"genres"`
 	ContentSubtype     ContentSubType       `json:"contentSubtype"`
 	PcLevel            int                  `json:"pcLevel"`
-	ContentID          int                  `json:"contentId"`
+	ContentID          int64                `json:"contentId"`
 	StarRating         int                  `json:"starRating"`
 	PictureURL         string               `json:"pictureUrl"`
 	ContentType        ContentType          `json:"contentType"`
@@ -206,7 +206,7 @@ type TopContainer struct {
 
 	// only in content details
 	PlatformVariants []PlatformVariants `json:"platformVariants"`
-	ContentID        int                `json:"contentId"`
+	ContentID        int64              `json:"contentId"`
 	Containers       struct {
 		Bundles    []Bundles    `json:"bundles"`
 		Categories []Categories `json:"categories"`

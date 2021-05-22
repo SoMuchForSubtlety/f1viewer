@@ -158,7 +158,7 @@ func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 		return nil, err
 	}
 	var live []ContentContainer
-	ids := make(map[int]struct{})
+	ids := make(map[int64]struct{})
 	for _, vidContainers := range topContainers {
 		for _, v := range vidContainers.RetrieveItems.ResultObj.Containers {
 			_, ok := ids[v.Metadata.ContentID]
@@ -172,7 +172,7 @@ func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 	return live, nil
 }
 
-func (f *F1TV) ContentDetails(contentID int) (TopContainer, error) {
+func (f *F1TV) ContentDetails(contentID int64) (TopContainer, error) {
 	reqURL, err := assembleURL(contentDetailsPath, BIG_SCREEN_HLS, contentID)
 	if err != nil {
 		return TopContainer{}, err
@@ -210,7 +210,7 @@ func (f *F1TV) GetPerspectivePlaybackURL(format StreamType, path string) (string
 	return f.playbackURL(reqURL.String())
 }
 
-func (f *F1TV) GetPlaybackURL(format StreamType, contentID int) (string, error) {
+func (f *F1TV) GetPlaybackURL(format StreamType, contentID int64) (string, error) {
 	reqURL, err := assembleURL(playbackRequestPath, format, contentID)
 	if err != nil {
 		return "", nil
