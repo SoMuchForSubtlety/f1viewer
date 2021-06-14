@@ -161,11 +161,7 @@ func (s *UIState) loginWithStoredCredentials() error {
 
 func (s *UIState) login(username, pw, token string) error {
 	// todo save auth token in credential store
-	err := s.v1.Login(username, pw, token)
-	if err != nil {
-		return err
-	}
-	err = s.v2.Authenticate(username, pw)
+	err := s.v2.Authenticate(username, pw)
 	return err
 }
 
