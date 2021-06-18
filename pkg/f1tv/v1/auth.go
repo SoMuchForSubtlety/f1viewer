@@ -11,7 +11,6 @@ import (
 const (
 	identityProvider = "/api/identity-providers/iden_732298a17f9c458890a1877880d140f3/"
 	authURL          = "https://api.formula1.com/v2/account/subscriber/authenticate/by-password"
-	getTokenURL      = "https://f1tv-api.formula1.com/agl/1.0/unk/en/all_devices/global/authenticate"
 	apiKey           = "fCUCjWrKPu9ylJwRAv8BpGLEgiAuThx7"
 )
 
@@ -29,13 +28,6 @@ type authResponse struct {
 	} `json:"data"`
 }
 
-type tokenResponse struct {
-	PlanUrls          []string `json:"plan_urls"`
-	Token             string   `json:"token"`
-	UserIsVip         bool     `json:"user_is_vip"`
-	Oauth2AccessToken string   `json:"oauth2_access_token"`
-}
-
 func (f *F1TV) Login(username, password, authToken string) error {
 	if authToken != "" && f.tokenValid(authToken) {
 		f.AuthToken = authToken
@@ -46,12 +38,8 @@ func (f *F1TV) Login(username, password, authToken string) error {
 	if err != nil {
 		return fmt.Errorf("could not log in: %w", err)
 	}
-	token, err := f.getToken(auth.Data.SubscriptionToken)
-	if err != nil {
-		return fmt.Errorf("could not authenticate in: %w", err)
-	}
-	f.AuthToken = token.Token
-	_ = f.setPlan(token)
+	f.AuthToken = auth.Data.SubscriptionToken
+	_ = f.setPlan()
 	return nil
 }
 
@@ -79,33 +67,17 @@ func authenticate(username, password string) (authResponse, error) {
 	return auth, err
 }
 
-func (f *F1TV) getToken(accessToken string) (tokenResponse, error) {
-	type request struct {
-		IdentityProviderURL string `json:"identity_provider_url"`
-		AccessToken         string `json:"access_token"`
-	}
+func (f *F1TV) setPlan() error {
+	//if len(token.PlanUrls) == 0 {
+	//	return nil
+	//}
 
-	respBody, err := post(request{identityProvider, accessToken}, getTokenURL, headers)
-	if err != nil {
-		return tokenResponse{}, err
-	}
+	//plan, err := GetPlan(token.PlanUrls[0])
+	//if err != nil {
+	//	return err
+	//}
 
-	var token tokenResponse
-	err = json.Unmarshal(respBody, &token)
-	return token, err
-}
-
-func (f *F1TV) setPlan(token tokenResponse) error {
-	if len(token.PlanUrls) == 0 {
-		return nil
-	}
-
-	plan, err := GetPlan(token.PlanUrls[0])
-	if err != nil {
-		return err
-	}
-
-	f.plan = SubscriptionPlan(plan.Product.Slug)
+	f.plan = SubscriptionPlan("pro")
 
 	return nil
 }
