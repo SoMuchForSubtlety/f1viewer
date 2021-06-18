@@ -68,15 +68,6 @@ func authenticate(username, password string) (authResponse, error) {
 }
 
 func (f *F1TV) setPlan() error {
-	//if len(token.PlanUrls) == 0 {
-	//	return nil
-	//}
-
-	//plan, err := GetPlan(token.PlanUrls[0])
-	//if err != nil {
-	//	return err
-	//}
-
 	f.plan = SubscriptionPlan("pro")
 
 	return nil
