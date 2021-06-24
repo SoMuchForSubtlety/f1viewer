@@ -20,6 +20,12 @@
 
 **Note:** You also need a compatible player installed, you can find a list [here](https://github.com/SoMuchForSubtlety/f1viewer/wiki/Players-Supported-by-Default).
 
+## compile form source
+install the go compiler, then run the following command
+```bash
+go get github.com/SoMuchForSubtlety/f1viewer@master
+```
+
 ### Windows
 * Download [the latest release directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 * Or install with [chocolatey](https://chocolatey.org/packages/f1viewer/) 
@@ -35,14 +41,7 @@
 ### Debian and Ubuntu
 Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.  
 
-### Fedora
-Install from the f1viewer copr repository
-```bash
-sudo dnf copr enable somuchforsubtlety/f1viewer
-sudo dnf install f1viewer
-```
-
-### openSUSE
+### Fedora, openSUSE
 Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
 
 ### Arch
@@ -51,10 +50,6 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 ### Any other Linux distribution
 * Download the binary [directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 * Install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
-* build it from source
-  ```bash
-  go get github.com/SoMuchForSubtlety/f1viewer@master
-  ```
 
 ## FAQ
 #### why is there a login, what credentials should I use
