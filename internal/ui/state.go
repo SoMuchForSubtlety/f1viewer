@@ -9,8 +9,7 @@ import (
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/github"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/secret"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
-	f1tvV1 "github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v1"
-	f1tvV2 "github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -62,8 +61,8 @@ type UIState struct {
 
 	changes chan *tview.TreeNode
 
-	v2     *f1tvV2.F1TV
-	v1     *f1tvV1.F1TV
+	v2 *f1tv.F1TV
+
 	secret *secret.SecretStore
 	cmd    *cmd.Store
 }
@@ -74,8 +73,7 @@ func NewUI(cfg config.Config, version string) *UIState {
 		cfg:     cfg,
 		changes: make(chan *tview.TreeNode),
 		secret:  &secret.SecretStore{},
-		v2:      f1tvV2.NewF1TV(version),
-		v1:      f1tvV1.NewF1TV(version),
+		v2:      f1tv.NewF1TV(version),
 	}
 	ui.applyTheme(cfg.Theme)
 
@@ -114,8 +112,6 @@ func NewUI(cfg config.Config, version string) *UIState {
 	}
 
 	appendNodes(root, ui.getHomepageNodes()...)
-	root.AddChild(ui.getLegacyContent())
-
 	return &ui
 }
 

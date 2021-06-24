@@ -1,7 +1,5 @@
 github.com/99designs/keyring v1.1.6 h1:kVDC2uCgVwecxCk+9zoCt2uEL6dt+dfVzMvGgnVcIuM=
 github.com/99designs/keyring v1.1.6/go.mod h1:16e0ds7LGQQcT59QqkTg72Hh5ShM51Byv5PEmW6uoRU=
-github.com/SoMuchForSubtlety/golark v1.2.0 h1:AL3xjJcakjdGIri+BwgPjruOYiNwJuzy1gLOjYnywm0=
-github.com/SoMuchForSubtlety/golark v1.2.0/go.mod h1:k11uLJFf5SHrMsLlJ0Jvy8hESyLBzNsiDSS6gkz0K24=
 github.com/SoMuchForSubtlety/keyring v1.1.6 h1:nObpYSKtjp9OfAgT9TGAm23PD886JdH5xtHD+HScZNk=
 github.com/SoMuchForSubtlety/keyring v1.1.6/go.mod h1:hVnJb2jtLXWRexWlVMhCSPdXVBYismixa1MdXxH3dYo=
 github.com/SoMuchForSubtlety/tview v0.0.0-20210213192247-c4de038979df h1:uVa6c4GilT/174Xr51V2+CukBMarvu1t1UvK61r7/O4=
@@ -74,8 +72,6 @@ golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b h1:7mWr3k41Qtv8XlltBkDkl8
 golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b/go.mod h1:T9bdIzuCu7OtxOm1hfPfRQxPLYneinmdGuTeoZ9dtd4=
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
-golang.org/x/sync v0.0.0-20210220032951-036812b2e83c h1:5KslGYwFpkhGh+Q16bwMP3cOontH8FOep7tGV86Y7SQ=
-golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190626150813-e07cf5db2756/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
