@@ -1,311 +1,311 @@
 package f1tv
 
 type APIResponse struct {
-	ResultCode       string    `json:"resultCode"`
-	Message          string    `json:"message"`
-	ErrorDescription string    `json:"errorDescription"`
-	ResultObj        ResultObj `json:"resultObj"`
-	SystemTime       int64     `json:"systemTime"`
-	Source           string    `json:"source"`
+	ResultCode       string    `json:"resultCode,omitempty"`
+	Message          string    `json:"message,omitempty"`
+	ErrorDescription string    `json:"errorDescription,omitempty"`
+	ResultObj        ResultObj `json:"resultObj,omitempty"`
+	SystemTime       int64     `json:"systemTime,omitempty"`
+	Source           string    `json:"source,omitempty"`
 }
 
 type Category struct {
-	ExternalPathIds []string `json:"externalPathIds"`
-	StartDate       int64    `json:"startDate"`
-	CategoryID      int      `json:"categoryId"`
-	EndDate         int64    `json:"endDate"`
-	CategoryPathIds []int    `json:"categoryPathIds"`
-	OrderID         int      `json:"orderId"`
-	IsPrimary       bool     `json:"isPrimary"`
-	CategoryName    string   `json:"categoryName"`
+	ExternalPathIds []string `json:"externalPathIds,omitempty"`
+	StartDate       int64    `json:"startDate,omitempty"`
+	CategoryID      int      `json:"categoryId,omitempty"`
+	EndDate         int64    `json:"endDate,omitempty"`
+	CategoryPathIds []int    `json:"categoryPathIds,omitempty"`
+	OrderID         int      `json:"orderId,omitempty"`
+	IsPrimary       bool     `json:"isPrimary,omitempty"`
+	CategoryName    string   `json:"categoryName,omitempty"`
 }
 
 type Bundles struct {
-	BundleID      int    `json:"bundleId"`
-	BundleType    string `json:"bundleType"`
-	BundleSubtype string `json:"bundleSubtype"`
-	IsParent      bool   `json:"isParent"`
-	OrderID       int    `json:"orderId"`
+	BundleID      int    `json:"bundleId,omitempty"`
+	BundleType    string `json:"bundleType,omitempty"`
+	BundleSubtype string `json:"bundleSubtype,omitempty"`
+	IsParent      bool   `json:"isParent,omitempty"`
+	OrderID       int    `json:"orderId,omitempty"`
 }
 
 type TechnicalPackage struct {
-	PackageID   int    `json:"packageId"`
-	PackageName string `json:"packageName"`
-	PackageType string `json:"packageType"`
+	PackageID   int    `json:"packageId,omitempty"`
+	PackageName string `json:"packageName,omitempty"`
+	PackageType string `json:"packageType,omitempty"`
 }
 
 type PlatformVariants struct {
-	SubtitlesLanguages []interface{}      `json:"subtitlesLanguages"`
-	AudioLanguages     []interface{}      `json:"audioLanguages"`
-	TechnicalPackages  []TechnicalPackage `json:"technicalPackages"`
-	CpID               int                `json:"cpId"`
-	VideoType          string             `json:"videoType"`
-	PictureURL         string             `json:"pictureUrl"`
-	TrailerURL         string             `json:"trailerUrl"`
-	HasTrailer         bool               `json:"hasTrailer"`
+	SubtitlesLanguages []interface{}      `json:"subtitlesLanguages,omitempty"`
+	AudioLanguages     []interface{}      `json:"audioLanguages,omitempty"`
+	TechnicalPackages  []TechnicalPackage `json:"technicalPackages,omitempty"`
+	CpID               int                `json:"cpId,omitempty"`
+	VideoType          string             `json:"videoType,omitempty"`
+	PictureURL         string             `json:"pictureUrl,omitempty"`
+	TrailerURL         string             `json:"trailerUrl,omitempty"`
+	HasTrailer         bool               `json:"hasTrailer,omitempty"`
 }
 
 type Properties struct {
-	MeetingNumber        int    `json:"meeting_Number"`
-	SessionEndTime       int64  `json:"sessionEndTime"`
-	Series               string `json:"series"`
-	LastUpdatedDate      int64  `json:"lastUpdatedDate"`
-	SeasonMeetingOrdinal int    `json:"season_Meeting_Ordinal"`
-	MeetingStartDate     int64  `json:"meeting_Start_Date"`
-	MeetingEndDate       int64  `json:"meeting_End_Date"`
-	Season               int    `json:"season"`
-	SessionIndex         int    `json:"session_index"`
-	SessionStartDate     int64  `json:"sessionStartDate"`
-	MeetingSessionKey    int    `json:"meetingSessionKey"`
-	SessionEndDate       int64  `json:"sessionEndDate"`
+	MeetingNumber        int    `json:"meeting_Number,omitempty"`
+	SessionEndTime       int64  `json:"sessionEndTime,omitempty"`
+	Series               string `json:"series,omitempty"`
+	LastUpdatedDate      int64  `json:"lastUpdatedDate,omitempty"`
+	SeasonMeetingOrdinal int    `json:"season_Meeting_Ordinal,omitempty"`
+	MeetingStartDate     int64  `json:"meeting_Start_Date,omitempty"`
+	MeetingEndDate       int64  `json:"meeting_End_Date,omitempty"`
+	Season               int    `json:"season,omitempty"`
+	SessionIndex         int    `json:"session_index,omitempty"`
+	SessionStartDate     int64  `json:"sessionStartDate,omitempty"`
+	MeetingSessionKey    int    `json:"meetingSessionKey,omitempty"`
+	SessionEndDate       int64  `json:"sessionEndDate,omitempty"`
 }
 
 type EmfAttributes struct {
-	VideoType                      string      `json:"VideoType"`
-	MeetingKey                     string      `json:"MeetingKey"`
-	MeetingSessionKey              string      `json:"MeetingSessionKey"`
-	MeetingName                    string      `json:"Meeting_Name"`
-	MeetingNumber                  string      `json:"Meeting_Number"`
-	CircuitShortName               string      `json:"Circuit_Short_Name"`
-	MeetingCode                    string      `json:"Meeting_Code"`
-	MeetingCountryKey              string      `json:"MeetingCountryKey"`
-	CircuitKey                     string      `json:"CircuitKey"`
-	MeetingLocation                string      `json:"Meeting_Location"`
-	Series                         string      `json:"Series"`
-	OBC                            bool        `json:"OBC"`
-	State                          string      `json:"state"`
-	TimetableKey                   string      `json:"TimetableKey"`
-	SessionKey                     string      `json:"SessionKey"`
-	SessionPeriod                  string      `json:"SessionPeriod"`
-	CircuitOfficialName            string      `json:"Circuit_Official_Name"`
-	ActivityDescription            string      `json:"ActivityDescription"`
-	SeriesMeetingSessionIdentifier string      `json:"SeriesMeetingSessionIdentifier"`
-	SessionEndTime                 string      `json:"sessionEndTime"`
-	MeetingStartDate               string      `json:"Meeting_Start_Date"`
-	MeetingEndDate                 string      `json:"Meeting_End_Date"`
-	TrackLength                    string      `json:"Track_Length"`
-	ScheduledLapCount              string      `json:"Scheduled_Lap_Count"`
-	ScheduledDistance              string      `json:"Scheduled_Distance"`
-	CircuitLocation                string      `json:"Circuit_Location"`
-	MeetingSponsor                 string      `json:"Meeting_Sponsor"`
-	IsTestEvent                    string      `json:"IsTestEvent"`
-	ChampionshipMeetingOrdinal     string      `json:"Championship_Meeting_Ordinal"`
-	MeetingOfficialName            string      `json:"Meeting_Official_Name"`
-	MeetingDisplayDate             string      `json:"Meeting_Display_Date"`
-	PageID                         interface{} `json:"PageID"`
-	MeetingCountryName             string      `json:"Meeting_Country_Name"`
-	GlobalTitle                    string      `json:"Global_Title"`
-	GlobalMeetingCountryName       string      `json:"Global_Meeting_Country_Name"`
-	GlobalMeetingName              string      `json:"Global_Meeting_Name"`
-	DriversID                      string      `json:"Drivers_ID"`
-	Year                           string      `json:"Year"`
-	TeamsID                        string      `json:"Teams_ID"`
+	VideoType                      string `json:"VideoType,omitempty"`
+	MeetingKey                     string `json:"MeetingKey,omitempty"`
+	MeetingSessionKey              string `json:"MeetingSessionKey,omitempty"`
+	MeetingName                    string `json:"Meeting_Name,omitempty"`
+	MeetingNumber                  string `json:"Meeting_Number,omitempty"`
+	CircuitShortName               string `json:"Circuit_Short_Name,omitempty"`
+	MeetingCode                    string `json:"Meeting_Code,omitempty"`
+	MeetingCountryKey              string `json:"MeetingCountryKey,omitempty"`
+	CircuitKey                     string `json:"CircuitKey,omitempty"`
+	MeetingLocation                string `json:"Meeting_Location,omitempty"`
+	Series                         string `json:"Series,omitempty"`
+	OBC                            bool   `json:"OBC,omitempty"`
+	State                          string `json:"state,omitempty"`
+	TimetableKey                   string `json:"TimetableKey,omitempty"`
+	SessionKey                     string `json:"SessionKey,omitempty"`
+	SessionPeriod                  string `json:"SessionPeriod,omitempty"`
+	CircuitOfficialName            string `json:"Circuit_Official_Name,omitempty"`
+	ActivityDescription            string `json:"ActivityDescription,omitempty"`
+	SeriesMeetingSessionIdentifier string `json:"SeriesMeetingSessionIdentifier,omitempty"`
+	SessionEndTime                 string `json:"sessionEndTime,omitempty"`
+	MeetingStartDate               string `json:"Meeting_Start_Date,omitempty"`
+	MeetingEndDate                 string `json:"Meeting_End_Date,omitempty"`
+	TrackLength                    string `json:"Track_Length,omitempty"`
+	ScheduledLapCount              string `json:"Scheduled_Lap_Count,omitempty"`
+	ScheduledDistance              string `json:"Scheduled_Distance,omitempty"`
+	CircuitLocation                string `json:"Circuit_Location,omitempty"`
+	MeetingSponsor                 string `json:"Meeting_Sponsor,omitempty"`
+	IsTestEvent                    string `json:"IsTestEvent,omitempty"`
+	ChampionshipMeetingOrdinal     string `json:"Championship_Meeting_Ordinal,omitempty"`
+	MeetingOfficialName            string `json:"Meeting_Official_Name,omitempty"`
+	MeetingDisplayDate             string `json:"Meeting_Display_Date,omitempty"`
+	PageID                         PageID `json:"PageID,omitempty"`
+	MeetingCountryName             string `json:"Meeting_Country_Name,omitempty"`
+	GlobalTitle                    string `json:"Global_Title,omitempty"`
+	GlobalMeetingCountryName       string `json:"Global_Meeting_Country_Name,omitempty"`
+	GlobalMeetingName              string `json:"Global_Meeting_Name,omitempty"`
+	DriversID                      string `json:"Drivers_ID,omitempty"`
+	Year                           string `json:"Year,omitempty"`
+	TeamsID                        string `json:"Teams_ID,omitempty"`
 	// inconsistent types
-	// SeasonMeetingOrdinal           int         `json:"Season_Meeting_Ordinal"`
-	// SessionStartDate               int64       `json:"sessionStartDate"`
-	// SessionEndDate                 int64       `json:"sessionEndDate"`
-	// SessionIndex                   int         `json:"session_index"`
+	// SeasonMeetingOrdinal           int         `json:"Season_Meeting_Ordinal,omitempty"`
+	// SessionStartDate               int64       `json:"sessionStartDate,omitempty"`
+	// SessionEndDate                 int64       `json:"sessionEndDate,omitempty"`
+	// SessionIndex                   int         `json:"session_index,omitempty"`
 }
 
 type Language []struct {
-	LanguageCode string `json:"languageCode"`
-	LanguageName string `json:"languageName"`
+	LanguageCode string `json:"languageCode,omitempty"`
+	LanguageName string `json:"languageName,omitempty"`
 }
 
 type Metadata struct {
-	EmfAttributes      EmfAttributes        `json:"emfAttributes"`
-	LongDescription    string               `json:"longDescription"`
-	Country            string               `json:"country"`
-	Year               string               `json:"year"`
-	ContractStartDate  int64                `json:"contractStartDate"`
-	EpisodeNumber      int                  `json:"episodeNumber"`
-	ContractEndDate    int64                `json:"contractEndDate"`
-	ExternalID         string               `json:"externalId"`
-	Title              string               `json:"title"`
-	TitleBrief         string               `json:"titleBrief"`
-	ObjectType         string               `json:"objectType"`
-	Duration           int64                `json:"duration"`
-	Genres             []string             `json:"genres"`
-	ContentSubtype     ContentSubType       `json:"contentSubtype"`
-	PcLevel            int                  `json:"pcLevel"`
-	ContentID          int64                `json:"contentId"`
-	StarRating         int                  `json:"starRating"`
-	PictureURL         string               `json:"pictureUrl"`
-	ContentType        ContentType          `json:"contentType"`
-	Language           string               `json:"language"`
-	Season             int                  `json:"season"`
-	UIDuration         string               `json:"uiDuration"`
-	Entitlement        string               `json:"entitlement"`
-	Locked             bool                 `json:"locked"`
-	Label              string               `json:"label"`
-	ImageURL           string               `json:"imageUrl"`
-	ID                 string               `json:"id"`
-	MetaDescription    string               `json:"meta-description"`
-	IsADVAllowed       bool                 `json:"isADVAllowed"`
-	ContentProvider    string               `json:"contentProvider"`
-	IsLatest           bool                 `json:"isLatest"`
-	IsOnAir            bool                 `json:"isOnAir"`
-	IsEncrypted        bool                 `json:"isEncrypted"`
-	ObjectSubtype      string               `json:"objectSubtype"`
-	MetadataLanguage   string               `json:"metadataLanguage"`
-	PcLevelVod         string               `json:"pcLevelVod"`
-	IsParent           bool                 `json:"isParent"`
-	AvailableLanguages []AvailableLanguages `json:"availableLanguages"`
-	AdvTags            string               `json:"advTags"`
-	ShortDescription   string               `json:"shortDescription"`
-	LeavingSoon        bool                 `json:"leavingSoon"`
-	AvailableAlso      []string             `json:"availableAlso"`
-	PcVodLabel         string               `json:"pcVodLabel"`
-	IsGeoBlocked       bool                 `json:"isGeoBlocked"`
-	Filter             string               `json:"filter"`
-	ComingSoon         bool                 `json:"comingSoon"`
-	IsPopularEpisode   bool                 `json:"isPopularEpisode"`
-	PrimaryCategoryID  int                  `json:"primaryCategoryId"`
-	MeetingKey         string               `json:"meetingKey"`
-	VideoType          string               `json:"videoType"`
-	ParentalAdvisory   string               `json:"parentalAdvisory"`
-	AdditionalStreams  []AdditionalStream   `json:"additionalStreams"`
+	EmfAttributes      EmfAttributes        `json:"emfAttributes,omitempty"`
+	LongDescription    string               `json:"longDescription,omitempty"`
+	Country            string               `json:"country,omitempty"`
+	Year               string               `json:"year,omitempty"`
+	ContractStartDate  int64                `json:"contractStartDate,omitempty"`
+	EpisodeNumber      int                  `json:"episodeNumber,omitempty"`
+	ContractEndDate    int64                `json:"contractEndDate,omitempty"`
+	ExternalID         string               `json:"externalId,omitempty"`
+	Title              string               `json:"title,omitempty"`
+	TitleBrief         string               `json:"titleBrief,omitempty"`
+	ObjectType         string               `json:"objectType,omitempty"`
+	Duration           int64                `json:"duration,omitempty"`
+	Genres             []string             `json:"genres,omitempty"`
+	ContentSubtype     ContentSubType       `json:"contentSubtype,omitempty"`
+	PcLevel            int                  `json:"pcLevel,omitempty"`
+	ContentID          int64                `json:"contentId,omitempty"`
+	StarRating         int                  `json:"starRating,omitempty"`
+	PictureURL         string               `json:"pictureUrl,omitempty"`
+	ContentType        ContentType          `json:"contentType,omitempty"`
+	Language           string               `json:"language,omitempty"`
+	Season             int                  `json:"season,omitempty"`
+	UIDuration         string               `json:"uiDuration,omitempty"`
+	Entitlement        string               `json:"entitlement,omitempty"`
+	Locked             bool                 `json:"locked,omitempty"`
+	Label              string               `json:"label,omitempty"`
+	ImageURL           string               `json:"imageUrl,omitempty"`
+	ID                 string               `json:"id,omitempty"`
+	MetaDescription    string               `json:"meta-description,omitempty"`
+	IsADVAllowed       bool                 `json:"isADVAllowed,omitempty"`
+	ContentProvider    string               `json:"contentProvider,omitempty"`
+	IsLatest           bool                 `json:"isLatest,omitempty"`
+	IsOnAir            bool                 `json:"isOnAir,omitempty"`
+	IsEncrypted        bool                 `json:"isEncrypted,omitempty"`
+	ObjectSubtype      string               `json:"objectSubtype,omitempty"`
+	MetadataLanguage   string               `json:"metadataLanguage,omitempty"`
+	PcLevelVod         string               `json:"pcLevelVod,omitempty"`
+	IsParent           bool                 `json:"isParent,omitempty"`
+	AvailableLanguages []AvailableLanguages `json:"availableLanguages,omitempty"`
+	AdvTags            string               `json:"advTags,omitempty"`
+	ShortDescription   string               `json:"shortDescription,omitempty"`
+	LeavingSoon        bool                 `json:"leavingSoon,omitempty"`
+	AvailableAlso      []string             `json:"availableAlso,omitempty"`
+	PcVodLabel         string               `json:"pcVodLabel,omitempty"`
+	IsGeoBlocked       bool                 `json:"isGeoBlocked,omitempty"`
+	Filter             string               `json:"filter,omitempty"`
+	ComingSoon         bool                 `json:"comingSoon,omitempty"`
+	IsPopularEpisode   bool                 `json:"isPopularEpisode,omitempty"`
+	PrimaryCategoryID  int                  `json:"primaryCategoryId,omitempty"`
+	MeetingKey         string               `json:"meetingKey,omitempty"`
+	VideoType          string               `json:"videoType,omitempty"`
+	ParentalAdvisory   string               `json:"parentalAdvisory,omitempty"`
+	AdditionalStreams  []AdditionalStream   `json:"additionalStreams,omitempty"`
 }
 
 type Container struct {
-	ID               string             `json:"id"`
-	Layout           string             `json:"layout"`
-	Actions          []Actions          `json:"actions"`
-	PlatformVariants []PlatformVariants `json:"platformVariants"`
-	Properties       []Properties       `json:"properties"`
-	Metadata         Metadata           `json:"metadata"`
-	RetrieveItems    RetrieveItems      `json:"retrieveItems"`
+	ID               string             `json:"id,omitempty"`
+	Layout           string             `json:"layout,omitempty"`
+	Actions          []Actions          `json:"actions,omitempty"`
+	PlatformVariants []PlatformVariants `json:"platformVariants,omitempty"`
+	Properties       []Properties       `json:"properties,omitempty"`
+	Metadata         Metadata           `json:"metadata,omitempty"`
+	RetrieveItems    RetrieveItems      `json:"retrieveItems,omitempty"`
 	Translations     Translations       `json:"translations,omitempty"`
-	Categories       []Category         `json:"categories"`
-	Bundles          []Bundles          `json:"bundles"`
+	Categories       []Category         `json:"categories,omitempty"`
+	Bundles          []Bundles          `json:"bundles,omitempty"`
 }
 
 type ContentContainer struct {
-	ID               string             `json:"id"`
-	Layout           string             `json:"layout"`
-	Actions          []Actions          `json:"actions"`
-	PlatformVariants []PlatformVariants `json:"platformVariants"`
-	Properties       []Properties       `json:"properties"`
-	Metadata         Metadata           `json:"metadata"`
+	ID               string             `json:"id,omitempty"`
+	Layout           string             `json:"layout,omitempty"`
+	Actions          []Actions          `json:"actions,omitempty"`
+	PlatformVariants []PlatformVariants `json:"platformVariants,omitempty"`
+	Properties       []Properties       `json:"properties,omitempty"`
+	Metadata         Metadata           `json:"metadata,omitempty"`
 	Containers       struct {
-		Categories []Category `json:"categories"`
-		Bundles    []Bundles  `json:"bundles"`
-	} `json:"containers"`
+		Categories []Category `json:"categories,omitempty"`
+		Bundles    []Bundles  `json:"bundles,omitempty"`
+	} `json:"containers,omitempty"`
 }
 
 type ContentDetailsContainer struct{}
 
 type TopContainer struct {
 	// inconsistent type
-	// ID            string        `json:"id"`
-	Layout        string        `json:"layout"`
-	Actions       []Actions     `json:"actions"`
-	Metadata      Metadata      `json:"metadata"`
-	RetrieveItems RetrieveItems `json:"retrieveItems"`
+	// ID            string        `json:"id,omitempty"`
+	Layout        string        `json:"layout,omitempty"`
+	Actions       []Actions     `json:"actions,omitempty"`
+	Metadata      Metadata      `json:"metadata,omitempty"`
+	RetrieveItems RetrieveItems `json:"retrieveItems,omitempty"`
 	Translations  Translations  `json:"translations,omitempty"`
 
 	// only in content details
-	PlatformVariants []PlatformVariants `json:"platformVariants"`
-	ContentID        int64              `json:"contentId"`
+	PlatformVariants []PlatformVariants `json:"platformVariants,omitempty"`
+	ContentID        int64              `json:"contentId,omitempty"`
 	Containers       struct {
-		Bundles    []Bundles    `json:"bundles"`
-		Categories []Categories `json:"categories"`
-	} `json:"containers"`
-	Suggest      Suggest      `json:"suggest"`
-	PlatformName string       `json:"platformName"`
-	Properties   []Properties `json:"properties"`
+		Bundles    []Bundles    `json:"bundles,omitempty"`
+		Categories []Categories `json:"categories,omitempty"`
+	} `json:"containers,omitempty"`
+	Suggest      Suggest      `json:"suggest,omitempty"`
+	PlatformName string       `json:"platformName,omitempty"`
+	Properties   []Properties `json:"properties,omitempty"`
 }
 
 type ResultObj struct {
-	Total       int            `json:"total"`
-	Containers  []TopContainer `json:"containers"`
-	MeetingName string         `json:"meetingName"`
-	Metadata    Metadata       `json:"metadata"`
+	Total       int            `json:"total,omitempty"`
+	Containers  []TopContainer `json:"containers,omitempty"`
+	MeetingName string         `json:"meetingName,omitempty"`
+	Metadata    Metadata       `json:"metadata,omitempty"`
 }
 
 type ContainerResultObj struct {
-	Total       int                `json:"total"`
-	Containers  []ContentContainer `json:"containers"`
-	MeetingName string             `json:"meetingName"`
-	Metadata    Metadata           `json:"metadata"`
+	Total       int                `json:"total,omitempty"`
+	Containers  []ContentContainer `json:"containers,omitempty"`
+	MeetingName string             `json:"meetingName,omitempty"`
+	Metadata    Metadata           `json:"metadata,omitempty"`
 }
 
 type RetrieveItems struct {
-	ResultObj    ContainerResultObj `json:"resultObj"`
-	URIOriginal  string             `json:"uriOriginal"`
-	TypeOriginal string             `json:"typeOriginal"`
+	ResultObj    ContainerResultObj `json:"resultObj,omitempty"`
+	URIOriginal  string             `json:"uriOriginal,omitempty"`
+	TypeOriginal string             `json:"typeOriginal,omitempty"`
 }
 
 type Actions struct {
-	Key        string `json:"key"`
-	URI        string `json:"uri"`
-	TargetType string `json:"targetType"`
-	Type       string `json:"type"`
-	Layout     string `json:"layout"`
+	Key        string `json:"key,omitempty"`
+	URI        string `json:"uri,omitempty"`
+	TargetType string `json:"targetType,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Layout     string `json:"layout,omitempty"`
 }
 
 type MetadataLabel struct {
-	NLD string `json:"NLD"`
-	FRA string `json:"FRA"`
-	DEU string `json:"DEU"`
-	POR string `json:"POR"`
-	SPA string `json:"SPA"`
+	NLD string `json:"NLD,omitempty"`
+	FRA string `json:"FRA,omitempty"`
+	DEU string `json:"DEU,omitempty"`
+	POR string `json:"POR,omitempty"`
+	SPA string `json:"SPA,omitempty"`
 }
 
 type Translations struct {
-	MetadataLabel MetadataLabel `json:"metadata.label"`
+	MetadataLabel MetadataLabel `json:"metadata.label,omitempty"`
 }
 
 type AvailableLanguages struct {
-	LanguageCode string `json:"languageCode"`
-	LanguageName string `json:"languageName"`
+	LanguageCode string `json:"languageCode,omitempty"`
+	LanguageName string `json:"languageName,omitempty"`
 }
 
 type AdditionalStream struct {
-	RacingNumber    int    `json:"racingNumber"`
-	Title           string `json:"title"`
+	RacingNumber    int    `json:"racingNumber,omitempty"`
+	Title           string `json:"title,omitempty"`
 	DriverFirstName string `json:"driverFirstName,omitempty"`
 	DriverLastName  string `json:"driverLastName,omitempty"`
-	TeamName        string `json:"teamName"`
+	TeamName        string `json:"teamName,omitempty"`
 	ConstructorName string `json:"constructorName,omitempty"`
-	Type            string `json:"type"`
-	PlaybackURL     string `json:"playbackUrl"`
-	DriverImg       string `json:"driverImg"`
-	TeamImg         string `json:"teamImg"`
+	Type            string `json:"type,omitempty"`
+	PlaybackURL     string `json:"playbackUrl,omitempty"`
+	DriverImg       string `json:"driverImg,omitempty"`
+	TeamImg         string `json:"teamImg,omitempty"`
 	Hex             string `json:"hex,omitempty"`
 }
 
 type AudioLanguages struct {
-	AudioLanguageName string `json:"audioLanguageName"`
-	AudioID           string `json:"audioId"`
-	IsPreferred       bool   `json:"isPreferred"`
+	AudioLanguageName string `json:"audioLanguageName,omitempty"`
+	AudioID           string `json:"audioId,omitempty"`
+	IsPreferred       bool   `json:"isPreferred,omitempty"`
 }
 
 type TechnicalPackages struct {
-	PackageID   int    `json:"packageId"`
-	PackageName string `json:"packageName"`
-	PackageType string `json:"packageType"`
+	PackageID   int    `json:"packageId,omitempty"`
+	PackageName string `json:"packageName,omitempty"`
+	PackageType string `json:"packageType,omitempty"`
 }
 
 type Categories struct {
-	CategoryPathIds []int    `json:"categoryPathIds"`
-	ExternalPathIds []string `json:"externalPathIds"`
-	EndDate         int64    `json:"endDate"`
-	OrderID         int      `json:"orderId"`
-	IsPrimary       bool     `json:"isPrimary"`
-	CategoryName    string   `json:"categoryName"`
-	CategoryID      int      `json:"categoryId"`
-	StartDate       int64    `json:"startDate"`
+	CategoryPathIds []int    `json:"categoryPathIds,omitempty"`
+	ExternalPathIds []string `json:"externalPathIds,omitempty"`
+	EndDate         int64    `json:"endDate,omitempty"`
+	OrderID         int      `json:"orderId,omitempty"`
+	IsPrimary       bool     `json:"isPrimary,omitempty"`
+	CategoryName    string   `json:"categoryName,omitempty"`
+	CategoryID      int      `json:"categoryId,omitempty"`
+	StartDate       int64    `json:"startDate,omitempty"`
 }
 
 type Containers struct{}
 
 type Suggest struct {
-	Input   []string `json:"input"`
+	Input   []string `json:"input,omitempty"`
 	Payload struct {
-		ObjectSubtype string `json:"objectSubtype"`
-		ContentID     string `json:"contentId"`
-		Title         string `json:"title"`
-		ObjectType    string `json:"objectType"`
-	} `json:"payload"`
+		ObjectSubtype string `json:"objectSubtype,omitempty"`
+		ContentID     string `json:"contentId,omitempty"`
+		Title         string `json:"title,omitempty"`
+		ObjectType    string `json:"objectType,omitempty"`
+	} `json:"payload,omitempty"`
 }

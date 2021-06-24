@@ -30,9 +30,14 @@ const (
 	MOBILE_DASH     StreamType = "MOBILE_DASH"
 	TABLET_DASH     StreamType = "TABLET_DASH"
 
-	CATEGORY_LIVE RequestCategory = 395
+	PAGE_HOMEPAGE      PageID = 395
+	PAGE_ARCHIVE       PageID = 493
+	PAGE_SHOWS         PageID = 410
+	PAGE_DOCUMENTARIES PageID = 413
+	PAGE_SEASON_20201  PageID = 1510
 
-	VIDEO ContentType = "VIDEO"
+	VIDEO  ContentType = "VIDEO"
+	BUNDLE ContentType = "BUNDLE"
 
 	LIVE   ContentSubType = "LIVE"
 	REPLAY ContentSubType = "REPLAY"
@@ -44,7 +49,7 @@ type ContentSubType string
 
 type StreamType string
 
-type RequestCategory int
+type PageID int64
 
 func assembleURL(urlPath string, format StreamType, args ...interface{}) (*url.URL, error) {
 	args = append([]interface{}{format}, args...)
@@ -98,7 +103,7 @@ func (f *F1TV) Authenticate(username, password string) error {
 	return err
 }
 
-func (f *F1TV) GetContent(format StreamType, category RequestCategory, v interface{}) error {
+func (f *F1TV) GetContent(format StreamType, category PageID, v interface{}) error {
 	reqURL, err := assembleURL(categoryPagePath, format, category)
 	if err != nil {
 		return err
@@ -115,28 +120,47 @@ func (f *F1TV) GetContent(format StreamType, category RequestCategory, v interfa
 	return json.NewDecoder(resp.Body).Decode(v)
 }
 
-func (f *F1TV) GetVideoContainers() ([]TopContainer, error) {
+type RemoteContent struct {
+	ID    PageID
+	Title string
+}
+
+func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error) {
 	var resp APIResponse
-	err := f.GetContent(WEB_DASH, CATEGORY_LIVE, &resp)
+	err := f.GetContent(WEB_DASH, id, &resp)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var nonEmpty []TopContainer
+	var content []TopContainer
+	var bundles []RemoteContent
 	for _, container := range resp.ResultObj.Containers {
 		var videoContainers []ContentContainer
 		for _, contentContainer := range container.RetrieveItems.ResultObj.Containers {
 			if contentContainer.Metadata.ContentType == VIDEO {
 				videoContainers = append(videoContainers, contentContainer)
+			} else if contentContainer.Metadata.ContentType == BUNDLE {
+				if contentContainer.Metadata.EmfAttributes.PageID == id {
+					// we don't need recusion
+					continue
+				}
+				title := contentContainer.Metadata.Label
+				if title == "" {
+					title = contentContainer.Metadata.EmfAttributes.GlobalTitle
+				}
+				if title == "" {
+					title = contentContainer.Metadata.EmfAttributes.GlobalMeetingName
+				}
+				bundles = append(bundles, RemoteContent{ID: contentContainer.Metadata.EmfAttributes.PageID, Title: title})
 			}
 		}
 		container.RetrieveItems.ResultObj.Containers = videoContainers
 		if len(videoContainers) > 0 {
-			nonEmpty = append(nonEmpty, container)
+			content = append(content, container)
 		}
 	}
 
-	return nonEmpty, err
+	return content, bundles, err
 }
 
 func (s AdditionalStream) PrettyName() string {
@@ -153,7 +177,7 @@ func (s AdditionalStream) PrettyName() string {
 }
 
 func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
-	topContainers, err := f.GetVideoContainers()
+	topContainers, _, err := f.GetPageContent(PAGE_HOMEPAGE)
 	if err != nil {
 		return nil, err
 	}

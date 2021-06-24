@@ -2,14 +2,14 @@ package ui
 
 import (
 	"fmt"
-	"io"
 	"log"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
+	"github.com/rivo/tview"
 )
 
 type tviewLogger struct {
-	io.Writer
+	*tview.TextView
 }
 
 func (s *UIState) Logger() *tviewLogger {
@@ -21,8 +21,9 @@ func (l *tviewLogger) Errorf(format string, v ...interface{}) {
 }
 
 func (l *tviewLogger) Error(v ...interface{}) {
-	fmt.Fprintln(l.Writer, fmt.Sprintf("[%s::b]ERROR:[-::-]", util.ColortoHexString(activeTheme.ErrorColor)), fmt.Sprint(v...))
+	fmt.Fprintln(l.TextView, fmt.Sprintf("[%s::b]ERROR:[-::-]", util.ColortoHexString(activeTheme.ErrorColor)), fmt.Sprint(v...))
 	log.Println("[ERROR]", fmt.Sprint(v...))
+	l.ScrollToEnd()
 }
 
 func (l *tviewLogger) Infof(format string, v ...interface{}) {
@@ -30,6 +31,7 @@ func (l *tviewLogger) Infof(format string, v ...interface{}) {
 }
 
 func (l *tviewLogger) Info(v ...interface{}) {
-	fmt.Fprintln(l.Writer, fmt.Sprintf("[%s::b]INFO:[-::-]", util.ColortoHexString(activeTheme.InfoColor)), fmt.Sprint(v...))
+	fmt.Fprintln(l.TextView, fmt.Sprintf("[%s::b]INFO:[-::-]", util.ColortoHexString(activeTheme.InfoColor)), fmt.Sprint(v...))
 	log.Println("[INFO]", fmt.Sprint(v...))
+	l.ScrollToEnd()
 }

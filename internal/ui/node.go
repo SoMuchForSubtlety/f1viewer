@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -150,8 +151,9 @@ func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
 	}
 }
 
-func (s *UIState) getHomepageNodes() []*tview.TreeNode {
-	headings, err := s.v2.GetVideoContainers()
+func (s *UIState) getPageNodes(id f1tv.PageID) []*tview.TreeNode {
+	s.logger.Infof("loading %d", id)
+	headings, bundles, err := s.v2.GetPageContent(id)
 	if err != nil {
 		s.logger.Error(err)
 		return nil
@@ -164,6 +166,9 @@ func (s *UIState) getHomepageNodes() []*tview.TreeNode {
 		if title == "" {
 			title = h.RetrieveItems.ResultObj.MeetingName
 		}
+		if title == "" {
+			title = "???"
+		}
 		metadata := cmd.MetaData{CategoryTitle: title}
 		headingNode := tview.NewTreeNode(title).
 			SetColor(activeTheme.CategoryNodeColor).
@@ -173,6 +178,22 @@ func (s *UIState) getHomepageNodes() []*tview.TreeNode {
 		for _, v := range h.RetrieveItems.ResultObj.Containers {
 			headingNode.AddChild(s.v2ContentNode(v, metadata))
 		}
+		headingNodes = append(headingNodes, headingNode)
+	}
+	for _, b := range bundles {
+		b := b
+
+		metadata := cmd.MetaData{CategoryTitle: b.Title}
+		headingNode := tview.NewTreeNode(b.Title).
+			SetColor(activeTheme.FolderNodeColor).
+			SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: metadata}).
+			SetExpanded(false)
+
+		headingNode.SetSelectedFunc(s.withBlink(headingNode, func() {
+			headingNode.SetSelectedFunc(nil)
+			appendNodes(headingNode, s.getPageNodes(b.ID)...)
+			headingNode.SetExpanded(true)
+		}, nil))
 		headingNodes = append(headingNodes, headingNode)
 	}
 

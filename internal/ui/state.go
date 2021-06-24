@@ -111,8 +111,37 @@ func NewUI(cfg config.Config, version string) *UIState {
 		ui.initUI()
 	}
 
-	appendNodes(root, ui.getHomepageNodes()...)
+	homepageContent := tview.NewTreeNode("homepage").
+		SetColor(activeTheme.CategoryNodeColor).
+		SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: cmd.MetaData{}}).
+		SetExpanded(true)
+	homepageContent.SetSelectedFunc(ui.withBlink(homepageContent, func() {
+		homepageContent.SetSelectedFunc(nil)
+		appendNodes(homepageContent, ui.getPageNodes(f1tv.PAGE_HOMEPAGE)...)
+	}, nil))
+
+	appendNodes(root,
+		ui.pageNode(f1tv.PAGE_HOMEPAGE, "Homepage"),
+		ui.pageNode(f1tv.PAGE_SEASON_20201, "2021 Season"),
+		ui.pageNode(f1tv.PAGE_ARCHIVE, "archive"),
+		ui.pageNode(f1tv.PAGE_DOCUMENTARIES, "Documentaries"),
+		ui.pageNode(f1tv.PAGE_SHOWS, "Shows"),
+	)
+
 	return &ui
+}
+
+func (ui *UIState) pageNode(id f1tv.PageID, title string) *tview.TreeNode {
+	node := tview.NewTreeNode(title).
+		SetColor(activeTheme.FolderNodeColor).
+		SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: cmd.MetaData{}}).
+		SetExpanded(true)
+	node.SetSelectedFunc(ui.withBlink(node, func() {
+		node.SetSelectedFunc(nil)
+		appendNodes(node, ui.getPageNodes(id)...)
+	}, nil))
+
+	return node
 }
 
 func (ui *UIState) Stop() {
