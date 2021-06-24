@@ -21,9 +21,10 @@
 **Note:** You also need a compatible player installed, you can find a list [here](https://github.com/SoMuchForSubtlety/f1viewer/wiki/Players-Supported-by-Default).
 
 ## compile form source
-install the go compiler, then run the following command
+Install the go compiler, then run the following commands
 ```bash
-go get github.com/SoMuchForSubtlety/f1viewer@master
+git clone https://github.com/SoMuchForSubtlety/f1viewer && cd f1viewer
+go build -o f1viewer cmd/main.go
 ```
 
 ### Windows
