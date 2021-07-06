@@ -123,7 +123,7 @@ func NewUI(cfg config.Config, version string) *UIState {
 	appendNodes(root,
 		ui.pageNode(f1tv.PAGE_HOMEPAGE, "Homepage"),
 		ui.pageNode(f1tv.PAGE_SEASON_20201, "2021 Season"),
-		ui.pageNode(f1tv.PAGE_ARCHIVE, "archive"),
+		ui.pageNode(f1tv.PAGE_ARCHIVE, "Archive"),
 		ui.pageNode(f1tv.PAGE_DOCUMENTARIES, "Documentaries"),
 		ui.pageNode(f1tv.PAGE_SHOWS, "Shows"),
 	)

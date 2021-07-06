@@ -152,7 +152,7 @@ func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
 }
 
 func (s *UIState) getPageNodes(id f1tv.PageID) []*tview.TreeNode {
-	s.logger.Infof("loading %d", id)
+	s.logger.Infof("loading page %d", id)
 	headings, bundles, err := s.v2.GetPageContent(id)
 	if err != nil {
 		s.logger.Error(err)
@@ -167,18 +167,24 @@ func (s *UIState) getPageNodes(id f1tv.PageID) []*tview.TreeNode {
 			title = h.RetrieveItems.ResultObj.MeetingName
 		}
 		if title == "" {
-			title = "???"
+			title = h.RetrieveItems.ResultObj.MeetingName
 		}
 		metadata := cmd.MetaData{CategoryTitle: title}
-		headingNode := tview.NewTreeNode(title).
-			SetColor(activeTheme.CategoryNodeColor).
-			SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: metadata}).
-			SetExpanded(false)
+		if title == "" {
+			for _, v := range h.RetrieveItems.ResultObj.Containers {
+				headingNodes = append(headingNodes, s.v2ContentNode(v, metadata))
+			}
+		} else {
+			headingNode := tview.NewTreeNode(title).
+				SetColor(activeTheme.CategoryNodeColor).
+				SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: metadata}).
+				SetExpanded(false)
 
-		for _, v := range h.RetrieveItems.ResultObj.Containers {
-			headingNode.AddChild(s.v2ContentNode(v, metadata))
+			for _, v := range h.RetrieveItems.ResultObj.Containers {
+				headingNode.AddChild(s.v2ContentNode(v, metadata))
+			}
+			headingNodes = append(headingNodes, headingNode)
 		}
-		headingNodes = append(headingNodes, headingNode)
 	}
 	for _, b := range bundles {
 		b := b

@@ -242,6 +242,7 @@ type Actions struct {
 	TargetType string `json:"targetType,omitempty"`
 	Type       string `json:"type,omitempty"`
 	Layout     string `json:"layout,omitempty"`
+	HREF       string `json:"href,omitempty"`
 }
 
 type MetadataLabel struct {

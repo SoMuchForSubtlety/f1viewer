@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 )
@@ -38,8 +41,9 @@ const (
 	PAGE_DOCUMENTARIES PageID = 413
 	PAGE_SEASON_20201  PageID = 1510
 
-	VIDEO  ContentType = "VIDEO"
-	BUNDLE ContentType = "BUNDLE"
+	VIDEO    ContentType = "VIDEO"
+	BUNDLE   ContentType = "BUNDLE"
+	LAUNCHER ContentType = "LAUNCHER"
 
 	LIVE   ContentSubType = "LIVE"
 	REPLAY ContentSubType = "REPLAY"
@@ -143,9 +147,10 @@ func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error
 	for _, container := range resp.ResultObj.Containers {
 		var videoContainers []ContentContainer
 		for _, contentContainer := range container.RetrieveItems.ResultObj.Containers {
-			if contentContainer.Metadata.ContentType == VIDEO {
+			switch contentContainer.Metadata.ContentType {
+			case VIDEO:
 				videoContainers = append(videoContainers, contentContainer)
-			} else if contentContainer.Metadata.ContentType == BUNDLE {
+			case BUNDLE:
 				if contentContainer.Metadata.EmfAttributes.PageID == id {
 					// we don't need recusion
 					continue
@@ -158,12 +163,24 @@ func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error
 					title = contentContainer.Metadata.EmfAttributes.GlobalMeetingName
 				}
 				bundles = append(bundles, RemoteContent{ID: contentContainer.Metadata.EmfAttributes.PageID, Title: title})
+			case LAUNCHER:
+				if len(contentContainer.Actions) == 0 || contentContainer.Actions[0].HREF == "" {
+					continue
+				}
+				title := contentContainer.Metadata.Title
+				idString := strings.Split(contentContainer.Actions[0].HREF, "/")[2]
+				id, err := strconv.ParseInt(idString, 10, 64)
+				if err != nil {
+					continue
+				}
+				bundles = append(bundles, RemoteContent{ID: PageID(id), Title: title})
 			}
 		}
 		container.RetrieveItems.ResultObj.Containers = videoContainers
 		if len(videoContainers) > 0 {
 			content = append(content, container)
 		}
+		sort.Slice(bundles, func(i, j int) bool { return bundles[i].Title > bundles[j].Title })
 	}
 
 	return content, bundles, err
