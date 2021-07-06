@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 )
 
 const (
@@ -69,7 +71,7 @@ func NewF1TV(version string) *F1TV {
 	}
 }
 
-func (f *F1TV) Authenticate(username, password string) error {
+func (f *F1TV) Authenticate(username, password string, logger util.Logger) error {
 	type request struct {
 		Login    string `json:"Login"`
 		Password string `json:"Password"`
@@ -99,6 +101,10 @@ func (f *F1TV) Authenticate(username, password string) error {
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&auth)
+	logger.Infof("subscription status: %s", auth.Data.SubscriptionStatus)
+	if auth.Data.SubscriptionToken == "" {
+		return errors.New("could not get subscription token")
+	}
 	f.SubscriptionToken = auth.Data.SubscriptionToken
 	return err
 }
