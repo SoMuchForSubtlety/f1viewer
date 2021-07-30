@@ -131,8 +131,9 @@ func (f *F1TV) GetContent(format StreamType, category PageID, v interface{}) err
 }
 
 type RemoteContent struct {
-	ID    PageID
-	Title string
+	ID      PageID
+	Title   string
+	Ordinal string
 }
 
 func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error) {
@@ -155,32 +156,58 @@ func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error
 					// we don't need recusion
 					continue
 				}
-				title := contentContainer.Metadata.Label
-				if title == "" {
-					title = contentContainer.Metadata.EmfAttributes.GlobalTitle
-				}
-				if title == "" {
-					title = contentContainer.Metadata.EmfAttributes.GlobalMeetingName
-				}
-				bundles = append(bundles, RemoteContent{ID: contentContainer.Metadata.EmfAttributes.PageID, Title: title})
+				title := util.FirstNonEmptyString(
+					contentContainer.Metadata.EmfAttributes.MeetingName,
+					contentContainer.Metadata.EmfAttributes.GlobalMeetingName,
+					contentContainer.Metadata.EmfAttributes.GlobalTitle,
+					contentContainer.Metadata.EmfAttributes.MeetingOfficialName,
+					contentContainer.Metadata.Label,
+					contentContainer.Metadata.Title,
+				)
+
+				bundles = append(bundles, RemoteContent{
+					ID:      contentContainer.Metadata.EmfAttributes.PageID,
+					Title:   title,
+					Ordinal: fmt.Sprintf("%5s", contentContainer.Metadata.EmfAttributes.ChampionshipMeetingOrdinal),
+				})
 			case LAUNCHER:
 				if len(contentContainer.Actions) == 0 || contentContainer.Actions[0].HREF == "" {
 					continue
 				}
-				title := contentContainer.Metadata.Title
+				title := util.FirstNonEmptyString(
+					contentContainer.Metadata.EmfAttributes.MeetingName,
+					contentContainer.Metadata.EmfAttributes.GlobalMeetingName,
+					contentContainer.Metadata.EmfAttributes.GlobalTitle,
+					contentContainer.Metadata.EmfAttributes.MeetingOfficialName,
+					contentContainer.Metadata.Label,
+					contentContainer.Metadata.Title,
+				)
 				idString := strings.Split(contentContainer.Actions[0].HREF, "/")[2]
 				id, err := strconv.ParseInt(idString, 10, 64)
 				if err != nil {
 					continue
 				}
-				bundles = append(bundles, RemoteContent{ID: PageID(id), Title: title})
+				bundles = append(bundles, RemoteContent{
+					ID:      PageID(id),
+					Title:   title,
+					Ordinal: fmt.Sprintf("%5s", contentContainer.Metadata.EmfAttributes.ChampionshipMeetingOrdinal),
+				})
 			}
 		}
 		container.RetrieveItems.ResultObj.Containers = videoContainers
 		if len(videoContainers) > 0 {
 			content = append(content, container)
 		}
-		sort.Slice(bundles, func(i, j int) bool { return bundles[i].Title > bundles[j].Title })
+		sort.Slice(bundles, func(i, j int) bool {
+			if bundles[i].Ordinal == "     " && bundles[j].Ordinal == "     " {
+				return bundles[i].Title > bundles[j].Title
+			} else if bundles[i].Ordinal == "     " {
+				return true
+			} else if bundles[j].Ordinal == "     " {
+				return false
+			}
+			return bundles[i].Ordinal < bundles[j].Ordinal
+		})
 	}
 
 	return content, bundles, err

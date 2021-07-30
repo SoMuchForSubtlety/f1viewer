@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
@@ -14,32 +15,58 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (s *UIState) v2ContentNode(v f1tv.ContentContainer, meta cmd.MetaData) *tview.TreeNode {
-	// TODO: more metadata
-	meta.EpisodeTitle = v.Metadata.TitleBrief
-	if meta.EpisodeTitle == "" {
-		meta.EpisodeTitle = v.Metadata.Title
+func (s *UIState) extractMetadata(metadata f1tv.Metadata, properties []f1tv.Properties) cmd.MetaData {
+	meta := cmd.MetaData{
+		Event:         util.FirstNonEmptyString(metadata.EmfAttributes.MeetingName, metadata.EmfAttributes.GlobalMeetingName),
+		Title:         util.FirstNonEmptyString(metadata.Title, metadata.EmfAttributes.GlobalTitle, metadata.TitleBrief),
+		Circuit:       util.FirstNonEmptyString(metadata.EmfAttributes.CircuitShortName, metadata.EmfAttributes.CircuitOfficialName),
+		Year:          metadata.Year,
+		EpisodeNumber: metadata.EpisodeNumber,
+		Country:       util.FirstNonEmptyString(metadata.EmfAttributes.GlobalMeetingCountryName, metadata.EmfAttributes.MeetingCountryName, metadata.Country),
+		Series:        metadata.EmfAttributes.Series,
+		Session:       metadata.TitleBrief,
+		Source:        map[string]interface{}{"metadata": metadata, "properties": properties},
+	}
+	if len(metadata.Genres) > 0 {
+		meta.Category = metadata.Genres[0]
+	}
+	if len(properties) > 0 {
+		meta.Date = time.Unix(properties[0].SessionStartDate/1000, properties[0].SessionStartDate%1000*1000000)
+		meta.OrdinalNumber = properties[0].MeetingNumber
 	}
 
-	streamNode := tview.NewTreeNode(meta.EpisodeTitle).
-		SetColor(activeTheme.ItemNodeColor).
-		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.FormatInt(v.Metadata.ContentID, 10), metadata: meta})
+	return meta
+}
 
+func (s *UIState) v2ContentNode(v f1tv.ContentContainer) *tview.TreeNode {
+	streamNode := tview.NewTreeNode(util.FirstNonEmptyString(
+		v.Metadata.Title,
+		v.Metadata.TitleBrief,
+		v.Metadata.EmfAttributes.GlobalTitle,
+		v.Metadata.ShortDescription,
+		v.Metadata.LongDescription,
+	)).SetColor(activeTheme.ItemNodeColor).
+		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.FormatInt(v.Metadata.ContentID, 10), metadata: s.extractMetadata(v.Metadata, v.Properties)})
 	streamNode.SetSelectedFunc(func() {
 		streamNode.SetSelectedFunc(nil)
 
-		perspectives := s.v2PerspectiveNodes(v, meta)
+		perspectives := s.v2PerspectiveNodes(v)
 		appendNodes(streamNode, perspectives...)
 	})
 
 	return streamNode
 }
 
-func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer, meta cmd.MetaData) []*tview.TreeNode {
+func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode {
+	meta := s.extractMetadata(v.Metadata, v.Properties)
+	s.logger.Infof("loading details for %s (%d)", meta.Title, v.Metadata.ContentID)
 	details, err := s.v2.ContentDetails(v.Metadata.ContentID)
 	if err != nil {
 		s.logger.Errorf("could not get content details for '%d': %v", v.Metadata.ContentID, err)
+	} else {
+		meta = s.extractMetadata(details.Metadata, details.Properties)
 	}
+
 	// fall back to just the main stream if there was an error getting details
 	// or there are no more streams
 	if err != nil || len(details.Metadata.AdditionalStreams) == 0 {

@@ -132,10 +132,7 @@ func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
 
 	var nodes []*tview.TreeNode
 	for _, v := range liveVideos {
-		m := cmd.MetaData{
-			EpisodeTitle: v.Metadata.Title,
-		}
-		streamNode := s.v2ContentNode(v, m)
+		streamNode := s.v2ContentNode(v)
 		streamNode.SetText(v.Metadata.Title + " - LIVE").SetColor(activeTheme.LiveColor)
 		nodes = append(nodes, streamNode)
 	}
@@ -159,6 +156,8 @@ func (s *UIState) getPageNodes(id f1tv.PageID) []*tview.TreeNode {
 		return nil
 	}
 
+	seenIDs := make(map[f1tv.PageID]struct{})
+
 	var headingNodes []*tview.TreeNode
 	for _, h := range headings {
 		h := h
@@ -169,30 +168,34 @@ func (s *UIState) getPageNodes(id f1tv.PageID) []*tview.TreeNode {
 		if title == "" {
 			title = h.RetrieveItems.ResultObj.MeetingName
 		}
-		metadata := cmd.MetaData{CategoryTitle: title}
 		if title == "" {
 			for _, v := range h.RetrieveItems.ResultObj.Containers {
-				headingNodes = append(headingNodes, s.v2ContentNode(v, metadata))
+				headingNodes = append(headingNodes, s.v2ContentNode(v))
 			}
 		} else {
 			headingNode := tview.NewTreeNode(title).
 				SetColor(activeTheme.CategoryNodeColor).
-				SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: metadata}).
+				SetReference(&NodeMetadata{nodeType: CategoryNode}).
 				SetExpanded(false)
 
 			for _, v := range h.RetrieveItems.ResultObj.Containers {
-				headingNode.AddChild(s.v2ContentNode(v, metadata))
+				headingNode.AddChild(s.v2ContentNode(v))
 			}
 			headingNodes = append(headingNodes, headingNode)
 		}
 	}
 	for _, b := range bundles {
 		b := b
-
-		metadata := cmd.MetaData{CategoryTitle: b.Title}
+		// don't show the same page
+		_, ok := seenIDs[b.ID]
+		if !ok {
+			seenIDs[b.ID] = struct{}{}
+		} else {
+			continue
+		}
 		headingNode := tview.NewTreeNode(b.Title).
 			SetColor(activeTheme.FolderNodeColor).
-			SetReference(&NodeMetadata{nodeType: CategoryNode, metadata: metadata}).
+			SetReference(&NodeMetadata{nodeType: CategoryNode}).
 			SetExpanded(false)
 
 		headingNode.SetSelectedFunc(s.withBlink(headingNode, func() {

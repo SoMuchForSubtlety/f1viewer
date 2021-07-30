@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -53,13 +54,19 @@ type CommandContext struct {
 // MetaData contains title metadata
 type MetaData struct {
 	PerspectiveTitle string
-	SessionTitle     string
-	EventTitle       string
-	CategoryTitle    string
-	EpisodeTitle     string
-	SeasonTitle      string
+	Event            string
+	Category         string
+	Title            string
+	Session          string
 	Date             time.Time
-	OrdinalNumber    int
+	Year             string
+	Country          string
+	Series           string
+	EpisodeNumber    int64
+	OrdinalNumber    int64
+	Circuit          string
+
+	Source interface{}
 }
 
 func NewStore(customCommands []Command, multiCommands []MultiCommand, lang string, logger util.Logger, accentColor tcell.Color) *Store {
@@ -135,19 +142,28 @@ func (s *Store) RunCommand(cc CommandContext) error {
 	// replace variables
 	tmpCommand := make([]string, len(cc.CustomOptions.Command))
 	copy(tmpCommand, cc.CustomOptions.Command)
+	metadataJson, err := json.MarshalIndent(cc.MetaData, "", "\t")
+	if err != nil {
+		s.logger.Error("failed to convert metadata to JSON:", err)
+	}
 	for i := range tmpCommand {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$url", url)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.MetaData.SessionTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$event", cc.MetaData.EventTitle)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$json", string(metadataJson))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.MetaData.Session)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$event", cc.MetaData.Event)
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$perspective", cc.MetaData.PerspectiveTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$category", cc.MetaData.CategoryTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$episode", cc.MetaData.EpisodeTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$season", cc.MetaData.SeasonTitle)
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$title", cc.MetaData.String())
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$ordinal", strconv.Itoa(cc.MetaData.OrdinalNumber))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$category", cc.MetaData.Category)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$episodenumber", strconv.FormatInt(cc.MetaData.EpisodeNumber, 10))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$season", cc.MetaData.Year)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$title", cc.MetaData.Title)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$filename", sanitizeFileName(cc.MetaData.Title))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$series", cc.MetaData.Series)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$country", cc.MetaData.Country)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$circuit", cc.MetaData.Circuit)
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$ordinal", strconv.FormatInt(cc.MetaData.OrdinalNumber, 10))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$time", cc.MetaData.Date.Format(time.RFC3339))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$date", cc.MetaData.Date.Format("2006-01-02"))
-		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$year", cc.MetaData.Date.Format("2006"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$year", cc.MetaData.Year)
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$month", cc.MetaData.Date.Format("01"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$day", cc.MetaData.Date.Format("02"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$hour", cc.MetaData.Date.Format("15"))
@@ -182,27 +198,6 @@ func (s *Store) runCmd(cmd *exec.Cmd) error {
 		return err
 	}
 	return cmd.Process.Release()
-}
-
-func (t MetaData) String() string {
-	var s []string
-	if t.SeasonTitle != "" {
-		s = append(s, t.SeasonTitle)
-	}
-	if t.EventTitle != "" {
-		s = append(s, t.EventTitle)
-	}
-	if t.SessionTitle != "" {
-		s = append(s, t.SessionTitle)
-	}
-	if t.PerspectiveTitle != "" {
-		s = append(s, t.PerspectiveTitle)
-	}
-	if t.EpisodeTitle != "" {
-		s = append(s, t.EpisodeTitle)
-	}
-
-	return sanitizeFileName(strings.Join(s, " - "))
 }
 
 func sanitizeFileName(s string) string {

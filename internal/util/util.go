@@ -63,3 +63,12 @@ func GetYearAndRace(input string) (string, string, error) {
 	raceNumber = input[2:4]
 	return fullYear, raceNumber, nil
 }
+
+func FirstNonEmptyString(strs ...string) string {
+	for _, str := range strs {
+		if str != "" {
+			return str
+		}
+	}
+	return ""
+}

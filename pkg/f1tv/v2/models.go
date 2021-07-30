@@ -46,17 +46,17 @@ type PlatformVariants struct {
 }
 
 type Properties struct {
-	MeetingNumber        int    `json:"meeting_Number,omitempty"`
+	MeetingNumber        int64  `json:"meeting_Number,omitempty"`
 	SessionEndTime       int64  `json:"sessionEndTime,omitempty"`
 	Series               string `json:"series,omitempty"`
 	LastUpdatedDate      int64  `json:"lastUpdatedDate,omitempty"`
-	SeasonMeetingOrdinal int    `json:"season_Meeting_Ordinal,omitempty"`
+	SeasonMeetingOrdinal int64  `json:"season_Meeting_Ordinal,omitempty"`
 	MeetingStartDate     int64  `json:"meeting_Start_Date,omitempty"`
 	MeetingEndDate       int64  `json:"meeting_End_Date,omitempty"`
-	Season               int    `json:"season,omitempty"`
-	SessionIndex         int    `json:"session_index,omitempty"`
+	Season               int64  `json:"season,omitempty"`
+	SessionIndex         int64  `json:"session_index,omitempty"`
 	SessionStartDate     int64  `json:"sessionStartDate,omitempty"`
-	MeetingSessionKey    int    `json:"meetingSessionKey,omitempty"`
+	MeetingSessionKey    int64  `json:"meetingSessionKey,omitempty"`
 	SessionEndDate       int64  `json:"sessionEndDate,omitempty"`
 }
 
@@ -101,10 +101,10 @@ type EmfAttributes struct {
 	Year                           string `json:"Year,omitempty"`
 	TeamsID                        string `json:"Teams_ID,omitempty"`
 	// inconsistent types
-	// SeasonMeetingOrdinal           int         `json:"Season_Meeting_Ordinal,omitempty"`
-	// SessionStartDate               int64       `json:"sessionStartDate,omitempty"`
-	// SessionEndDate                 int64       `json:"sessionEndDate,omitempty"`
-	// SessionIndex                   int         `json:"session_index,omitempty"`
+	// SeasonMeetingOrdinal int64 `json:"Season_Meeting_Ordinal,omitempty"`
+	// SessionStartDate     int64 `json:"sessionStartDate,omitempty"`
+	// SessionEndDate       int64 `json:"sessionEndDate,omitempty"`
+	// SessionIndex         int64 `json:"session_index,omitempty"`
 }
 
 type Language []struct {
@@ -118,7 +118,7 @@ type Metadata struct {
 	Country            string               `json:"country,omitempty"`
 	Year               string               `json:"year,omitempty"`
 	ContractStartDate  int64                `json:"contractStartDate,omitempty"`
-	EpisodeNumber      int                  `json:"episodeNumber,omitempty"`
+	EpisodeNumber      int64                `json:"episodeNumber,omitempty"`
 	ContractEndDate    int64                `json:"contractEndDate,omitempty"`
 	ExternalID         string               `json:"externalId,omitempty"`
 	Title              string               `json:"title,omitempty"`
