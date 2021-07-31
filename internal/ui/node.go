@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
@@ -161,13 +162,8 @@ func (s *UIState) getPageNodes(id f1tv.PageID) []*tview.TreeNode {
 	var headingNodes []*tview.TreeNode
 	for _, h := range headings {
 		h := h
-		title := h.Metadata.Label
-		if title == "" {
-			title = h.RetrieveItems.ResultObj.MeetingName
-		}
-		if title == "" {
-			title = h.RetrieveItems.ResultObj.MeetingName
-		}
+		title := util.FirstNonEmptyString(h.Metadata.Label, h.Metadata.Title, h.RetrieveItems.ResultObj.MeetingName)
+
 		if title == "" {
 			for _, v := range h.RetrieveItems.ResultObj.Containers {
 				headingNodes = append(headingNodes, s.v2ContentNode(v))
