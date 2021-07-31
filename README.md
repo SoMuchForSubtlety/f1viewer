@@ -24,7 +24,7 @@
 Install the go compiler, then run the following commands
 ```bash
 git clone https://github.com/SoMuchForSubtlety/f1viewer && cd f1viewer
-go build -o f1viewer cmd/main.go
+go build .
 ```
 
 ### Windows

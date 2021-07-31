@@ -1,13 +1,11 @@
 project_name: f1viewer
 builds:
   - id: windows
-    main: ./cmd/main.go
     goos:
       - windows
     goarch:
       - amd64
   - id: linux
-    main: ./cmd/main.go
     goos:
       - linux
     goarch:
@@ -15,7 +13,6 @@ builds:
       - arm
       - arm64
   - id: mac
-    main: ./cmd/main.go
     goos:
       - darwin
     goarch:
