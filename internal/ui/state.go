@@ -325,7 +325,7 @@ func (ui *UIState) loadUpdate() {
 	getUpdateNode := tview.NewTreeNode("download update").
 		SetColor(activeTheme.ActionNodeColor).
 		SetSelectedFunc(func() {
-			err := util.OpenBrowser("https://github.com/SoMuchForSubtlety/f1viewer/v2/releases/latest")
+			err := util.OpenBrowser("https://github.com/SoMuchForSubtlety/f1viewer/releases/latest")
 			if err != nil {
 				ui.logger.Error(err)
 			}
