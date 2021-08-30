@@ -177,26 +177,26 @@ func (s *UIState) logout() {
 }
 
 func (s *UIState) loginWithStoredCredentials() error {
-	username, password, token, err := s.secret.LoadCredentials()
+	username, password, err := s.secret.LoadCredentials()
 	if err != nil {
 		return err
 	}
-	return s.login(username, password, token)
+	return s.login(username, password)
 }
 
-func (s *UIState) login(username, pw, token string) error {
+func (s *UIState) login(username, pw string) error {
 	// todo save auth token in credential store
 	err := s.v2.Authenticate(username, pw, s.logger)
 	return err
 }
 
 func (s *UIState) initUIWithForm() {
-	username, pw, _, _ := s.secret.LoadCredentials()
+	username, pw, _ := s.secret.LoadCredentials()
 	form := tview.NewForm().
 		AddInputField("email", username, 30, nil, func(text string) { username = text }).
 		AddPasswordField("password", "", 30, '*', func(text string) { pw = text }).
 		AddButton("test", func() {
-			err := s.login(username, pw, "")
+			err := s.login(username, pw)
 			if err == nil {
 				s.logger.Info("credentials accepted")
 			} else {
@@ -245,7 +245,7 @@ func (s *UIState) initUI() {
 }
 
 func (s *UIState) closeForm(username, pw string) {
-	err := s.login(username, pw, "")
+	err := s.login(username, pw)
 	if err != nil {
 		s.logger.Error(err)
 	} else {

@@ -11,31 +11,27 @@ type SecretStore struct {
 	ring keyring.Keyring
 }
 
-func (s *SecretStore) LoadCredentials() (string, string, string, error) {
+func (s *SecretStore) LoadCredentials() (string, string, error) {
 	if s.ring == nil {
 		err := s.openRing()
 		if err != nil {
-			return "", "", "", err
+			return "", "", err
 		}
 	}
 
 	if s.ring == nil {
-		return "", "", "", errors.New("No keyring configured")
+		return "", "", errors.New("No keyring configured")
 	}
 	username, err := s.ring.Get("username")
 	if err != nil {
-		return "", "", "", fmt.Errorf("Could not get username: %w", err)
+		return "", "", fmt.Errorf("Could not get username: %w", err)
 	}
 
 	password, err := s.ring.Get("password")
 	if err != nil {
-		return "", "", "", fmt.Errorf("Could not get password: %w", err)
+		return "", "", fmt.Errorf("Could not get password: %w", err)
 	}
-	token, err := s.ring.Get("skylarkToken")
-	if err != nil {
-		return "", "", "", fmt.Errorf("Could not get auth token: %w", err)
-	}
-	return string(username.Data), string(password.Data), string(token.Data), nil
+	return string(username.Data), string(password.Data), nil
 }
 
 func (s *SecretStore) SaveCredentials(username, password, authtoken string) error {
