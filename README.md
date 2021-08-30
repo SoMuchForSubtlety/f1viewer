@@ -120,7 +120,8 @@ You can execute custom commands, for example to launch a different player. These
 "custom_playback_options": [
 	{
 		"title": "download with ffmpeg",
-		"command": ["ffmpeg", "-i", "$url", "-c", "copy", "$title.mp4"]
+		"command": ["ffmpeg", "-i", "$url", "-c", "copy", "$title.mp4"],
+		"proxy": true
 	},
 	{
 		"title": "create .strm file",
@@ -132,6 +133,8 @@ You can execute custom commands, for example to launch a different player. These
 `title` is the title. It will appear next to the standard `Play with MPV` and `Copy URL to clipboard`.
 
 `command` is where your command goes. It is saved as a list of args like in the examples above. Every argument should be a separate string! The following would be incorrect! `["ffmpeg", "-i $url", "-c copy", "$title.mp4"]`
+
+`proxy` sends http requests through a proxy if they require cookies. This is useful for commands that use ffmpeg (and by extension mpv).
 
 There are several placeholder variables you can use that will be replaced by f1viewer.
 

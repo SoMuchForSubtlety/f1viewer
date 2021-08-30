@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/proxy"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/gdamore/tcell/v2"
 )
@@ -30,6 +33,7 @@ type commandAndArgs []string
 type Command struct {
 	Title      string         `json:"title"`
 	Command    commandAndArgs `json:"command"`
+	Proxy      bool           `json:"proxy"`
 	registry   string
 	registry32 string
 }
@@ -81,6 +85,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 		{
 			Title:   "Play with MPV",
 			Command: []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
+			Proxy:   true,
 		},
 		{
 			Title:      "Play with VLC",
@@ -91,6 +96,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 		{
 			Title:   "Play with IINA",
 			Command: []string{"iina", "--no-stdin", "$url"},
+			Proxy:   true,
 		},
 	}
 
@@ -139,6 +145,29 @@ func (s *Store) RunCommand(cc CommandContext) error {
 	if err != nil {
 		return fmt.Errorf("could not get video URL: %w", err)
 	}
+
+	var proxyEnabled bool
+	ctx, cancel := context.WithCancel(context.Background())
+	if cc.CustomOptions.Proxy {
+		prxy, err := proxy.NewProxyServer(url, s.logger)
+		if err != nil && !errors.Is(err, proxy.ErrNotRequired) {
+			cancel()
+			return err
+		} else if err == nil {
+			tmpUrl, err := prxy.Listen(ctx)
+			if err != nil {
+				s.logger.Errorf("failed to start proxy: %s", err)
+			} else {
+				s.logger.Info("proxy started")
+				url = tmpUrl
+				proxyEnabled = true
+			}
+		} else {
+			cancel()
+			s.logger.Info("proxy not required")
+		}
+	}
+
 	// replace variables
 	tmpCommand := make([]string, len(cc.CustomOptions.Command))
 	copy(tmpCommand, cc.CustomOptions.Command)
@@ -169,10 +198,10 @@ func (s *Store) RunCommand(cc CommandContext) error {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$hour", cc.MetaData.Date.Format("15"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$minute", cc.MetaData.Date.Format("04"))
 	}
-	return s.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...))
+	return s.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...), proxyEnabled, cancel)
 }
 
-func (s *Store) runCmd(cmd *exec.Cmd) error {
+func (s *Store) runCmd(cmd *exec.Cmd, proxy bool, cancel func()) error {
 	wdir, err := os.Getwd()
 	if err != nil {
 		// session.logError("unable to get working directory: ", err)
@@ -195,9 +224,22 @@ func (s *Store) runCmd(cmd *exec.Cmd) error {
 
 	err = cmd.Start()
 	if err != nil {
+		cancel()
 		return err
 	}
-	return cmd.Process.Release()
+	if !proxy {
+		cancel()
+		return cmd.Process.Release()
+	} else {
+		go func() {
+			_, err := cmd.Process.Wait()
+			if err != nil {
+				s.logger.Error("process exited with errod: %s", err)
+			}
+			cancel()
+		}()
+		return nil
+	}
 }
 
 func sanitizeFileName(s string) string {
