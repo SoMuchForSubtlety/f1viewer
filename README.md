@@ -40,17 +40,25 @@ go build .
 * Or [download the binary directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 
 ### Debian and Ubuntu
-Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.  
+Download the latest release `.deb` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 
-### Fedora, openSUSE
-Download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest) and install it.
+### Fedora, openSUSE, CentOS
+ * Install from the f1viewer [copr repo](https://copr.fedorainfracloud.org/coprs/somuchforsubtlety/f1viewer/)
+
+   ```bash
+   sudo dnf install dnf-plugins-core
+   sudo dnf copr enable somuchforsubtlety/f1viewer
+   sudo dnf install f1viewer
+   ```
+
+ * Or download the latest release `.rpm` [file](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 
 ### Arch
 Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/).
 
 ### Any other Linux distribution
 * Download the binary [directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
-* Install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
+* Or install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
 
 ## FAQ
 #### why is there a login, what credentials should I use
