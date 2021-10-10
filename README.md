@@ -110,7 +110,7 @@ The default config looks like this
 }
 ```
  - `live_retry_timeout` is the interval f1viewer looks for a live F1TV session seconds
- - `preferred_language` is the language MPV is started with, so the correct audio track gets selected. Use the [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php) (3-letter) code for your language, or `"fx"` to get the background sound (no commentary) track.
+ - `preferred_language` is the language MPV or VLC is started with, so the correct audio track gets selected. Use the [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php) (3-letter) code for your language, or `"fx"` to get the background sound (no commentary) track.
  - `check_updates` determines if F1TV should check GitHub for new versions
  - `save_logs` determines if logs should be saved
  - `log_location` can be used to set a custom log output folder
