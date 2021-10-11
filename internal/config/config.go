@@ -51,7 +51,7 @@ type Theme struct {
 // codes. We remap those codes to ISO 639-2 3-letter codes to prevent those
 // configs from breaking.
 // https://www.iso.org/iso-639-language-codes.html
-var LanguageCodeRemapping = map[string]string{
+var languageCodeRemapping = map[string]string{
 	"de": "deu",
 	"fr": "fra",
 	"es": "spa",
@@ -95,8 +95,8 @@ func LoadConfig() (Config, error) {
 		cfg.OutputRatio = 1
 	}
 	// Remap 2-letter code to 3-letter code
-	if Lang, ok := LanguageCodeRemapping[cfg.Lang]; ok {
-		cfg.Lang = Lang
+	if lang, ok := languageCodeRemapping[cfg.Lang]; ok {
+		cfg.Lang = lang
 	}
 
 	// TODO: move?
