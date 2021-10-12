@@ -93,7 +93,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 			Title:        "Play with VLC",
 			registry:     "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
 			registry32:   "SOFTWARE\\VideoLAN\\VLC",
-			Command:      []string{"vlc", "$url", "--meta-title=$title"},
+      Command:    []string{"vlc", "$url", "--meta-title=$title", "--audio-language=" + lang},
 			flatpakAppID: "org.videolan.VLC",
 		},
 		{
