@@ -34,6 +34,5 @@ func checkRegistry(c Command) (Command, bool) {
 }
 
 func checkFlatpak(c Command) {
-
 	return c, false
 }
