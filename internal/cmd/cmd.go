@@ -31,12 +31,12 @@ type Store struct {
 type commandAndArgs []string
 
 type Command struct {
-	Title      string         `json:"title"`
-	Command    commandAndArgs `json:"command"`
-	Proxy      bool           `json:"proxy"`
-	registry   string
-	registry32 string
-	flatpak    bool
+	Title        string         `json:"title"`
+	Command      commandAndArgs `json:"command"`
+	Proxy        bool           `json:"proxy"`
+	registry     string
+	registry32   string
+	flatpakAppID string
 }
 
 type MultiCommand struct {
@@ -84,15 +84,17 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 
 	commands := []Command{
 		{
-			Title:   "Play with MPV",
-			Command: []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
-			Proxy:   true,
+			Title:        "Play with MPV",
+			Command:      []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
+			Proxy:        true,
+			flatpakAppID: "io.mpv.Mpv",
 		},
 		{
-			Title:      "Play with VLC",
-			registry:   "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
-			registry32: "SOFTWARE\\VideoLAN\\VLC",
-			Command:    []string{"vlc", "$url", "--meta-title=$title"},
+			Title:        "Play with VLC",
+			registry:     "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
+			registry32:   "SOFTWARE\\VideoLAN\\VLC",
+			Command:      []string{"vlc", "$url", "--meta-title=$title"},
+			flatpakAppID: "org.videolan.VLC",
 		},
 		{
 			Title:   "Play with IINA",
@@ -107,6 +109,8 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 			store.Commands = append(store.Commands, c)
 		} else if c, found := checkRegistry(c); found {
 			store.Commands = append(store.Commands, c)
+		} else if c, found := checkFlatpak(c); found {
+			store.Commands = append(store.Commands, c)
 		}
 	}
 
@@ -115,25 +119,6 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 			Title:   "Play with QuickTime Player",
 			Command: []string{"open", "-a", "quicktime player", "$url"},
 		})
-	}
-
-	if runtime.GOOS == "linux" {
-		if lookFlatpak("VLC") {
-			store.Commands = append(store.Commands, Command{
-				Title:   "Play with VLC Flatpak",
-				Command: []string{"org.videolan.VLC", "$url", "--meta-title=$title"},
-				flatpak: true,
-			})
-		}
-
-		if lookFlatpak("mpv") {
-			store.Commands = append(store.Commands, Command{
-				Title:   "Play with MPV Flatpak",
-				Command: []string{"io.mpv.Mpv", "$url", "--meta-title=$title"},
-				flatpak: true,
-			})
-
-		}
 	}
 
 	if len(store.Commands) == 0 {
@@ -219,10 +204,6 @@ func (s *Store) RunCommand(cc CommandContext) error {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$minute", cc.MetaData.Date.Format("04"))
 	}
 
-	if cc.CustomOptions.flatpak {
-		return execFlatpak(cc.CustomOptions.Command[0], url, cancel)
-	}
-
 	return s.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...), proxyEnabled, cancel)
 }
 
@@ -279,55 +260,4 @@ func sanitizeFileName(s string) string {
 	s = whitespace.ReplaceAllString(s, " ")
 	s = strings.TrimSpace(s)
 	return s
-}
-
-// this method is used to check if there exists a flatpak installation of given program
-// only relevant for linux systems
-
-func lookFlatpak(file string) bool {
-
-	// use find executable to check if flatpak is installed
-
-	_, err := exec.LookPath("flatpak")
-
-	if err != nil {
-		return false
-	}
-
-	// official flatpak image for vlc is called org.videolan.VLC
-	// we can access installed flatpak programs by calling 'flatpak list'
-
-	// output of flatpak list is (name, appID, version, branch, installation)
-	// use the awk program to filter output and only gain name of programs
-
-	flatpak_programs_cmd := exec.Command("bash", "-c", "flatpak list | awk '{print $1}'")
-	flatpak_programs, err := flatpak_programs_cmd.Output()
-
-	if err != nil {
-		return false
-	}
-
-	// now we have a list with programs seperated by newline
-	// transform it into an array to loop and check if the desired program is installed
-
-	list := strings.Split(string(flatpak_programs), "\n")
-
-	for _, program := range list {
-		if program == file {
-			return true
-		}
-	}
-
-	return false
-
-}
-
-// todo: add support for cancel func since idk what it is
-
-func execFlatpak(cmd string, url string, _ context.CancelFunc) error {
-	command := "flatpak run " + cmd + " " + url
-	ex := exec.Command("sh", "-c", command)
-
-	_, err := ex.Output()
-	return err
 }
