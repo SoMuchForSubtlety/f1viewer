@@ -32,9 +32,5 @@ func checkFlatpak(c Command) (Command, bool) {
 	c.Command[0] = c.flatpakAppID
 	c.Command = append([]string{"flatpak", "run"}, c.Command...)
 
-	// optional update title
-
-	c.Title = c.Title + " Flatpak"
-
 	return c, true
 }
