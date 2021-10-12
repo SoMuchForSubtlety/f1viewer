@@ -47,6 +47,19 @@ type Theme struct {
 	MultiCommandColor   string `json:"multi_command_color"`
 }
 
+// Old configs (e.g. the old default config) may be using ISO 639-1 2-letter
+// codes. We remap those codes to ISO 639-2 3-letter codes to prevent those
+// configs from breaking.
+// https://www.iso.org/iso-639-language-codes.html
+var languageCodeRemapping = map[string]string{
+	"de": "deu",
+	"fr": "fra",
+	"es": "spa",
+	"nl": "nld",
+	"pt": "por",
+	"en": "eng",
+}
+
 func LoadConfig() (Config, error) {
 	var cfg Config
 	p, err := GetConfigPath()
@@ -56,7 +69,7 @@ func LoadConfig() (Config, error) {
 
 	if _, err = os.Stat(path.Join(p, "config.json")); os.IsNotExist(err) {
 		cfg.LiveRetryTimeout = 60
-		cfg.Lang = "en"
+		cfg.Lang = "eng"
 		cfg.CheckUpdate = true
 		cfg.SaveLogs = true
 		cfg.TreeRatio = 1
@@ -80,6 +93,10 @@ func LoadConfig() (Config, error) {
 	}
 	if cfg.OutputRatio < 1 {
 		cfg.OutputRatio = 1
+	}
+	// Remap 2-letter code to 3-letter code
+	if lang, ok := languageCodeRemapping[cfg.Lang]; ok {
+		cfg.Lang = lang
 	}
 
 	// TODO: move?
