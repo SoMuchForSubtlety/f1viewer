@@ -24,6 +24,9 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+universal_binaries:
+  - replace: true
+    id: mac
 checksum:
   name_template: "checksums.txt"
 snapshot:
