@@ -33,6 +33,6 @@ func checkRegistry(c Command) (Command, bool) {
 	return c, true
 }
 
-func checkFlatpak(c Command) {
+func checkFlatpak(c Command) (Command, bool) {
 	return c, false
 }
