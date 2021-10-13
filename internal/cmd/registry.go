@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package cmd
@@ -30,4 +31,8 @@ func checkRegistry(c Command) (Command, bool) {
 	c.Command[0] = path + "\\" + c.Command[0]
 
 	return c, true
+}
+
+func checkFlatpak(c Command) (Command, bool) {
+	return c, false
 }

@@ -31,11 +31,12 @@ type Store struct {
 type commandAndArgs []string
 
 type Command struct {
-	Title      string         `json:"title"`
-	Command    commandAndArgs `json:"command"`
-	Proxy      bool           `json:"proxy"`
-	registry   string
-	registry32 string
+	Title        string         `json:"title"`
+	Command      commandAndArgs `json:"command"`
+	Proxy        bool           `json:"proxy"`
+	registry     string
+	registry32   string
+	flatpakAppID string
 }
 
 type MultiCommand struct {
@@ -83,15 +84,17 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 
 	commands := []Command{
 		{
-			Title:   "Play with MPV",
-			Command: []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
-			Proxy:   true,
+			Title:        "Play with MPV",
+			Command:      []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
+			Proxy:        true,
+			flatpakAppID: "io.mpv.Mpv",
 		},
 		{
-			Title:      "Play with VLC",
-			registry:   "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
-			registry32: "SOFTWARE\\VideoLAN\\VLC",
-			Command:    []string{"vlc", "$url", "--meta-title=$title", "--audio-language=" + lang},
+			Title:        "Play with VLC",
+			registry:     "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
+			registry32:   "SOFTWARE\\VideoLAN\\VLC",
+			Command:      []string{"vlc", "$url", "--meta-title=$title", "--audio-language=" + lang},
+			flatpakAppID: "org.videolan.VLC",
 		},
 		{
 			Title:   "Play with IINA",
@@ -105,6 +108,8 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 		if err == nil {
 			store.Commands = append(store.Commands, c)
 		} else if c, found := checkRegistry(c); found {
+			store.Commands = append(store.Commands, c)
+		} else if c, found := checkFlatpak(c); found {
 			store.Commands = append(store.Commands, c)
 		}
 	}
@@ -198,6 +203,7 @@ func (s *Store) RunCommand(cc CommandContext) error {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$hour", cc.MetaData.Date.Format("15"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$minute", cc.MetaData.Date.Format("04"))
 	}
+
 	return s.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...), proxyEnabled, cancel)
 }
 
