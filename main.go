@@ -11,7 +11,7 @@ import (
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/ui"
-	"github.com/skratchdot/open-golang/open"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 )
 
 var (
@@ -42,7 +42,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = open.Start(path.Join(cfgPath, "config.json"))
+		err = util.Open(path.Join(cfgPath, "config.json"))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -53,7 +53,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = open.Start(logPath)
+		err = util.Open(logPath)
 		if err != nil {
 			log.Fatal(err)
 		}

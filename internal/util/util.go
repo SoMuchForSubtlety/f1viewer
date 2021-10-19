@@ -11,7 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func OpenBrowser(url string) error {
+func Open(url string) error {
 	var err error
 	switch runtime.GOOS {
 	case "linux":
