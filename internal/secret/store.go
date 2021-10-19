@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/SoMuchForSubtlety/keyring"
+	"github.com/99designs/keyring"
 )
 
 type SecretStore struct {
