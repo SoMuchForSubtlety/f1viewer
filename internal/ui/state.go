@@ -291,9 +291,7 @@ func (s *UIState) blinkNode(node *tview.TreeNode, done chan struct{}) {
 		case <-ticker.C:
 			node.SetColor(color2)
 			s.app.Draw()
-			c := color1
-			color1 = color2
-			color2 = c
+			color1, color2 = color2, color1
 		}
 	}
 }

@@ -199,14 +199,16 @@ func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error
 			content = append(content, container)
 		}
 		sort.Slice(bundles, func(i, j int) bool {
-			if bundles[i].Ordinal == "     " && bundles[j].Ordinal == "     " {
+			switch {
+			case bundles[i].Ordinal == "     " && bundles[j].Ordinal == "     ":
 				return bundles[i].Title > bundles[j].Title
-			} else if bundles[i].Ordinal == "     " {
+			case bundles[i].Ordinal == "     ":
 				return true
-			} else if bundles[j].Ordinal == "     " {
+			case bundles[j].Ordinal == "     ":
 				return false
+			default:
+				return bundles[i].Ordinal < bundles[j].Ordinal
 			}
-			return bundles[i].Ordinal < bundles[j].Ordinal
 		})
 	}
 

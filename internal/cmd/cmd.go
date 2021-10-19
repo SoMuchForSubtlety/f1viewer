@@ -155,10 +155,11 @@ func (s *Store) RunCommand(cc CommandContext) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	if cc.CustomOptions.Proxy {
 		prxy, err := proxy.NewProxyServer(url, s.logger)
-		if err != nil && !errors.Is(err, proxy.ErrNotRequired) {
+		switch {
+		case err != nil && !errors.Is(err, proxy.ErrNotRequired):
 			cancel()
 			return err
-		} else if err == nil {
+		case err == nil:
 			tmpUrl, err := prxy.Listen(ctx)
 			if err != nil {
 				s.logger.Errorf("failed to start proxy: %s", err)
@@ -167,7 +168,7 @@ func (s *Store) RunCommand(cc CommandContext) error {
 				url = tmpUrl
 				proxyEnabled = true
 			}
-		} else {
+		default:
 			cancel()
 			s.logger.Info("proxy not required")
 		}
