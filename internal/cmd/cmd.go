@@ -143,7 +143,7 @@ func (s *Store) GetCommand(multi ChannelMatcher) Command {
 	return Command{
 		Title:   "matcher for " + multi.MatchTitle,
 		Command: multi.Command,
-		Proxy: multi.Proxy,
+		Proxy:   multi.Proxy,
 	}
 }
 
