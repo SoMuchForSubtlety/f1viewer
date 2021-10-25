@@ -253,11 +253,10 @@ func (s *UIState) closeForm(username, pw string) {
 	err := s.login(username, pw)
 	if err != nil {
 		s.logger.Error(err)
-	} else {
-		err := keyring.Set(serviceName, username, pw)
-		if err != nil {
-			s.logger.Error(err)
-		}
+	}
+	err = keyring.Set(serviceName, username, pw)
+	if err != nil {
+		s.logger.Error(err)
 	}
 	if username != s.cfg.F1TVEmail {
 		s.cfg.F1TVEmail = username
