@@ -48,6 +48,7 @@ type ChannelMatcher struct {
 	MatchTitle string         `json:"match_title,omitempty"`
 	Command    commandAndArgs `json:"command,omitempty"`
 	CommandKey string         `json:"command_key,omitempty"`
+	Proxy      bool           `json:"proxy"`
 }
 
 type CommandContext struct {
@@ -142,6 +143,7 @@ func (s *Store) GetCommand(multi ChannelMatcher) Command {
 	return Command{
 		Title:   "matcher for " + multi.MatchTitle,
 		Command: multi.Command,
+		Proxy:   multi.Proxy,
 	}
 }
 
