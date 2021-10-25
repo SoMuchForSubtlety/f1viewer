@@ -1,18 +1,21 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/github"
-	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/secret"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/zalando/go-keyring"
 )
+
+const serviceName = "f1viewer"
 
 // TODO: rework
 var activeTheme = struct {
@@ -63,8 +66,7 @@ type UIState struct {
 
 	v2 *f1tv.F1TV
 
-	secret *secret.SecretStore
-	cmd    *cmd.Store
+	cmd *cmd.Store
 }
 
 func NewUI(cfg config.Config, version string) *UIState {
@@ -72,7 +74,6 @@ func NewUI(cfg config.Config, version string) *UIState {
 		version: version,
 		cfg:     cfg,
 		changes: make(chan *tview.TreeNode),
-		secret:  &secret.SecretStore{},
 		v2:      f1tv.NewF1TV(version),
 	}
 	ui.applyTheme(cfg.Theme)
@@ -105,6 +106,9 @@ func NewUI(cfg config.Config, version string) *UIState {
 
 	err := ui.loginWithStoredCredentials()
 	if err != nil {
+		if !errors.Is(err, keyring.ErrNotFound) {
+			ui.logger.Errorf("could not get credentials: %s", err.Error())
+		}
 		ui.initUIWithForm()
 	} else {
 		ui.logger.Info("logged in!")
@@ -169,7 +173,7 @@ func (ui *UIState) Run() error {
 }
 
 func (s *UIState) logout() {
-	err := s.secret.RemoveCredentials()
+	err := keyring.Delete(serviceName, s.cfg.F1TVEmail)
 	if err != nil {
 		s.logger.Error(err)
 	}
@@ -177,11 +181,11 @@ func (s *UIState) logout() {
 }
 
 func (s *UIState) loginWithStoredCredentials() error {
-	username, password, err := s.secret.LoadCredentials()
+	password, err := keyring.Get(serviceName, s.cfg.F1TVEmail)
 	if err != nil {
 		return err
 	}
-	return s.login(username, password)
+	return s.login(s.cfg.F1TVEmail, password)
 }
 
 func (s *UIState) login(username, pw string) error {
@@ -191,9 +195,10 @@ func (s *UIState) login(username, pw string) error {
 }
 
 func (s *UIState) initUIWithForm() {
-	username, pw, _ := s.secret.LoadCredentials()
+	username := s.cfg.F1TVEmail
+	pw := ""
 	form := tview.NewForm().
-		AddInputField("email", username, 30, nil, func(text string) { username = text }).
+		AddInputField("email", s.cfg.F1TVEmail, 30, nil, func(text string) { username = text }).
 		AddPasswordField("password", "", 30, '*', func(text string) { pw = text }).
 		AddButton("test", func() {
 			err := s.login(username, pw)
@@ -249,9 +254,16 @@ func (s *UIState) closeForm(username, pw string) {
 	if err != nil {
 		s.logger.Error(err)
 	} else {
-		err = s.secret.SaveCredentials(username, pw, "")
+		err := keyring.Set(serviceName, username, pw)
 		if err != nil {
 			s.logger.Error(err)
+		}
+	}
+	if username != s.cfg.F1TVEmail {
+		s.cfg.F1TVEmail = username
+		err := s.cfg.Save()
+		if err != nil {
+			s.logger.Error("failed to update config with new username: %s", err)
 		}
 	}
 	s.initUI()

@@ -27,6 +27,7 @@ type Config struct {
 	OutputRatio           int                `json:"output_ratio"`
 	TerminalWrap          bool               `json:"terminal_wrap"`
 	DisableTeamColors     bool               `json:"disable_team_colors"`
+	F1TVEmail             string             `json:"f1tv_email"`
 }
 
 type Theme struct {
