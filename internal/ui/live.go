@@ -13,12 +13,13 @@ func (s *UIState) checkLive() {
 				return
 			}
 		case isLive:
-			s.changes <- liveNode
-			return
+			s.addLiveNode(liveNode)
+			s.logger.Info("found live event")
 		case s.cfg.LiveRetryTimeout <= 0:
 			s.logger.Info("no live session found")
 			return
 		default:
+			s.addLiveNode(nil) // remove live node
 			s.logger.Info("no live session found")
 		}
 		time.Sleep(time.Second * time.Duration(s.cfg.LiveRetryTimeout))

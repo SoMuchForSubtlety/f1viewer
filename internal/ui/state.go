@@ -57,12 +57,12 @@ type UIState struct {
 	textWindow *tview.TextView
 	treeView   *tview.TreeView
 
+	LiveNode *tview.TreeNode
+
 	logger util.Logger
 
 	// TODO: replace activeTheme
 	// theme config.Theme
-
-	changes chan *tview.TreeNode
 
 	v2 *f1tv.F1TV
 
@@ -73,7 +73,6 @@ func NewUI(cfg config.Config, version string) *UIState {
 	ui := UIState{
 		version: version,
 		cfg:     cfg,
-		changes: make(chan *tview.TreeNode),
 		v2:      f1tv.NewF1TV(version),
 	}
 	ui.applyTheme(cfg.Theme)
@@ -158,7 +157,6 @@ func (ui *UIState) Run() error {
 		done <- ui.app.Run()
 	}()
 
-	go ui.handleEvents()
 	go ui.checkLive()
 	go ui.loadUpdate()
 
@@ -307,11 +305,17 @@ func (s *UIState) blinkNode(node *tview.TreeNode, done chan struct{}) {
 	}
 }
 
-func (ui *UIState) handleEvents() {
-	for node := range ui.changes {
-		insertNodeAtTop(ui.treeView.GetRoot(), node)
-		ui.app.Draw()
+func (ui *UIState) addLiveNode(newNode *tview.TreeNode) {
+	if ui.LiveNode != nil {
+		ui.treeView.GetRoot().RemoveChild(ui.LiveNode)
 	}
+
+	// newNode if nil if the previous session is no longer live and there is no new live session
+	if newNode != nil {
+		ui.LiveNode = newNode
+		insertNodeAtTop(ui.treeView.GetRoot(), newNode)
+	}
+	ui.app.Draw()
 }
 
 func (ui *UIState) loadUpdate() {
@@ -341,5 +345,5 @@ func (ui *UIState) loadUpdate() {
 		})
 
 	appendNodes(updateNode, getUpdateNode)
-	ui.changes <- updateNode
+	insertNodeAtTop(ui.treeView.GetRoot(), updateNode)
 }
