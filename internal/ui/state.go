@@ -7,6 +7,7 @@ import (
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/creds"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/github"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
@@ -14,8 +15,6 @@ import (
 	"github.com/rivo/tview"
 	"github.com/zalando/go-keyring"
 )
-
-const serviceName = "f1viewer"
 
 // TODO: rework
 var activeTheme = struct {
@@ -171,32 +170,30 @@ func (ui *UIState) Run() error {
 }
 
 func (s *UIState) logout() {
-	err := keyring.Delete(serviceName, s.cfg.F1TVEmail)
-	if err != nil {
+	if err := creds.RemoveCredentials(); err != nil {
 		s.logger.Error(err)
 	}
 	s.initUIWithForm()
 }
 
 func (s *UIState) loginWithStoredCredentials() error {
-	password, err := keyring.Get(serviceName, s.cfg.F1TVEmail)
+	username, password, err := creds.LoadCredentials()
 	if err != nil {
 		return err
 	}
-	return s.login(s.cfg.F1TVEmail, password)
+	return s.login(username, password)
 }
 
 func (s *UIState) login(username, pw string) error {
-	// todo save auth token in credential store
 	err := s.v2.Authenticate(username, pw, s.logger)
 	return err
 }
 
 func (s *UIState) initUIWithForm() {
-	username := s.cfg.F1TVEmail
+	username, _, _ := creds.LoadCredentials()
 	pw := ""
 	form := tview.NewForm().
-		AddInputField("email", s.cfg.F1TVEmail, 30, nil, func(text string) { username = text }).
+		AddInputField("email", username, 30, nil, func(text string) { username = text }).
 		AddPasswordField("password", "", 30, '*', func(text string) { pw = text }).
 		AddButton("test", func() {
 			err := s.login(username, pw)
@@ -248,20 +245,11 @@ func (s *UIState) initUI() {
 }
 
 func (s *UIState) closeForm(username, pw string) {
-	err := s.login(username, pw)
-	if err != nil {
+	if err := s.login(username, pw); err != nil {
 		s.logger.Error(err)
 	}
-	err = keyring.Set(serviceName, username, pw)
-	if err != nil {
+	if err := creds.SaveCredentials(username, pw); err != nil {
 		s.logger.Error(err)
-	}
-	if username != s.cfg.F1TVEmail {
-		s.cfg.F1TVEmail = username
-		err := s.cfg.Save()
-		if err != nil {
-			s.logger.Error("failed to update config with new username: %s", err)
-		}
 	}
 	s.initUI()
 }
