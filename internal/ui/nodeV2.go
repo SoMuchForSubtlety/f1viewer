@@ -132,7 +132,7 @@ func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, main
 	var nodes []*tview.TreeNode
 
 	for _, multi := range s.cmd.MultiCommads {
-		s.logger.Info("chcking " + multi.Title)
+		s.logger.Infof("checking %q", multi.Title)
 		var commands []cmd.CommandContext
 		for _, target := range multi.Targets {
 			mainFeed, perspective, err := findPerspectiveByName(target.MatchTitle, perspectives, mainStream)
@@ -148,10 +148,16 @@ func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, main
 					return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, perspective.PlaybackURL)
 				}
 			}
+			targetCmd := s.cmd.GetCommand(target)
+			if len(targetCmd.Command) == 0 {
+				s.logger.Errorf("could not dertermine command for %q - %q", multi.Title, target.MatchTitle)
+				continue
+			}
+
 			// If we have a match, run the given command!
 			context := cmd.CommandContext{
 				MetaData:      cmd.MetaData{PerspectiveTitle: multi.Title},
-				CustomOptions: s.cmd.GetCommand(target),
+				CustomOptions: targetCmd,
 				URL:           urlFunc,
 			}
 			commands = append(commands, context)

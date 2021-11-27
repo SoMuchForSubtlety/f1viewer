@@ -1,0 +1,65 @@
+# notify about new releases
+check_updates = true
+# don't show driver names in their team's colour
+disable_team_colors = false
+# show the output at the bottom
+horizontal_layout = false
+# check for a live F1TV stream every x seconds
+live_retry_timeout = 60
+# change the size ratio of differen parts
+output_ratio = 1
+tree_ratio   = 1
+
+# F1TV has not been consistent with the code for their audio tracks, these vaules have been observed in the past
+# "deu" -> german
+# "fra" -> french
+# "spa" -> spanish
+# "nld" -> dutch
+# "por" -> portugese
+# "eng" -> english
+# "fx"  -> no commentary
+# "cfx" -> no commentary
+# onboards only:
+# "teamradio"   -> team radio
+# "obc"         -> team radio
+# list them according to your preference
+preferred_languages = ["teamradio", "obc", "eng"]
+save_logs           = true
+# wrap the output of executed commands or cut it off
+terminal_wrap = true
+
+# custom playback options can be used to execute any command, this example uses ffmpeg to donload the video
+# [[custom_playback_options]]
+#   command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "$url", "-c", "copy", "-f", "mp4", "$title.mp4"]
+#   proxy   = true
+#   title   = "Download as mp4"
+
+# mult commands can be used to start multiple streams at once, this example starts the world feed an the onboard for the GOAT ;)
+# [[multi_commands]]
+#   title = "Open World Feed and HAM onboard"
+
+#   [[multi_commands.targets]]
+#     command     = ["mpv", "$url", "--alang=$lang"] # define a command to execute
+#     match_title = "World Feed"
+
+#   [[multi_commands.targets]]
+#     command_key = "custom mpv"      # you can also reference previously defined custom commands
+#     match_title = "Lewis [a-zA-Z]+" # regex is also supported
+
+# you can override the default colours by providing new values in hex format (#RRGGBB)
+[theme]
+  action_node_color     = "#008B8B"
+  background_color      = ""
+  border_color          = "#FFFFFF"
+  category_node_color   = "#FF4500"
+  error_color           = "#FF0000"
+  folder_node_color     = "#FFFFFF"
+  info_color            = "#008000"
+  item_node_color       = "#90EE90"
+  live_color            = "#FF0000"
+  loading_color         = ""
+  multi_command_color   = "#7FFFD4"
+  no_content_color      = "#FF4500"
+  terminal_accent_color = "#008000"
+  terminal_text_color   = "#FFFFFF"
+  update_color          = "#8B0000"

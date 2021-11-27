@@ -6,6 +6,7 @@ replace github.com/rivo/tview => github.com/SoMuchForSubtlety/tview v0.0.0-20210
 
 require (
 	github.com/99designs/keyring v1.1.6
+	github.com/BurntSushi/toml v0.4.1
 	github.com/atotto/clipboard v0.1.4
 	github.com/gdamore/tcell/v2 v2.4.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect

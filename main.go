@@ -42,14 +42,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = util.Open(path.Join(cfgPath, "config.json"))
+		err = util.Open(path.Join(cfgPath, "config.toml"))
 		if err != nil {
 			log.Fatal(err)
 		}
 		return
 	}
 	if openLogs {
-		logPath, err := config.GetLogPath(cfg)
+		logPath, err := config.GetLogPath()
 		if err != nil {
 			log.Fatal(err)
 		}

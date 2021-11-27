@@ -24,31 +24,31 @@ type Store struct {
 	Commands     []Command
 	MultiCommads []MultiCommand
 	logger       util.Logger
-	lang         string
+	lang         []string
 	accentColor  tcell.Color
 }
 
 type commandAndArgs []string
 
 type Command struct {
-	Title        string         `json:"title"`
-	Command      commandAndArgs `json:"command"`
-	Proxy        bool           `json:"proxy"`
+	Title        string         `json:"title" toml:"title"`
+	Command      commandAndArgs `json:"command" toml:"command"`
+	Proxy        bool           `json:"proxy" toml:"proxy"`
 	registry     string
 	registry32   string
 	flatpakAppID string
 }
 
 type MultiCommand struct {
-	Title   string           `json:"title,omitempty"`
-	Targets []ChannelMatcher `json:"targets,omitempty"`
+	Title   string           `json:"title,omitempty" toml:"title,omitempty"`
+	Targets []ChannelMatcher `json:"targets,omitempty" toml:"targets,omitempty"`
 }
 
 type ChannelMatcher struct {
-	MatchTitle string         `json:"match_title,omitempty"`
-	Command    commandAndArgs `json:"command,omitempty"`
-	CommandKey string         `json:"command_key,omitempty"`
-	Proxy      bool           `json:"proxy"`
+	MatchTitle string         `json:"match_title,omitempty" toml:"match_title,omitempty"`
+	Command    commandAndArgs `json:"command,omitempty" toml:"command,omitempty"`
+	CommandKey string         `json:"command_key,omitempty" toml:"command_key,omitempty"`
+	Proxy      bool           `json:"proxy" toml:"proxy"`
 }
 
 type CommandContext struct {
@@ -75,7 +75,7 @@ type MetaData struct {
 	Source interface{}
 }
 
-func NewStore(customCommands []Command, multiCommands []MultiCommand, lang string, logger util.Logger, accentColor tcell.Color) *Store {
+func NewStore(customCommands []Command, multiCommands []MultiCommand, lang []string, logger util.Logger, accentColor tcell.Color) *Store {
 	store := Store{
 		logger:       logger,
 		lang:         lang,
@@ -86,7 +86,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 	commands := []Command{
 		{
 			Title:        "Play with MPV",
-			Command:      []string{"mpv", "$url", "--alang=" + lang, "--quiet", "--title=$title"},
+			Command:      []string{"mpv", "$url", "--alang=" + strings.Join(lang, ","), "--quiet", "--title=$title"},
 			Proxy:        true,
 			flatpakAppID: "io.mpv.Mpv",
 		},
@@ -94,7 +94,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang strin
 			Title:        "Play with VLC",
 			registry:     "SOFTWARE\\WOW6432Node\\VideoLAN\\VLC",
 			registry32:   "SOFTWARE\\VideoLAN\\VLC",
-			Command:      []string{"vlc", "$url", "--meta-title=$title", "--audio-language=" + lang},
+			Command:      []string{"vlc", "$url", "--meta-title=$title", "--audio-language=" + strings.Join(lang, ",")},
 			flatpakAppID: "org.videolan.VLC",
 		},
 		{
@@ -205,8 +205,13 @@ func (s *Store) RunCommand(cc CommandContext) error {
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$day", cc.MetaData.Date.Format("02"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$hour", cc.MetaData.Date.Format("15"))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$minute", cc.MetaData.Date.Format("04"))
+		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$lang", strings.Join(s.lang, ","))
 	}
 
+	if len(tmpCommand) < 2 {
+		cancel()
+		return fmt.Errorf("invalid command %v", tmpCommand)
+	}
 	return s.runCmd(exec.Command(tmpCommand[0], tmpCommand[1:]...), proxyEnabled, cancel)
 }
 

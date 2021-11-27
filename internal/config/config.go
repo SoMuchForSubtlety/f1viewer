@@ -1,33 +1,42 @@
 package config
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
 )
 
 type Config struct {
-	LiveRetryTimeout      int                `json:"live_retry_timeout"`
-	Lang                  string             `json:"preferred_language"`
-	CheckUpdate           bool               `json:"check_updates"`
-	SaveLogs              bool               `json:"save_logs"`
-	LogLocation           string             `json:"log_location"`
-	CustomPlaybackOptions []cmd.Command      `json:"custom_playback_options"`
-	MultiCommand          []cmd.MultiCommand `json:"multi_commands"`
-	HorizontalLayout      bool               `json:"horizontal_layout"`
-	Theme                 Theme              `json:"theme"`
-	TreeRatio             int                `json:"tree_ratio"`
-	OutputRatio           int                `json:"output_ratio"`
-	TerminalWrap          bool               `json:"terminal_wrap"`
-	DisableTeamColors     bool               `json:"disable_team_colors"`
-	F1TVEmail             string             `json:"f1tv_email"`
+	LiveRetryTimeout      int                `toml:"live_retry_timeout,omitempty"`
+	Lang                  []string           `toml:"preferred_languages,omitempty"`
+	CheckUpdate           bool               `toml:"check_updates,omitempty"`
+	SaveLogs              bool               `toml:"save_logs,omitempty,omitempty"`
+	LogLocation           string             `toml:"log_location,omitempty"`
+	CustomPlaybackOptions []cmd.Command      `json:"custom_playback_options" toml:"custom_playback_options,omitempty"`
+	MultiCommand          []cmd.MultiCommand `json:"multi_commands" toml:"multi_commands,omitempty"`
+	HorizontalLayout      bool               `toml:"horizontal_layout,omitempty"`
+	Theme                 Theme              `toml:"theme,omitempty"`
+	TreeRatio             int                `toml:"tree_ratio,omitempty"`
+	OutputRatio           int                `toml:"output_ratio,omitempty"`
+	TerminalWrap          bool               `toml:"terminal_wrap,omitempty"`
+	DisableTeamColors     bool               `toml:"disable_team_colors,omitempty"`
+}
+
+type ConversionConfig struct {
+	CustomPlaybackOptions []cmd.Command      `toml:"custom_playback_options,omitempty"`
+	MultiCommand          []cmd.MultiCommand `toml:"multi_commands,omitempty"`
 }
 
 type Theme struct {
@@ -48,6 +57,13 @@ type Theme struct {
 	MultiCommandColor   string `json:"multi_command_color"`
 }
 
+//go:embed default-config.toml
+var defaultConfig []byte
+
+const (
+	configName = "config.toml"
+)
+
 // Old configs (e.g. the old default config) may be using ISO 639-1 2-letter
 // codes. We remap those codes to ISO 639-2 3-letter codes to prevent those
 // configs from breaking.
@@ -61,6 +77,29 @@ var languageCodeRemapping = map[string]string{
 	"en": "eng",
 }
 
+func customOptsAsToml(path string) ([]byte, error) {
+	oldCfg, err := os.ReadFile(filepath.Join(path, "config.json"))
+	if err != nil {
+		return nil, fmt.Errorf("could not open old config file: %w", err)
+	}
+	var tmpCfg Config
+	err = json.Unmarshal(oldCfg, &tmpCfg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid open old config: %w", err)
+	}
+	tmpCfg2 := ConversionConfig{
+		CustomPlaybackOptions: tmpCfg.CustomPlaybackOptions,
+		MultiCommand:          tmpCfg.MultiCommand,
+	}
+	var data bytes.Buffer
+	err = toml.NewEncoder(&data).Encode(tmpCfg2)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode old config as toml: %w", err)
+	}
+
+	return data.Bytes(), nil
+}
+
 func LoadConfig() (Config, error) {
 	var cfg Config
 	p, err := GetConfigPath()
@@ -68,36 +107,43 @@ func LoadConfig() (Config, error) {
 		return cfg, err
 	}
 
-	if _, err = os.Stat(path.Join(p, "config.json")); os.IsNotExist(err) {
-		cfg.LiveRetryTimeout = 60
-		cfg.Lang = "eng"
-		cfg.CheckUpdate = true
-		cfg.SaveLogs = true
-		cfg.TreeRatio = 1
-		cfg.OutputRatio = 1
-		cfg.TerminalWrap = true
-		err = cfg.Save()
+	if _, err = os.Stat(path.Join(p, configName)); os.IsNotExist(err) {
+		cfgData := defaultConfig
+		customOptsToml, err := customOptsAsToml(p)
+		if err != nil {
+			fmt.Println("failed to convert custom options: " + err.Error())
+			panic(err)
+		} else {
+			cfgData = append(cfgData, 0x0A)              // newline
+			cfgData = append(cfgData, customOptsToml...) // add existing custom opts
+		}
+		err = os.WriteFile(path.Join(p, configName), cfgData, fs.ModePerm)
+		if err != nil {
+			return cfg, err
+		}
+	}
+
+	data, err := ioutil.ReadFile(path.Join(p, configName))
+	if err != nil {
+		return cfg, err
+	}
+	err = toml.Unmarshal(data, &cfg)
+	if err != nil {
 		return cfg, err
 	}
 
-	var data []byte
-	data, err = ioutil.ReadFile(path.Join(p, "config.json"))
-	if err != nil {
-		return cfg, err
-	}
-	err = json.Unmarshal(data, &cfg)
-	if err != nil {
-		return cfg, err
-	}
 	if cfg.TreeRatio < 1 {
 		cfg.TreeRatio = 1
 	}
 	if cfg.OutputRatio < 1 {
 		cfg.OutputRatio = 1
 	}
+
 	// Remap 2-letter code to 3-letter code
-	if lang, ok := languageCodeRemapping[cfg.Lang]; ok {
-		cfg.Lang = lang
+	for i, lang := range cfg.Lang {
+		if val, ok := languageCodeRemapping[lang]; ok {
+			cfg.Lang[i] = val
+		}
 	}
 
 	// TODO: move?
@@ -119,27 +165,24 @@ func GetConfigPath() (string, error) {
 	return p, err
 }
 
-func GetLogPath(cfg Config) (string, error) {
+func GetLogPath() (string, error) {
 	var p string
-	if cfg.LogLocation == "" {
-		// windows, macos
-		switch runtime.GOOS {
-		case "windows", "darwin":
-			configPath, err := GetConfigPath()
-			if err != nil {
-				return "", err
-			}
-			p = path.Join(configPath, "logs")
-		default:
-			// linux, etc.
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			p = path.Join(home, "/.local/share/f1viewer/")
+
+	// windows, macos
+	switch runtime.GOOS {
+	case "windows", "darwin":
+		configPath, err := GetConfigPath()
+		if err != nil {
+			return "", err
 		}
-	} else {
-		p = cfg.LogLocation
+		p = path.Join(configPath, "logs")
+	default:
+		// linux, etc.
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		p = path.Join(home, "/.local/share/f1viewer/")
 	}
 
 	_, err := os.Stat(p)
@@ -149,29 +192,12 @@ func GetLogPath(cfg Config) (string, error) {
 	return p, err
 }
 
-func (cfg Config) Save() error {
-	p, err := GetConfigPath()
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(&cfg, "", "\t")
-	if err != nil {
-		return fmt.Errorf("error marshaling config: %v", err)
-	}
-
-	err = ioutil.WriteFile(path.Join(p, "config.json"), data, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error saving config: %v", err)
-	}
-	return nil
-}
-
 func configureLogging(cfg Config) (*os.File, error) {
 	if !cfg.SaveLogs {
 		log.SetOutput(ioutil.Discard)
 		return nil, nil
 	}
-	logPath, err := GetLogPath(cfg)
+	logPath, err := GetLogPath()
 	if err != nil {
 		return nil, fmt.Errorf("Could not get log path: %w", err)
 	}

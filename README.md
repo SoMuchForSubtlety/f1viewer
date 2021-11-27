@@ -76,66 +76,13 @@ Players need to be in your PATH environment variable to be detected by f1viewer.
 ## Config
 When you first start f1viewer a boilerplate config is automatically generated. On Widows systems it's located in `%AppData%\Roaming\f1viewer`, on macOS in `$HOME/Library/Application Support/f1viewer` and on Linux in `$XDG_CONFIG_HOME/f1viewer` or `$HOME/.config/f1viewer`. You can access it quickly by running `f1viewer -config`.
 
-The default config looks like this
-```json
-{
-	"live_retry_timeout": 60,
-	"preferred_language": "eng",
-	"check_updates": true,
-	"save_logs": true,
-	"log_location": "",
-	"custom_playback_options": [],
-	"multi_commands": [],
-	"horizontal_layout": false,
-	"tree_ratio": 1,
-	"output_ratio": 1,
-	"terminal_wrap": true,
-	"disable_team_colors": false,
-	"theme": {
-		"background_color": "",
-		"border_color": "",
-		"category_node_color": "",
-		"folder_node_color": "",
-		"item_node_color": "",
-		"action_node_color": "",
-		"loading_color": "",
-		"live_color": "",
-		"update_color": "",
-		"no_content_color": "",
-		"info_color": "",
-		"error_color": "",
-		"terminal_accent_color": "",
-		"terminal_text_color": ""
-	}
-}
-```
- - `live_retry_timeout` is the interval f1viewer looks for a live F1TV session seconds
- - `preferred_language` is the language MPV or VLC is started with, so the correct audio track gets selected. Use the [ISO 639-2](https://www.loc.gov/standards/iso639-2/php/code_list.php) (3-letter) code for your language, or `"fx"` to get the background sound (no commentary) track.
- - `check_updates` determines if F1TV should check GitHub for new versions
- - `save_logs` determines if logs should be saved
- - `log_location` can be used to set a custom log output folder
- - `custom_playback_options` can be used to set custom commands, see  [Custom Commands](#custom-commands)  for more info
- - `multi_commands` can be used to load a set of feeds automatically, see [Multi Commands](#Multi-commands) for more info
- - `horizontal_layout` can be used to switch the orientation from vertical to horizontal
- - `theme` can be used to set custom colors for various UI elements. Please use standard hex RGB values in the format `#FFFFFF` or `FFFFFF`.
- - `tree_ratio` and `output_ratio` can adjust the UI ratio. The values need to be integers >= 1.
- - `terminal_wrap` toggles line wrap for the terminal window. Default is value `true`
- - `disable_team_colors` disables colors for perspective selection. Default is value `false`
-
 ## Custom Commands
-You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options`. You can add as many as you want.
-```json
-"custom_playback_options": [
-	{
-		"title": "download with ffmpeg",
-		"command": ["ffmpeg", "-i", "$url", "-c", "copy", "$title.mp4"],
-		"proxy": true
-	},
-	{
-		"title": "create .strm file",
-		"command": ["echo", "$url", ">$title.strm"]
-	}
-]
+You can execute custom commands, for example to launch a different player. These are set in the config under `custom_playback_options` in the config file. You can add as many as you want.
+```toml
+[[custom_playback_options]]
+  command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "$url", "-c", "copy", "-f", "mp4", "$title.mp4"]
+  proxy   = true
+  title   = "Download as mp4"
 ```
 
 `title` is the title. It will appear next to the standard `Play with MPV` and `Copy URL to clipboard`.
@@ -162,6 +109,7 @@ There are several placeholder variables you can use that will be replaced by f1v
  - `$ordinal`: the ordinal numer of the event
  - `$episodenumber`: the episode number as reported by F1TV
  - `$json`: all metadata fields and the full source metadata from F1TV
+ - `$lang`: the preferred languages as a comma separated list
 
 If you have ideas for more variables feel free to open an issue.
 
@@ -173,22 +121,17 @@ You can specify commands directly with `command`, or reference one of your [cust
 
 For an explanation on the `command` variable, see [Custom Commands](#custom-commands)
 
-```json
-"multi_commands": [
-	{
-		"title": "open main and pit feed",
-		"targets": [
-			{
-				"match_title": "Main Feed",
-				"command": ["mpv", "$url"]
-			},
-			{
-				"match_title": "Pit",
-				"command_key": "custom mpv"
-			}
-		]
-	}
-]
+```toml
+[[multi_commands]]
+  title = "Open World Feed and HAM onboard"
+
+  [[multi_commands.targets]]
+    command     = ["mpv", "$url", "--alang=$lang"] # define a command to execute
+    match_title = "World Feed"
+
+  [[multi_commands.targets]]
+    command_key = "custom mpv"      # you can also reference previously defined custom commands
+    match_title = "Lewis [a-zA-Z]+" # regex is also supported
 ```
 
 ## Key Bindings
@@ -199,7 +142,7 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
 
 ## Logs
 By default f1viewer saves all info and error messages to log files. Under Windows and macOS they are save in the same directory as the config file, on Linux they are saved to `$HOME/.local/share/f1viewer/`. You can access them quickly by running `f1viewer -logs`.
-The log folder can be changed in the config. Logs can also be turned off completely.
+Saving logs can also be turned off in the config.
 
 ## Credentials
 Your login credentials for F1TV are not saved in the config file. On macOS they are stored in the keychain and on Windows the credential store is used. If you're using Linux, where they are saved depends on your distro. Generally [Pass](https://www.passwordstore.org/), [Secret Service](https://specifications.freedesktop.org/secret-service/latest/) / [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring) and KWallet are supported.
