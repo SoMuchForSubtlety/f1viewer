@@ -85,7 +85,7 @@ func customOptsAsToml(path string) ([]byte, error) {
 	var tmpCfg Config
 	err = json.Unmarshal(oldCfg, &tmpCfg)
 	if err != nil {
-		return nil, fmt.Errorf("invalid open old config: %w", err)
+		return nil, fmt.Errorf("invalid old config: %w", err)
 	}
 	tmpCfg2 := ConversionConfig{
 		CustomPlaybackOptions: tmpCfg.CustomPlaybackOptions,
@@ -110,10 +110,7 @@ func LoadConfig() (Config, error) {
 	if _, err = os.Stat(path.Join(p, configName)); os.IsNotExist(err) {
 		cfgData := defaultConfig
 		customOptsToml, err := customOptsAsToml(p)
-		if err != nil {
-			fmt.Println("failed to convert custom options: " + err.Error())
-			panic(err)
-		} else {
+		if err == nil {
 			cfgData = append(cfgData, 0x0A)              // newline
 			cfgData = append(cfgData, customOptsToml...) // add existing custom opts
 		}
