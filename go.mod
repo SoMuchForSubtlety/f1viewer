@@ -5,7 +5,7 @@ go 1.17
 replace github.com/rivo/tview => github.com/SoMuchForSubtlety/tview v0.0.0-20210731202536-88987c7f5054
 
 require (
-	github.com/99designs/keyring v1.2.0
+	github.com/99designs/keyring v1.2.1
 	github.com/BurntSushi/toml v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/gdamore/tcell/v2 v2.4.0
@@ -32,7 +32,6 @@ require (
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
