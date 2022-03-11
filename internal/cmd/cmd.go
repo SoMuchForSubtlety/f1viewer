@@ -99,7 +99,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang []str
 		},
 		{
 			Title:   "Play with IINA",
-			Command: []string{"iina", "--no-stdin", "$url"},
+			Command: []string{"iina", "--no-stdin", "--keep-running", "$url"},
 			Proxy:   true,
 		},
 	}
