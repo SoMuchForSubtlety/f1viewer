@@ -150,7 +150,7 @@ func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, main
 			}
 			targetCmd := s.cmd.GetCommand(target)
 			if len(targetCmd.Command) == 0 {
-				s.logger.Errorf("could not dertermine command for %q - %q", multi.Title, target.MatchTitle)
+				s.logger.Errorf("could not determine command for %q - %q", multi.Title, target.MatchTitle)
 				continue
 			}
 
