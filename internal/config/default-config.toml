@@ -37,14 +37,22 @@ terminal_wrap = true
 # mult commands can be used to start multiple streams at once, this example starts the world feed an the onboard for the GOAT ;)
 # [[multi_commands]]
 #   title = "Open World Feed and HAM onboard"
-
 #   [[multi_commands.targets]]
-#     command     = ["mpv", "$url", "--alang=$lang"] # define a command to execute
+#     command     = ["mpv", "$url", "--alang=$lang", "--quiet"] # define a command to execute
 #     match_title = "World Feed"
-
 #   [[multi_commands.targets]]
 #     command_key = "custom mpv"      # you can also reference previously defined custom commands
 #     match_title = "Lewis [a-zA-Z]+" # regex is also supported
+
+# live session hooks are like custom multi commands, but they are automatically started if a new live session is detected 
+# [[live_session_hooks]]
+#   title = "Open Pit Lane and Data Channel"
+#   [[live_session_hooks.targets]]
+#     command     = ["mpv", "$url", "--alang=$lang", "--quiet"] # define a command to execute
+#     match_title = "Pit Lane"
+#   [[live_session_hooks.targets]]
+#     command_key = "custom mpv"      # you can also reference previously defined custom commands
+#     match_title = "Data Channel"
 
 # you can override the default colours by providing new values in hex format (#RRGGBB)
 [theme]

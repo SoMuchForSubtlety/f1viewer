@@ -66,13 +66,16 @@ type UIState struct {
 	v2 *f1tv.F1TV
 
 	cmd *cmd.Store
+
+	liveSessions map[string]struct{}
 }
 
 func NewUI(cfg config.Config, version string) *UIState {
 	ui := UIState{
-		version: version,
-		cfg:     cfg,
-		v2:      f1tv.NewF1TV(version),
+		version:      version,
+		cfg:          cfg,
+		v2:           f1tv.NewF1TV(version),
+		liveSessions: make(map[string]struct{}),
 	}
 	ui.applyTheme(cfg.Theme)
 

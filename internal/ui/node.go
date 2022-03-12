@@ -125,11 +125,22 @@ func (s *UIState) createCommandNode(t cmd.MetaData, getURL func() (string, error
 	return node
 }
 
-func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
+func (s *UIState) getLiveNode() (bool, *tview.TreeNode, []f1tv.ContentContainer, error) {
 	liveVideos, err := s.v2.GetLiveVideoContainers()
 	if err != nil || len(liveVideos) == 0 {
-		return false, nil, err
+		return false, nil, nil, err
 	}
+
+	newLiveSessions := make(map[string]struct{})
+	var newLiveVideos []f1tv.ContentContainer
+	for _, v := range liveVideos {
+		_, ok := s.liveSessions[v.ID]
+		newLiveSessions[v.ID] = struct{}{}
+		if !ok {
+			newLiveVideos = append(newLiveVideos, v)
+		}
+	}
+	s.liveSessions = newLiveSessions
 
 	var nodes []*tview.TreeNode
 	for _, v := range liveVideos {
@@ -143,9 +154,9 @@ func (s *UIState) getLiveNode() (bool, *tview.TreeNode, error) {
 			SetColor(activeTheme.LiveColor).
 			SetExpanded(false)
 		appendNodes(allLive, nodes...)
-		return true, allLive, nil
+		return true, allLive, newLiveVideos, nil
 	} else {
-		return true, nodes[0], nil
+		return true, nodes[0], newLiveVideos, nil
 	}
 }
 

@@ -12,6 +12,7 @@
 * [Config](#Config)
 * [Custom Commands](#Custom-commands)
 * [Multi Commands](#Multi-commands)
+* [Live Session Hooks](#Live-session-hooks)
 * [Key Bindings](#Key-bindings)
 * [Logs](#Logs)
 * [Credentials](#Credentials)
@@ -132,6 +133,22 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
   [[multi_commands.targets]]
     command_key = "custom mpv"      # you can also reference previously defined custom commands
     match_title = "Lewis [a-zA-Z]+" # regex is also supported
+```
+
+## Live Session Hooks
+Live session hooks work like multi commands, but they are automatically started when a new live session is detected.
+
+```toml
+[[live_session_hooks]]
+  title = "Open Pit Lane and Data Channel"
+
+  [[live_session_hooks.targets]]
+    command     = ["mpv", "$url", "--alang=$lang", "--quiet"] # define a command to execute
+    match_title = "Pit Lane"
+
+  [[live_session_hooks.targets]]
+    command_key = "custom mpv"      # you can also reference previously defined custom commands
+    match_title = "Data Channel"
 ```
 
 ## Key Bindings

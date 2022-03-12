@@ -25,6 +25,7 @@ type Config struct {
 	SaveLogs              bool               `toml:"save_logs,omitempty,omitempty"`
 	LogLocation           string             `toml:"log_location,omitempty"`
 	CustomPlaybackOptions []cmd.Command      `json:"custom_playback_options" toml:"custom_playback_options,omitempty"`
+	LiveSessionHooks      []cmd.MultiCommand `toml:"live_session_hooks,omitempty"`
 	MultiCommand          []cmd.MultiCommand `json:"multi_commands" toml:"multi_commands,omitempty"`
 	HorizontalLayout      bool               `toml:"horizontal_layout,omitempty"`
 	Theme                 Theme              `toml:"theme,omitempty"`
