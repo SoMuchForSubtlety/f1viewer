@@ -99,7 +99,7 @@ func NewStore(customCommands []Command, multiCommands []MultiCommand, lang []str
 		},
 		{
 			Title:   "Play with IINA",
-			Command: []string{"iina", "--no-stdin", "$url"},
+			Command: []string{"iina", "--no-stdin", "--keep-running", "$url"},
 			Proxy:   true,
 		},
 	}
@@ -248,7 +248,7 @@ func (s *Store) runCmd(cmd *exec.Cmd, proxy bool, cancel func()) error {
 		go func() {
 			_, err := cmd.Process.Wait()
 			if err != nil {
-				s.logger.Error("process exited with errod: %s", err)
+				s.logger.Error("process exited with error: %s", err)
 			}
 			cancel()
 		}()
