@@ -133,35 +133,8 @@ func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, main
 
 	for _, multi := range s.cmd.MultiCommads {
 		s.logger.Infof("checking %q", multi.Title)
-		var commands []cmd.CommandContext
-		for _, target := range multi.Targets {
-			mainFeed, perspective, err := findPerspectiveByName(target.MatchTitle, perspectives, mainStream)
-			if err != nil {
-				continue
-			}
+		commands := s.extractCommands(multi, perspectives, mainStream)
 
-			var urlFunc func() (string, error)
-			if mainFeed != nil {
-				urlFunc = func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, mainStream.Metadata.ContentID) }
-			} else {
-				urlFunc = func() (string, error) {
-					return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, perspective.PlaybackURL)
-				}
-			}
-			targetCmd := s.cmd.GetCommand(target)
-			if len(targetCmd.Command) == 0 {
-				s.logger.Errorf("could not determine command for %q - %q", multi.Title, target.MatchTitle)
-				continue
-			}
-
-			// If we have a match, run the given command!
-			context := cmd.CommandContext{
-				MetaData:      cmd.MetaData{PerspectiveTitle: multi.Title},
-				CustomOptions: targetCmd,
-				URL:           urlFunc,
-			}
-			commands = append(commands, context)
-		}
 		// If no streams are matched, continue
 		if len(commands) == 0 {
 			continue
@@ -183,6 +156,39 @@ func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, main
 	}
 
 	return nodes
+}
+
+func (s *UIState) extractCommands(multi cmd.MultiCommand, perspectives []f1tv.AdditionalStream, mainStream f1tv.ContentContainer) []cmd.CommandContext {
+	var commands []cmd.CommandContext
+	for _, target := range multi.Targets {
+		mainFeed, perspective, err := findPerspectiveByName(target.MatchTitle, perspectives, mainStream)
+		if err != nil {
+			continue
+		}
+
+		var urlFunc func() (string, error)
+		if mainFeed != nil {
+			urlFunc = func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, mainStream.Metadata.ContentID) }
+		} else {
+			urlFunc = func() (string, error) {
+				return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, perspective.PlaybackURL)
+			}
+		}
+		targetCmd := s.cmd.GetCommand(target)
+		if len(targetCmd.Command) == 0 {
+			s.logger.Errorf("could not determine command for %q - %q", multi.Title, target.MatchTitle)
+			continue
+		}
+
+		// If we have a match, run the given command!
+		context := cmd.CommandContext{
+			MetaData:      cmd.MetaData{PerspectiveTitle: multi.Title},
+			CustomOptions: targetCmd,
+			URL:           urlFunc,
+		}
+		commands = append(commands, context)
+	}
+	return commands
 }
 
 func findPerspectiveByName(name string, perspectives []f1tv.AdditionalStream, mainStream f1tv.ContentContainer) (*f1tv.ContentContainer, *f1tv.AdditionalStream, error) {

@@ -47,35 +47,7 @@ func (s *UIState) checkLive() {
 }
 
 func (s *UIState) runLiveHook(hook cmd.MultiCommand, mainStream f1tv.ContentContainer, perspectives []f1tv.AdditionalStream, meta cmd.MetaData) {
-	var commands []cmd.CommandContext
-	for _, target := range hook.Targets {
-		mainFeed, perspective, err := findPerspectiveByName(target.MatchTitle, perspectives, mainStream)
-		if err != nil {
-			continue
-		}
-
-		var urlFunc func() (string, error)
-		if mainFeed != nil {
-			urlFunc = func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, mainStream.Metadata.ContentID) }
-		} else {
-			urlFunc = func() (string, error) {
-				return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, perspective.PlaybackURL)
-			}
-		}
-		targetCmd := s.cmd.GetCommand(target)
-		if len(targetCmd.Command) == 0 {
-			s.logger.Errorf("could not determine command for %q - %q", hook.Title, target.MatchTitle)
-			continue
-		}
-
-		// If we have a match, run the given command!
-		context := cmd.CommandContext{
-			MetaData:      cmd.MetaData{PerspectiveTitle: hook.Title},
-			CustomOptions: targetCmd,
-			URL:           urlFunc,
-		}
-		commands = append(commands, context)
-	}
+	commands := s.extractCommands(hook, perspectives, mainStream)
 	// If no streams are matched, continue
 	if len(commands) == 0 {
 		return
