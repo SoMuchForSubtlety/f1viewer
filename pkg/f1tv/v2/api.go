@@ -39,7 +39,7 @@ const (
 	PAGE_ARCHIVE       PageID = 493
 	PAGE_SHOWS         PageID = 410
 	PAGE_DOCUMENTARIES PageID = 413
-	PAGE_SEASON_20201  PageID = 1510
+	PAGE_SEASON_2022   PageID = 4319
 
 	VIDEO    ContentType = "VIDEO"
 	BUNDLE   ContentType = "BUNDLE"
