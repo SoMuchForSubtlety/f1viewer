@@ -180,9 +180,13 @@ func (s *UIState) extractCommands(multi cmd.MultiCommand, perspectives []f1tv.Ad
 			continue
 		}
 
+		meta := s.extractMetadata(mainStream.Metadata, mainStream.Properties)
+		if perspective != nil {
+			meta.PerspectiveTitle = perspective.PrettyName()
+		}
 		// If we have a match, run the given command!
 		context := cmd.CommandContext{
-			MetaData:      cmd.MetaData{PerspectiveTitle: multi.Title},
+			MetaData:      meta,
 			CustomOptions: targetCmd,
 			URL:           urlFunc,
 		}
