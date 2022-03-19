@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"path"
@@ -35,27 +34,32 @@ func main() {
 	}
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Could not open config: %v", err)
+		fmt.Printf("Could not open config: %v\n", err)
+		os.Exit(1)
 	}
 	if openConfig {
 		cfgPath, err := config.GetConfigPath()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		err = util.Open(path.Join(cfgPath, "config.toml"))
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		return
 	}
 	if openLogs {
 		logPath, err := config.GetLogPath()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		err = util.Open(logPath)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		return
 	}
@@ -63,7 +67,8 @@ func main() {
 	ui := ui.NewUI(cfg, version)
 	go func() {
 		if err := ui.Run(); err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		os.Exit(0)
 	}()
