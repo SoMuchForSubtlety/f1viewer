@@ -12,7 +12,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/rivo/tview v0.0.0-20210624165335-29d673af0ce2
 	github.com/stretchr/testify v1.7.0
-	github.com/zalando/go-keyring v0.2.0
+	github.com/zalando/go-keyring v0.2.1
 	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
