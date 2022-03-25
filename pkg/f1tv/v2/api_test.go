@@ -33,7 +33,7 @@ func Test_assbmleURL(t *testing.T) {
 			urlPath: contentDetailsPath,
 			format:  WEB_DASH,
 			args:    []interface{}{1000003910},
-			result:  "https://f1tv.formula1.com/2.0/R/ENG/WEB_DASH/ALL/CONTENT/VIDEO/1000003910/F1_TV_Pro_Annual/14",
+			result:  "https://f1tv.formula1.com/3.0/R/ENG/WEB_DASH/ALL/CONTENT/VIDEO/1000005112/F1_TV_Pro_Annual/14",
 		},
 	}
 

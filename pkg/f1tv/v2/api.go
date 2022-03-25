@@ -21,7 +21,7 @@ const (
 
 	playbackRequestPath            = "/1.0/R/ENG/%v/ALL/CONTENT/PLAY?contentId=%d"
 	playbackPerspectiveRequestPath = "/1.0/R/ENG/%v/ALL/%s"
-	contentDetailsPath             = "/2.0/R/ENG/%v/ALL/CONTENT/VIDEO/%d/F1_TV_Pro_Annual/14"
+	contentDetailsPath             = "/3.0/R/ENG/%v/ALL/CONTENT/VIDEO/%d/F1_TV_Pro_Annual/14"
 	categoryPagePath               = "/2.0/R/ENG/%v/ALL/PAGE/%v/F1_TV_Pro_Annual/2"
 
 	apiKey = "fCUCjWrKPu9ylJwRAv8BpGLEgiAuThx7"
@@ -217,6 +217,10 @@ func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error
 
 func (s AdditionalStream) PrettyName() string {
 	switch s.Title {
+	case "F1 LIVE":
+		return "F1 Live"
+	case "INTERNATIONAL":
+		return "World Feed"
 	case "PIT LANE":
 		return "Pit Lane"
 	case "TRACKER":

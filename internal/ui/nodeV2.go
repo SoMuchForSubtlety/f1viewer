@@ -101,23 +101,27 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 			SetColor(color).
 			SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta2})
 
+			
 		node.SetSelectedFunc(func() {
 			node.SetSelectedFunc(nil)
 			playbackNodes := s.getPlaybackNodes(meta2, func() (string, error) { return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, p.PlaybackURL) })
 			appendNodes(node, playbackNodes...)
 		})
-		perspectives[i+1] = node
+		switch(p.PrettyName()) {
+		case "World Feed":
+			perspectives[0] = node
+			break
+		case "F1 Live":
+		case "Pit Lane":
+			perspectives[1] = node
+			break
+		case "Data Channel":
+			perspectives[2] = node
+			break
+		default:
+			perspectives[i] = node
+		}
 	}
-	node := tview.NewTreeNode("World Feed").
-		SetColor(activeTheme.ItemNodeColor).
-		SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta})
-	node.SetSelectedFunc(func() {
-		node.SetSelectedFunc(nil)
-		playbackNodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, v.Metadata.ContentID) })
-		appendNodes(node, playbackNodes...)
-	})
-	perspectives[0] = node
-
 	multicommands := s.v2MultiCommandNodes(streams, v)
 
 	return append(multicommands, perspectives...)
@@ -210,14 +214,14 @@ func findPerspectiveByName(name string, perspectives []f1tv.AdditionalStream, ma
 			return nil, &perspective, nil
 		}
 	}
-	if strings.EqualFold(name, "World Feed") {
+	if strings.EqualFold(name, "F1 Live") {
 		return &mainStream, nil, nil
 	}
 	r, err := regexp.Compile(name)
 	if err != nil {
 		return nil, nil, notFound
 	}
-	if r.MatchString("World Feed") {
+	if r.MatchString("F1 Live") {
 		return &mainStream, nil, nil
 	}
 	return nil, nil, notFound
