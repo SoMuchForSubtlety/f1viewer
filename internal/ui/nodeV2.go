@@ -110,14 +110,12 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 		switch(p.PrettyName()) {
 		case "World Feed":
 			perspectives[0] = node
-			break
-		case "F1 Live":
-		case "Pit Lane":
+		case "F1 Live", "Pit Lane":
 			perspectives[1] = node
-			break
 		case "Data Channel":
 			perspectives[2] = node
-			break
+		case "Driver Tracker":
+			perspectives[3] = node
 		default:
 			perspectives[i] = node
 		}
