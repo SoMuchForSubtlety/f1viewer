@@ -19,7 +19,7 @@ func (s *UIState) checkLive() {
 			}
 		case isLive:
 			if len(newSessions) == 0 {
-				return
+				break
 			}
 			s.addLiveNode(liveNode)
 			s.logger.Info("found live event")
