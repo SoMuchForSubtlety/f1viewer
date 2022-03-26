@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -46,7 +45,7 @@ func (s *UIState) v2ContentNode(v f1tv.ContentContainer) *tview.TreeNode {
 		v.Metadata.ShortDescription,
 		v.Metadata.LongDescription,
 	)).SetColor(activeTheme.ItemNodeColor).
-		SetReference(&NodeMetadata{nodeType: StreamNode, id: strconv.FormatInt(v.Metadata.ContentID, 10), metadata: s.extractMetadata(v.Metadata, v.Properties)})
+		SetReference(&NodeMetadata{nodeType: StreamNode, id: v.Metadata.ContentID.String(), metadata: s.extractMetadata(v.Metadata, v.Properties)})
 	streamNode.SetSelectedFunc(func() {
 		streamNode.SetSelectedFunc(nil)
 

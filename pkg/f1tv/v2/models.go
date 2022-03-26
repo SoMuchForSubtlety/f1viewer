@@ -128,7 +128,7 @@ type Metadata struct {
 	Genres             []string             `json:"genres,omitempty"`
 	ContentSubtype     ContentSubType       `json:"contentSubtype,omitempty"`
 	PcLevel            int                  `json:"pcLevel,omitempty"`
-	ContentID          int64                `json:"contentId,omitempty"`
+	ContentID          ContentID            `json:"contentId,omitempty"`
 	StarRating         int                  `json:"starRating,omitempty"`
 	PictureURL         string               `json:"pictureUrl,omitempty"`
 	ContentType        ContentType          `json:"contentType,omitempty"`
@@ -206,7 +206,7 @@ type TopContainer struct {
 
 	// only in content details
 	PlatformVariants []PlatformVariants `json:"platformVariants,omitempty"`
-	ContentID        int64              `json:"contentId,omitempty"`
+	ContentID        ContentID          `json:"contentId,omitempty"`
 	Containers       struct {
 		Bundles    []Bundles    `json:"bundles,omitempty"`
 		Categories []Categories `json:"categories,omitempty"`
@@ -263,20 +263,20 @@ type AvailableLanguages struct {
 }
 
 type AdditionalStream struct {
-	RacingNumber    int    `json:"racingNumber"`
-	TeamName        string `json:"teamName"`
-	Type            string `json:"type"`
-	PlaybackURL     string `json:"playbackUrl"`
-	DriverImg       string `json:"driverImg"`
-	TeamImg         string `json:"teamImg"`
-	ChannelID       int64  `json:"channelId"`
-	Title           string `json:"title"`
-	ReportingName   string `json:"reportingName"`
-	Default         bool   `json:"default"`
-	DriverFirstName string `json:"driverFirstName,omitempty"`
-	DriverLastName  string `json:"driverLastName,omitempty"`
-	ConstructorName string `json:"constructorName,omitempty"`
-	Hex             string `json:"hex,omitempty"`
+	RacingNumber    int       `json:"racingNumber"`
+	TeamName        string    `json:"teamName"`
+	Type            string    `json:"type"`
+	PlaybackURL     string    `json:"playbackUrl"`
+	DriverImg       string    `json:"driverImg"`
+	TeamImg         string    `json:"teamImg"`
+	ChannelID       ChannelID `json:"channelId"`
+	Title           string    `json:"title"`
+	ReportingName   string    `json:"reportingName"`
+	Default         bool      `json:"default"`
+	DriverFirstName string    `json:"driverFirstName,omitempty"`
+	DriverLastName  string    `json:"driverLastName,omitempty"`
+	ConstructorName string    `json:"constructorName,omitempty"`
+	Hex             string    `json:"hex,omitempty"`
 }
 
 type AudioLanguages struct {

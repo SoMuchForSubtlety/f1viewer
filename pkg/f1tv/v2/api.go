@@ -48,13 +48,23 @@ const (
 	REPLAY ContentSubType = "REPLAY"
 )
 
-type ContentType string
+type (
+	ContentType    string
+	ContentSubType string
+	StreamType     string
 
-type ContentSubType string
+	PageID    int64
+	ContentID int64
+	ChannelID int64
+)
 
-type StreamType string
+func (c ContentID) String() string {
+	return strconv.FormatInt(int64(c), 10)
+}
 
-type PageID int64
+func (c ChannelID) String() string {
+	return strconv.FormatInt(int64(c), 10)
+}
 
 func assembleURL(urlPath string, format StreamType, args ...interface{}) (*url.URL, error) {
 	args = append([]interface{}{format}, args...)
@@ -238,7 +248,7 @@ func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 		return nil, err
 	}
 	var live []ContentContainer
-	ids := make(map[int64]struct{})
+	ids := make(map[ContentID]struct{})
 	for _, vidContainers := range topContainers {
 		for _, v := range vidContainers.RetrieveItems.ResultObj.Containers {
 			_, ok := ids[v.Metadata.ContentID]
@@ -252,7 +262,7 @@ func (f *F1TV) GetLiveVideoContainers() ([]ContentContainer, error) {
 	return live, nil
 }
 
-func (f *F1TV) ContentDetails(contentID int64) (TopContainer, error) {
+func (f *F1TV) ContentDetails(contentID ContentID) (TopContainer, error) {
 	reqURL, err := assembleURL(contentDetailsPath, BIG_SCREEN_HLS, contentID)
 	if err != nil {
 		return TopContainer{}, err
@@ -281,15 +291,15 @@ func (f *F1TV) ContentDetails(contentID int64) (TopContainer, error) {
 	return details.ResultObj.Containers[0], err
 }
 
-func (f *F1TV) GetPlaybackURL(format StreamType, contentID int64, channelID *int64) (string, error) {
+func (f *F1TV) GetPlaybackURL(format StreamType, contentID ContentID, channelID *ChannelID) (string, error) {
 	reqURL, err := assembleURL(playbackRequestPath, format)
 	if err != nil {
 		return "", nil
 	}
 	query := reqURL.Query()
-	query.Add("contentId", strconv.FormatInt(contentID, 10))
+	query.Add("contentId", contentID.String())
 	if channelID != nil {
-		query.Add("channelId", strconv.FormatInt(*channelID, 10))
+		query.Add("channelId", channelID.String())
 	}
 	reqURL.RawQuery = query.Encode()
 
