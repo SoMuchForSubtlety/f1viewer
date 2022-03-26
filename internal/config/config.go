@@ -33,6 +33,7 @@ type Config struct {
 	OutputRatio           int                `toml:"output_ratio,omitempty"`
 	TerminalWrap          bool               `toml:"terminal_wrap,omitempty"`
 	DisableTeamColors     bool               `toml:"disable_team_colors,omitempty"`
+	EnableMouse           bool               `toml:"enable_mouse,omitempty"`
 }
 
 type ConversionConfig struct {

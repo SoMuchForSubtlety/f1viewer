@@ -9,6 +9,8 @@ live_retry_timeout = 60
 # change the size ratio of differen parts
 output_ratio = 1
 tree_ratio   = 1
+# set to false to disable mouse input
+enable_mouse = true
 
 # F1TV has not been consistent with the code for their audio tracks, these vaules have been observed in the past
 # "deu" -> german

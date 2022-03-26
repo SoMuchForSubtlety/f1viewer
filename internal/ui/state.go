@@ -80,7 +80,7 @@ func NewUI(cfg config.Config, version string) *UIState {
 	ui.applyTheme(cfg.Theme)
 
 	ui.app = tview.NewApplication()
-	ui.app.EnableMouse(true)
+	ui.app.EnableMouse(cfg.EnableMouse)
 
 	root := tview.NewTreeNode("Categories").SetSelectable(false)
 
