@@ -70,7 +70,7 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 	// fall back to just the main stream if there was an error getting details
 	// or there are no more streams
 	if err != nil || len(details.Metadata.AdditionalStreams) == 0 {
-		nodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, v.Metadata.ContentID) })
+		nodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, v.Metadata.ContentID, nil) })
 		return nodes
 	}
 
@@ -103,7 +103,9 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 
 		node.SetSelectedFunc(func() {
 			node.SetSelectedFunc(nil)
-			playbackNodes := s.getPlaybackNodes(meta2, func() (string, error) { return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, p.PlaybackURL) })
+			playbackNodes := s.getPlaybackNodes(meta2, func() (string, error) {
+				return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, details.ContentID, &p.ChannelID)
+			})
 			appendNodes(node, playbackNodes...)
 		})
 		perspectives[i+1] = node
@@ -113,7 +115,7 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 		SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta})
 	node.SetSelectedFunc(func() {
 		node.SetSelectedFunc(nil)
-		playbackNodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, v.Metadata.ContentID) })
+		playbackNodes := s.getPlaybackNodes(meta, func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, v.Metadata.ContentID, nil) })
 		appendNodes(node, playbackNodes...)
 	})
 	perspectives[0] = node
@@ -168,10 +170,12 @@ func (s *UIState) extractCommands(multi cmd.MultiCommand, perspectives []f1tv.Ad
 
 		var urlFunc func() (string, error)
 		if mainFeed != nil {
-			urlFunc = func() (string, error) { return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, mainStream.Metadata.ContentID) }
+			urlFunc = func() (string, error) {
+				return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, mainStream.Metadata.ContentID, nil)
+			}
 		} else {
 			urlFunc = func() (string, error) {
-				return s.v2.GetPerspectivePlaybackURL(f1tv.BIG_SCREEN_HLS, perspective.PlaybackURL)
+				return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, mainFeed.Metadata.ContentID, &perspective.ChannelID)
 			}
 		}
 		targetCmd := s.cmd.GetCommand(target)

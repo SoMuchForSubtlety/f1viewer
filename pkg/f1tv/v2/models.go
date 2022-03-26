@@ -263,16 +263,19 @@ type AvailableLanguages struct {
 }
 
 type AdditionalStream struct {
-	RacingNumber    int    `json:"racingNumber,omitempty"`
-	Title           string `json:"title,omitempty"`
+	RacingNumber    int    `json:"racingNumber"`
+	TeamName        string `json:"teamName"`
+	Type            string `json:"type"`
+	PlaybackURL     string `json:"playbackUrl"`
+	DriverImg       string `json:"driverImg"`
+	TeamImg         string `json:"teamImg"`
+	ChannelID       int64  `json:"channelId"`
+	Title           string `json:"title"`
+	ReportingName   string `json:"reportingName"`
+	Default         bool   `json:"default"`
 	DriverFirstName string `json:"driverFirstName,omitempty"`
 	DriverLastName  string `json:"driverLastName,omitempty"`
-	TeamName        string `json:"teamName,omitempty"`
 	ConstructorName string `json:"constructorName,omitempty"`
-	Type            string `json:"type,omitempty"`
-	PlaybackURL     string `json:"playbackUrl,omitempty"`
-	DriverImg       string `json:"driverImg,omitempty"`
-	TeamImg         string `json:"teamImg,omitempty"`
 	Hex             string `json:"hex,omitempty"`
 }
 

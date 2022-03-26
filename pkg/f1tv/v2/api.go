@@ -19,10 +19,9 @@ const (
 	baseURL = "https://f1tv.formula1.com"
 	authURL = "https://api.formula1.com/v2/account/subscriber/authenticate/by-password"
 
-	playbackRequestPath            = "/1.0/R/ENG/%v/ALL/CONTENT/PLAY?contentId=%d"
-	playbackPerspectiveRequestPath = "/1.0/R/ENG/%v/ALL/%s"
-	contentDetailsPath             = "/2.0/R/ENG/%v/ALL/CONTENT/VIDEO/%d/F1_TV_Pro_Annual/14"
-	categoryPagePath               = "/2.0/R/ENG/%v/ALL/PAGE/%v/F1_TV_Pro_Annual/2"
+	playbackRequestPath = "/2.0/R/ENG/%v/ALL/CONTENT/PLAY"
+	contentDetailsPath  = "/3.0/R/ENG/%v/ALL/CONTENT/VIDEO/%d/F1_TV_Pro_Annual/14"
+	categoryPagePath    = "/2.0/R/ENG/%v/ALL/PAGE/%v/F1_TV_Pro_Annual/14"
 
 	apiKey = "fCUCjWrKPu9ylJwRAv8BpGLEgiAuThx7"
 
@@ -217,13 +216,18 @@ func (f *F1TV) GetPageContent(id PageID) ([]TopContainer, []RemoteContent, error
 
 func (s AdditionalStream) PrettyName() string {
 	switch s.Title {
-	case "PIT LANE":
-		return "Pit Lane"
+	case "F1 LIVE":
+		return "F1 Live"
 	case "TRACKER":
 		return "Driver Tracker"
 	case "DATA":
 		return "Data Channel"
+	case "INTERNATIONAL":
+		return "International"
 	default:
+		if s.DriverFirstName == "" && s.DriverLastName == "" {
+			return s.Title
+		}
 		return fmt.Sprintf("%s %s", s.DriverFirstName, s.DriverLastName)
 	}
 }
@@ -277,20 +281,17 @@ func (f *F1TV) ContentDetails(contentID int64) (TopContainer, error) {
 	return details.ResultObj.Containers[0], err
 }
 
-func (f *F1TV) GetPerspectivePlaybackURL(format StreamType, path string) (string, error) {
-	reqURL, err := assembleURL(playbackPerspectiveRequestPath, format, path)
+func (f *F1TV) GetPlaybackURL(format StreamType, contentID int64, channelID *int64) (string, error) {
+	reqURL, err := assembleURL(playbackRequestPath, format)
 	if err != nil {
 		return "", nil
 	}
-
-	return f.playbackURL(reqURL.String())
-}
-
-func (f *F1TV) GetPlaybackURL(format StreamType, contentID int64) (string, error) {
-	reqURL, err := assembleURL(playbackRequestPath, format, contentID)
-	if err != nil {
-		return "", nil
+	query := reqURL.Query()
+	query.Add("contentId", strconv.FormatInt(contentID, 10))
+	if channelID != nil {
+		query.Add("channelId", strconv.FormatInt(*channelID, 10))
 	}
+	reqURL.RawQuery = query.Encode()
 
 	return f.playbackURL(reqURL.String())
 }
