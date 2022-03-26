@@ -99,7 +99,7 @@ There are several placeholder variables you can use that will be replaced by f1v
  - `$season`: the season's year (eg. "2021")
  - `$event`: the event (eg. "Belgian Grand Prix")
  - `$session`: the session (eg. "F1 Practice 3")
- - `$perspective`: the perspective (eg. "Main Feed", "Kimi Räikkönen", etc.)
+ - `$perspective`: the perspective (eg. "F1 Live", "Kimi Räikkönen", etc.)
  - `$title`: the conten's title as reported by F1TV
  - `$filename`: the same as title, but with illegal characters removed
  - `$series`: "Formula 1", "Formula 2", etc.
@@ -124,11 +124,11 @@ For an explanation on the `command` variable, see [Custom Commands](#custom-comm
 
 ```toml
 [[multi_commands]]
-  title = "Open World Feed and HAM onboard"
+  title = "Open F1 Live and HAM onboard"
 
   [[multi_commands.targets]]
     command     = ["mpv", "$url", "--alang=$lang"] # define a command to execute
-    match_title = "World Feed"
+    match_title = "F1 Live"
 
   [[multi_commands.targets]]
     command_key = "custom mpv"      # you can also reference previously defined custom commands

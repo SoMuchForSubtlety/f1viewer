@@ -36,12 +36,12 @@ terminal_wrap = true
 #   proxy   = true
 #   title   = "Download as mp4"
 
-# mult commands can be used to start multiple streams at once, this example starts the world feed an the onboard for the GOAT ;)
+# mult commands can be used to start multiple streams at once, this example starts the F1 Live an the onboard for the GOAT ;)
 # [[multi_commands]]
-#   title = "Open World Feed and HAM onboard"
+#   title = "Open F1 Live and HAM onboard"
 #   [[multi_commands.targets]]
 #     command     = ["mpv", "$url", "--alang=$lang", "--quiet"] # define a command to execute
-#     match_title = "World Feed"
+#     match_title = "F1 Live"
 #   [[multi_commands.targets]]
 #     command_key = "custom mpv"      # you can also reference previously defined custom commands
 #     match_title = "Lewis [a-zA-Z]+" # regex is also supported
