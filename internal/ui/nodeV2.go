@@ -86,6 +86,7 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 	})
 
 	for _, p := range streams {
+		p := p
 		perspectiveMeta := meta
 		perspectiveMeta.PerspectiveTitle = p.PrettyName()
 
