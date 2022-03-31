@@ -19,21 +19,22 @@ import (
 )
 
 type Config struct {
-	LiveRetryTimeout      int                `toml:"live_retry_timeout,omitempty"`
-	Lang                  []string           `toml:"preferred_languages,omitempty"`
-	CheckUpdate           bool               `toml:"check_updates,omitempty"`
-	SaveLogs              bool               `toml:"save_logs,omitempty,omitempty"`
-	LogLocation           string             `toml:"log_location,omitempty"`
-	CustomPlaybackOptions []cmd.Command      `json:"custom_playback_options" toml:"custom_playback_options,omitempty"`
-	LiveSessionHooks      []cmd.MultiCommand `toml:"live_session_hooks,omitempty"`
-	MultiCommand          []cmd.MultiCommand `json:"multi_commands" toml:"multi_commands,omitempty"`
-	HorizontalLayout      bool               `toml:"horizontal_layout,omitempty"`
-	Theme                 Theme              `toml:"theme,omitempty"`
-	TreeRatio             int                `toml:"tree_ratio,omitempty"`
-	OutputRatio           int                `toml:"output_ratio,omitempty"`
-	TerminalWrap          bool               `toml:"terminal_wrap,omitempty"`
-	DisableTeamColors     bool               `toml:"disable_team_colors,omitempty"`
-	EnableMouse           bool               `toml:"enable_mouse,omitempty"`
+	LiveRetryTimeout          int                `toml:"live_retry_timeout,omitempty"`
+	Lang                      []string           `toml:"preferred_languages,omitempty"`
+	CheckUpdate               bool               `toml:"check_updates,omitempty"`
+	SaveLogs                  bool               `toml:"save_logs,omitempty,omitempty"`
+	LogLocation               string             `toml:"log_location,omitempty"`
+	UseEnvironmentCredentials bool               `toml:"use_environment_credentials,omitempty"`
+	CustomPlaybackOptions     []cmd.Command      `json:"custom_playback_options" toml:"custom_playback_options,omitempty"`
+	LiveSessionHooks          []cmd.MultiCommand `toml:"live_session_hooks,omitempty"`
+	MultiCommand              []cmd.MultiCommand `json:"multi_commands" toml:"multi_commands,omitempty"`
+	HorizontalLayout          bool               `toml:"horizontal_layout,omitempty"`
+	Theme                     Theme              `toml:"theme,omitempty"`
+	TreeRatio                 int                `toml:"tree_ratio,omitempty"`
+	OutputRatio               int                `toml:"output_ratio,omitempty"`
+	TerminalWrap              bool               `toml:"terminal_wrap,omitempty"`
+	DisableTeamColors         bool               `toml:"disable_team_colors,omitempty"`
+	EnableMouse               bool               `toml:"enable_mouse,omitempty"`
 }
 
 type ConversionConfig struct {

@@ -179,11 +179,19 @@ func (s *UIState) logout() {
 	s.initUIWithForm()
 }
 
-func (s *UIState) loginWithStoredCredentials() error {
-	username, password, err := creds.LoadCredentials()
+func (s *UIState) loginWithStoredCredentials() (err error) {
+	var username, password string
+
+	if s.cfg.UseEnvironmentCredentials {
+		username, password, err = creds.LoadEnvCredentials()
+	} else {
+		username, password, err = creds.LoadCredentials()
+	}
+
 	if err != nil {
 		return err
 	}
+
 	return s.login(username, password)
 }
 

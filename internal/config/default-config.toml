@@ -29,6 +29,8 @@ preferred_languages = ["teamradio", "obc", "eng"]
 save_logs           = true
 # wrap the output of executed commands or cut it off
 terminal_wrap = true
+# use F1VIEWER_USERNAME and F1VIEWER_PASSWORD environment variables for credentials instead of keyring
+use_environment_credentials = false
 
 # custom playback options can be used to execute any command, this example uses ffmpeg to donload the video
 # [[custom_playback_options]]
@@ -46,7 +48,7 @@ terminal_wrap = true
 #     command_key = "custom mpv"      # you can also reference previously defined custom commands
 #     match_title = "Lewis [a-zA-Z]+" # regex is also supported
 
-# live session hooks are like custom multi commands, but they are automatically started if a new live session is detected 
+# live session hooks are like custom multi commands, but they are automatically started if a new live session is detected
 # [[live_session_hooks]]
 #   title = "Open Pit Lane and Data Channel"
 #   [[live_session_hooks.targets]]
