@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
@@ -190,6 +192,10 @@ func (s *UIState) loginWithStoredCredentials() error {
 func (s *UIState) login(username, pw, token string) error {
 	var err error
 	if token != "" {
+		token, err = unpackToken(token)
+		if err != nil {
+			return err
+		}
 		err = s.v2.SetToken(token)
 		if err == nil {
 			s.logger.Info("token is valid")
@@ -200,6 +206,20 @@ func (s *UIState) login(username, pw, token string) error {
 	return err
 }
 
+func unpackToken(input string) (string, error) {
+	if !strings.HasPrefix(input, "{") {
+		return input, nil
+	}
+
+	var auth f1tv.AuthResp
+	err := json.Unmarshal([]byte(input), &auth)
+	if err != nil {
+		return input, fmt.Errorf("invalid token json: %w", err)
+	}
+
+	return auth.Data.SubscriptionToken, nil
+}
+
 func (s *UIState) initUIWithForm() {
 	username, _, _, _ := creds.LoadCredentials()
 	pw := ""
@@ -207,7 +227,7 @@ func (s *UIState) initUIWithForm() {
 	form := tview.NewForm().
 		AddInputField("email", username, 30, nil, func(text string) { username = text }).
 		AddPasswordField("password", "", 30, '*', func(text string) { pw = text }).
-		AddInputField("token", "", 30, nil, func(text string) { token = text }).
+		AddInputField("token", "", 100, nil, func(text string) { token = text }).
 		AddButton("test", func() {
 			err := s.login(username, pw, token)
 			if err == nil {
@@ -229,7 +249,7 @@ func (s *UIState) initUIWithForm() {
 			AddItem(s.treeView, 0, 1, false)
 	} else {
 		formTreeFlex.
-			AddItem(form, 7, 0, true).
+			AddItem(form, 9, 0, true).
 			AddItem(s.treeView, 0, 1, false)
 	}
 
@@ -258,6 +278,7 @@ func (s *UIState) initUI() {
 }
 
 func (s *UIState) closeForm(username, pw, token string) {
+	token, _ = unpackToken(token)
 	if err := s.login(username, pw, token); err != nil {
 		s.logger.Error(err)
 	}

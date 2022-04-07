@@ -93,6 +93,13 @@ func (f *F1TV) SetToken(token string) error {
 	return nil
 }
 
+type AuthResp struct {
+	Data struct {
+		SubscriptionStatus string `json:"subscriptionStatus"`
+		SubscriptionToken  string `json:"subscriptionToken"`
+	} `json:"data"`
+}
+
 func (f *F1TV) Authenticate(username, password string, logger util.Logger) error {
 	type request struct {
 		Login    string `json:"Login"`
@@ -115,12 +122,7 @@ func (f *F1TV) Authenticate(username, password string, logger util.Logger) error
 	if err != nil {
 		return err
 	}
-	var auth struct {
-		Data struct {
-			SubscriptionStatus string `json:"subscriptionStatus"`
-			SubscriptionToken  string `json:"subscriptionToken"`
-		} `json:"data"`
-	}
+	var auth AuthResp
 
 	err = json.NewDecoder(resp.Body).Decode(&auth)
 	logger.Infof("subscription status: %s", auth.Data.SubscriptionStatus)
