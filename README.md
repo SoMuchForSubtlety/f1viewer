@@ -8,6 +8,7 @@
 ## Table of Contents
 
 * [Installation](#Installation)
+* [Login](#Login)
 * [FAQ](#Faq)
 * [Config](#Config)
 * [Custom Commands](#Custom-commands)
@@ -60,6 +61,9 @@ Install the f1viewer [AUR package](https://aur.archlinux.org/packages/f1viewer/)
 ### Any other Linux distribution
 * Download the binary [directly](https://github.com/SoMuchForSubtlety/f1viewer/releases/latest)
 * Or install it with [Homebrew](https://docs.brew.sh/Homebrew-on-Linux) as described in the [macOS](#macOS) section.
+
+## Login
+Login via email and password is currently broken dues to anti-bot measures from F1TV. Follow [these steps](https://github.com/SoMuchForSubtlety/f1viewer/wiki/Getting-your-subscription-token) to log in with your subscription token.
 
 ## FAQ
 #### why is there a login, what credentials should I use
