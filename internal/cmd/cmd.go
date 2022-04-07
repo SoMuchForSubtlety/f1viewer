@@ -147,6 +147,29 @@ func (s *Store) GetCommand(multi ChannelMatcher) Command {
 	}
 }
 
+func (s *Store) GetVideoOffset(url string) (string) {
+	var skip int
+
+	skip = 0;
+	for i := 10; i < 120;  i += 20 {
+		ffmpeg := exec.Command("ffmpeg", "-ss", strconv.Itoa(skip), "-t", strconv.Itoa(i), "-i", url, "-map", "0:m:language:eng", "-af", "silencedetect=noise=-18dB:d=0.5", "-f","null","-")
+		out, err := ffmpeg.CombinedOutput()
+		if err != nil {
+			fmt.Fprintf(s.logger, "error detecting synchronization: %s\n", err)
+			return "0";
+		}
+
+		match :=  regexp.MustCompile(".* silence_end: (\\d+\\.\\d+)").FindStringSubmatch(string(out))
+		if match != nil {
+			return strings.Split(match[0], ": ")[1]
+		}
+		skip = i - 1;
+	}
+
+	fmt.Fprintf(s.logger, "error detecting synchronization: No silence_end found\n")
+	return "0";
+}
+
 func (s *Store) RunCommand(cc CommandContext) error {
 	url, err := cc.URL()
 	if err != nil {
@@ -184,6 +207,11 @@ func (s *Store) RunCommand(cc CommandContext) error {
 		s.logger.Error("failed to convert metadata to JSON:", err)
 	}
 	for i := range tmpCommand {
+		if (strings.Contains(tmpCommand[i], "$seek")) {
+			offset := s.GetVideoOffset(url)
+			tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$seek", offset);
+		}
+
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$url", url)
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$json", string(metadataJson))
 		tmpCommand[i] = strings.ReplaceAll(tmpCommand[i], "$session", cc.MetaData.Session)
