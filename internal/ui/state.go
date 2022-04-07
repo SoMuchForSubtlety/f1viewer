@@ -180,33 +180,43 @@ func (s *UIState) logout() {
 }
 
 func (s *UIState) loginWithStoredCredentials() error {
-	username, password, err := creds.LoadCredentials()
+	username, password, token, err := creds.LoadCredentials()
 	if err != nil {
 		return err
 	}
-	return s.login(username, password)
+	return s.login(username, password, token)
 }
 
-func (s *UIState) login(username, pw string) error {
-	err := s.v2.Authenticate(username, pw, s.logger)
+func (s *UIState) login(username, pw, token string) error {
+	var err error
+	if token != "" {
+		err = s.v2.SetToken(token)
+		if err == nil {
+			s.logger.Info("token is valid")
+			return nil
+		}
+	}
+	err = s.v2.Authenticate(username, pw, s.logger)
 	return err
 }
 
 func (s *UIState) initUIWithForm() {
-	username, _, _ := creds.LoadCredentials()
+	username, _, _, _ := creds.LoadCredentials()
 	pw := ""
+	token := ""
 	form := tview.NewForm().
 		AddInputField("email", username, 30, nil, func(text string) { username = text }).
 		AddPasswordField("password", "", 30, '*', func(text string) { pw = text }).
+		AddInputField("token", "", 30, nil, func(text string) { token = text }).
 		AddButton("test", func() {
-			err := s.login(username, pw)
+			err := s.login(username, pw, token)
 			if err == nil {
 				s.logger.Info("credentials accepted")
 			} else {
 				s.logger.Error(err)
 			}
 		}).
-		AddButton("save", func() { s.closeForm(username, pw) })
+		AddButton("save", func() { s.closeForm(username, pw, token) })
 
 	formTreeFlex := tview.NewFlex()
 	if !s.cfg.HorizontalLayout {
@@ -247,11 +257,11 @@ func (s *UIState) initUI() {
 	s.app.SetRoot(flex, true)
 }
 
-func (s *UIState) closeForm(username, pw string) {
-	if err := s.login(username, pw); err != nil {
+func (s *UIState) closeForm(username, pw, token string) {
+	if err := s.login(username, pw, token); err != nil {
 		s.logger.Error(err)
 	}
-	if err := creds.SaveCredentials(username, pw); err != nil {
+	if err := creds.SaveCredentials(username, pw, token); err != nil {
 		s.logger.Error(err)
 	}
 	s.initUI()

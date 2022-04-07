@@ -11,25 +11,30 @@ import (
 
 const serviceName = "f1viewer"
 
-func LoadCredentials() (string, string, error) {
+func LoadCredentials() (string, string, string, error) {
 	ring, err := openRing()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open secret store: %w", err)
+		return "", "", "", fmt.Errorf("failed to open secret store: %w", err)
 	}
 
 	username, err := ring.Get("username")
 	if err != nil {
-		return "", "", fmt.Errorf("Could not get username: %w", err)
+		return "", "", "", fmt.Errorf("Could not get username: %w", err)
 	}
 
 	password, err := ring.Get("password")
 	if err != nil {
-		return "", "", fmt.Errorf("Could not get password: %w", err)
+		return "", "", "", fmt.Errorf("Could not get password: %w", err)
 	}
-	return string(username.Data), string(password.Data), nil
+
+	token, err := ring.Get("token")
+	if err != nil {
+		return string(username.Data), string(password.Data), "", nil
+	}
+	return string(username.Data), string(password.Data), string(token.Data), nil
 }
 
-func SaveCredentials(username, password string) error {
+func SaveCredentials(username, password, token string) error {
 	ring, err := openRing()
 	if err != nil {
 		return fmt.Errorf("failed to open secret store: %w", err)
@@ -51,6 +56,15 @@ func SaveCredentials(username, password string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("could not save password %w", err)
+	}
+
+	err = ring.Set(keyring.Item{
+		Description: "F1TV subscription token",
+		Key:         "token",
+		Data:        []byte(token),
+	})
+	if err != nil {
+		return fmt.Errorf("could not save token %w", err)
 	}
 	return nil
 }

@@ -84,6 +84,15 @@ func NewF1TV(version string) *F1TV {
 	}
 }
 
+func (f *F1TV) SetToken(token string) error {
+	f.SubscriptionToken = token
+	_, err := f.GetPlaybackURL(BIG_SCREEN_HLS, 1000003967, nil)
+	if err != nil {
+		return fmt.Errorf("invalid token: %w", err)
+	}
+	return nil
+}
+
 func (f *F1TV) Authenticate(username, password string, logger util.Logger) error {
 	type request struct {
 		Login    string `json:"Login"`
