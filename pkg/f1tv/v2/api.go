@@ -245,6 +245,8 @@ func (s AdditionalStream) PrettyName() string {
 		return "Data Channel"
 	case "INTERNATIONAL":
 		return "International"
+	case "PIT LANE":
+		return "Pit Lane"
 	default:
 		if s.DriverFirstName == "" && s.DriverLastName == "" {
 			return s.Title

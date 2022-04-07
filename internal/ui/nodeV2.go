@@ -9,6 +9,7 @@ import (
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/cmd"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/util"
 	"github.com/SoMuchForSubtlety/f1viewer/v2/pkg/f1tv/v2"
+	"github.com/gdamore/tcell/v2"
 
 	"github.com/rivo/tview"
 )
@@ -85,32 +86,36 @@ func (s *UIState) v2PerspectiveNodes(v f1tv.ContentContainer) []*tview.TreeNode 
 		return streams[i].TeamName == ""
 	})
 
+	perspectives = append(perspectives, s.buildPerspectiveNode(meta, activeTheme.ItemNodeColor, "Default", details.ContentID, nil))
 	for _, p := range streams {
 		p := p
-		perspectiveMeta := meta
-		perspectiveMeta.PerspectiveTitle = p.PrettyName()
-
 		color := util.HexStringToColor(p.Hex)
 		if p.Hex == "" || s.cfg.DisableTeamColors {
 			color = activeTheme.ItemNodeColor
 		}
 
-		node := tview.NewTreeNode(p.PrettyName()).
-			SetColor(color).
-			SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: perspectiveMeta})
-
-		node.SetSelectedFunc(func() {
-			node.SetSelectedFunc(nil)
-			playbackNodes := s.getPlaybackNodes(perspectiveMeta, func() (string, error) {
-				return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, details.ContentID, &p.ChannelID)
-			})
-			appendNodes(node, playbackNodes...)
-		})
-		perspectives = append(perspectives, node)
+		perspectives = append(perspectives, s.buildPerspectiveNode(meta, color, p.PrettyName(), details.ContentID, &p.ChannelID))
 	}
 
 	multicommands := s.v2MultiCommandNodes(streams, v)
 	return append(multicommands, perspectives...)
+}
+
+func (s *UIState) buildPerspectiveNode(meta cmd.MetaData, color tcell.Color, name string, contentID f1tv.ContentID, channelID *f1tv.ChannelID) *tview.TreeNode {
+	meta.PerspectiveTitle = name
+	node := tview.NewTreeNode(name).
+		SetColor(color).
+		SetReference(&NodeMetadata{nodeType: PlayableNode, metadata: meta})
+
+	node.SetSelectedFunc(func() {
+		node.SetSelectedFunc(nil)
+		playbackNodes := s.getPlaybackNodes(meta, func() (string, error) {
+			return s.v2.GetPlaybackURL(f1tv.BIG_SCREEN_HLS, contentID, channelID)
+		})
+		appendNodes(node, playbackNodes...)
+	})
+
+	return node
 }
 
 func (s *UIState) v2MultiCommandNodes(perspectives []f1tv.AdditionalStream, mainStream f1tv.ContentContainer) []*tview.TreeNode {
