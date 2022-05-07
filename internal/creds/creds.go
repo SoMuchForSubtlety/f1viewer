@@ -5,8 +5,10 @@ package creds
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/99designs/keyring"
+	"github.com/SoMuchForSubtlety/f1viewer/v2/internal/config"
 )
 
 const serviceName = "f1viewer"
@@ -35,14 +37,28 @@ func LoadCredentials() (string, string, string, error) {
 }
 
 func SaveCredentials(username, password, token string) error {
+	conf, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("error loading config: %w", err)
+	}
+
 	ring, err := openRing()
 	if err != nil {
 		return fmt.Errorf("failed to open secret store: %w", err)
 	}
 
+	uKey := "username"
+	pKey := "password"
+
+	pfx := conf.KeyRingPrefix
+	if pfx != "" {
+		uKey = path.Join(pfx, uKey)
+		pKey = path.Join(pfx, pKey)
+	}
+
 	err = ring.Set(keyring.Item{
 		Description: "F1TV username",
-		Key:         "username",
+		Key:         uKey,
 		Data:        []byte(username),
 	})
 	if err != nil {
@@ -51,7 +67,7 @@ func SaveCredentials(username, password, token string) error {
 
 	err = ring.Set(keyring.Item{
 		Description: "F1TV password",
-		Key:         "password",
+		Key:         pKey,
 		Data:        []byte(password),
 	})
 	if err != nil {

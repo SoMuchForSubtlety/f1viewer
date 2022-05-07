@@ -34,6 +34,7 @@ type Config struct {
 	TerminalWrap          bool               `toml:"terminal_wrap,omitempty"`
 	DisableTeamColors     bool               `toml:"disable_team_colors,omitempty"`
 	EnableMouse           bool               `toml:"enable_mouse,omitempty"`
+	KeyRingPrefix         string             `toml:"key_ring_prefix,omitempty"`
 }
 
 type ConversionConfig struct {
