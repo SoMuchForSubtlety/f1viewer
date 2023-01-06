@@ -12,7 +12,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/rivo/tview v0.0.0-20210624165335-29d673af0ce2
 	github.com/stretchr/testify v1.7.0
-	github.com/zalando/go-keyring v0.2.1
+	github.com/zalando/go-keyring v0.2.2
 	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
@@ -26,7 +26,7 @@ require (
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
-	github.com/godbus/dbus/v5 v5.0.6 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
